@@ -33,7 +33,7 @@ function clean(v,max=160){return typeof v==="string"?v.trim().slice(0,max):""}
 function checkPayload(p){
  if(!p||typeof p!=="object"||Array.isArray(p))throw Error("Datos incompletos");
  const type=clean(p.type,24),date=clean(p.date,10),amount=Number(p.amount);
- if(!TYPES.has(type)||!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||Math.round(amount*100)!==amount*100)
+ if(!TYPES.has(type)||!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||Math.abs(Math.round(amount*100)-amount*100)>1e-5)
    throw Error("Tipo, fecha o monto inválidos");
  // La prueba piloto no permite USD: la cotización del día del gasto aún no está sincronizada.
  if(p.currency!=="CRC")throw Error("Piloto disponible solo para CRC");
