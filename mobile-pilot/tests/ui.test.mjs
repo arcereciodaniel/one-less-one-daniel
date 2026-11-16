@@ -30,3 +30,18 @@ test("V10.1: JavaScript válido y conserva claves y reintentos",()=>{
  assert.match(script,/localStorage\.removeItem\(DRAFT\)/);
  assert.match(script,/if\(!pending\)setType/);
 });
+
+test("V10.2: marca oficial y fecha robusta para Safari",()=>{
+ assert.match(html,/>One Less One<\/div>/);
+ assert.doesNotMatch(html,/one <span>−<\/span> one/);
+ assert.match(html,/id="dateDisplay"/);
+ assert.match(html,/id="dueDateDisplay"/);
+ assert.match(css,/\.date-control\s*\{/);
+ assert.match(css,/\.date-control \.date-native\s*\{/);
+ assert.match(css,/opacity:\s*0/);
+ assert.match(script,/function syncDateDisplays\(\)/);
+ assert.match(script,/new Intl\.DateTimeFormat\("es-CR"/);
+ assert.match(script,/addEventListener\("change",syncDateDisplays\)/);
+ assert.doesNotMatch(html,/CRC · Colones costarricenses/);
+ assert.doesNotMatch(html,/Un registro menos por recordar/);
+});

@@ -5,6 +5,16 @@ const LABELS={Gasto:"Registrar gasto",Ingreso:"Registrar ingreso",Cobro:"Crear c
 const $=id=>document.getElementById(id);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 let catalog=null,kind="Gasto",pending=null,submitting=false;
+function formatLocalDate(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value||""))return "Seleccioná una fecha";
+ const date=new Date(value+"T12:00:00");
+ if(Number.isNaN(date.getTime()))return "Seleccioná una fecha";
+ return new Intl.DateTimeFormat("es-CR",{day:"numeric",month:"short",year:"numeric"}).format(date);
+}
+function syncDateDisplays(){
+ $("dateDisplay").textContent=formatLocalDate($("date").value);
+ $("dueDateDisplay").textContent=formatLocalDate($("dueDate").value);
+}
 function status(message="",tone=""){const e=$("status");e.textContent=message;e.className="status"+(tone?" "+tone:"");}
 function auth(){return {"Authorization":"Bearer "+(localStorage.getItem(KEY)||"")};}
 async function api(path,{method="GET",data}={}){
@@ -50,7 +60,7 @@ function restoreDraft(){
   pending=saved;const p=saved.movement,old=!TYPES.includes(p.type);
   setType(old?"Gasto":p.type);
   for(const id of ["date","amount","categoryId","person","description","dueDate"]){if($(id)&&p[id]!==undefined)$(id).value=p[id];}
-  freeze(true);
+  syncDateDisplays();freeze(true);
   status(old?"Hay un envío anterior de "+p.type+" sin confirmar. Podés reintentarlo sin duplicarlo o descartarlo.":"El último envío no fue confirmado. Tocá Reintentar para evitar duplicados.","error");
  }catch{}
 }
@@ -71,22 +81,26 @@ async function send(event){
   const result=await api("inbox",{method:"POST",data:pending});
   if(result.id!==pending.id||result.received!==true)throw Error("No se confirmó la recepción");
   localStorage.removeItem(DRAFT);pending=null;$("entryForm").reset();$("date").value=today();
-  setType("Gasto");freeze(false);status("Recibido ✓ Se incorporará cuando One Less One Daniel sincronice.","ok");
+  setType("Gasto");syncDateDisplays();freeze(false);status("Recibido ✓ Se incorporará cuando One Less One Daniel sincronice.","ok");
  }catch(e){status("No confirmado: "+e.message+". Reintentá sin crear otro movimiento.","error");}
  finally{submitting=false;$("submit").disabled=false;freeze(!!pending);}
 }
-$("date").value=today();$("date").max=today();
+$("date").value=today();$("date").max=today();syncDateDisplays();
 showCapture(!!localStorage.getItem(KEY));
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();const key=$("mobileKey").value.trim();if(key.length<32)return;localStorage.setItem(KEY,key);if(await refresh())restoreDraft();});
 $("entryForm").addEventListener("submit",send);
 for(const b of document.querySelectorAll("[data-type]"))b.addEventListener("click",()=>{if(!pending)setType(b.dataset.type);});
-$("todayButton").addEventListener("click",()=>{$("date").value=today();});
+$("todayButton").addEventListener("click",()=>{$("date").value=today();syncDateDisplays();});
+$("date").addEventListener("input",syncDateDisplays);
+$("date").addEventListener("change",syncDateDisplays);
+$("dueDate").addEventListener("input",syncDateDisplays);
+$("dueDate").addEventListener("change",syncDateDisplays);
 $("refreshCatalog").addEventListener("click",refresh);
 $("discardDraft").addEventListener("click",()=>{
  if(!pending||submitting)return;
  if(!confirm("Este envío podría haber llegado al servidor. Descartarlo no cancela un registro recibido. ¿Descartar el borrador local?"))return;
  localStorage.removeItem(DRAFT);pending=null;$("entryForm").reset();$("date").value=today();
- setType("Gasto");freeze(false);
+ setType("Gasto");syncDateDisplays();freeze(false);
  status("Borrador local descartado. Si el servidor recibió el movimiento, podría aparecer en Daniel.");
 });
 $("disconnect").addEventListener("click",()=>{

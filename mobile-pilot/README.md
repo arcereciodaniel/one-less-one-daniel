@@ -111,3 +111,12 @@ El commit de GitHub NO actualiza automáticamente el Worker de Cloudflare. Si ya
 4. No sobrescribás el archivo wrangler.jsonc local con el del repositorio: su database_id es un marcador de posición.
 5. Desde tu carpeta mobile-pilot local, ejecutá npm run deploy. No creés otra base D1 ni reinstalés las claves.
 6. Abrí nuevamente el formulario en Safari y probá un Gasto, Ingreso y Cobro. El atajo y el widget existentes siguen utilizando la misma URL.
+
+
+## V10.2 — marca One Less One y fecha consistente en iPhone
+- El encabezado utiliza **One Less One**, sin guiones ni texto extra.
+- El formulario reduce títulos, etiquetas y texto accesorio; se mantienen Gasto, Ingreso y Cobro.
+- La fecha se muestra en una capa de texto centrada dentro de un control del mismo tamaño que Categoría y Detalle, mientras que un input nativo transparente y accesible permite utilizar el selector de fecha de iOS. Esto evita depender del posicionamiento visual nativo que Safari hacía aparecer arriba.
+- Se aplica el mismo tratamiento a la fecha esperada de Cobro y se mantiene la acción Hoy.
+- No se cambia la API, la base D1, el identificador de reintento ni las claves existentes.
+- La implementación en GitHub no cambia automáticamente el Worker ya publicado. En la Mac configurada hay que actualizar los archivos public/index.html, public/style.css y public/app.js y ejecutar npm run deploy, sin reemplazar wrangler.jsonc.
