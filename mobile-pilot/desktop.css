@@ -1,0 +1,9 @@
+.one-mobile-settings{border:1px solid var(--border);background:var(--surface);border-radius:11px;margin:0 0 15px;padding:14px 16px;max-width:100%}
+.one-mobile-settings summary{cursor:pointer;font-size:.83rem;display:flex;gap:10px;align-items:center}.one-mobile-settings summary small{font-size:.7rem;color:var(--muted)}
+.one-mobile-settings-body{padding:10px 1px 0}.one-mobile-settings-body p{color:var(--muted);font-size:.76rem;line-height:1.5}
+.one-mobile-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}
+.one-mobile-fields label{font-size:.7rem;color:var(--muted);min-width:0}
+.one-mobile-fields input{display:block;margin-top:6px;width:100%;border-radius:7px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:10px;font-size:.8rem}
+.one-mobile-actions{display:flex;gap:7px;flex-wrap:wrap}.one-mobile-caution{font-size:.69rem!important}
+#oneMobileStatus[data-tone=warning]{color:var(--danger)}#oneMobileStatus[data-tone=ok]{color:var(--success)}
+@media(max-width:620px){.one-mobile-fields{grid-template-columns:1fr}}
