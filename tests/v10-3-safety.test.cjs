@@ -28,7 +28,7 @@ function setup(){
    {id:"i",name:"Salario",type:"Ingreso",group:"Trabajo",active:true,budgetable:true,sort:1}],
   reserves:[],reserveMovements:[],sharedCharges:[],sharedChargeGroups:[],receivableRecurring:[]
  }));
- w.eval(script);
+ w.eval(script+"\nwindow.__oneTest={data,save,renderReconciliationStatus,renderSharedCharges};");
  return {w,errors,close:()=>w.close()};
 }
 test("Lab V7 antiguo redirige, sin escribir finanzas",()=>{
@@ -42,7 +42,7 @@ test("Lab V7 antiguo redirige, sin escribir finanzas",()=>{
 test("Guardado financiero comprueba persistencia",()=>{
  const {w,errors,close}=setup();
  try{
-  w.eval("data.settings.fx=513;save()");
+  w.__oneTest.data.settings.fx=513;w.__oneTest.save();
   assert.equal(JSON.parse(w.localStorage.getItem(KEY)).settings.fx,513);
   assert.equal(w.document.getElementById("oneStorageGuardBanner").hidden,true);
   assert.equal(errors.length,0);
@@ -56,8 +56,8 @@ test("Cambio de otra pestaña bloquea sobrescrituras",()=>{
   const remoteRaw=JSON.stringify(remote);
   w.localStorage.setItem(KEY,remoteRaw);
   w.dispatchEvent(new w.StorageEvent("storage",{key:KEY,oldValue,newValue:remoteRaw,storageArea:w.localStorage}));
-  w.eval("data.settings.fx=999");
-  assert.throws(()=>w.eval("save()"),/otra pestaña|cambiaron/);
+  w.__oneTest.data.settings.fx=999;
+  assert.throws(()=>w.__oneTest.save(),/otra pestaña|cambiaron/);
   assert.equal(w.localStorage.getItem(KEY),remoteRaw);
   assert.equal(w.document.getElementById("oneStorageGuardBanner").hidden,false);
  }finally{close()}
@@ -67,17 +67,17 @@ test("Comprobar directamente el almacenamiento también detecta colisiones",()=>
  try{
   const remote=JSON.parse(w.localStorage.getItem(KEY));remote.settings.fx=701;
   w.localStorage.setItem(KEY,JSON.stringify(remote));
-  assert.throws(()=>w.eval("save()"),/otra pestaña|cambiaron/);
+  assert.throws(()=>w.__oneTest.save(),/otra pestaña|cambiaron/);
   assert.equal(JSON.parse(w.localStorage.getItem(KEY)).settings.fx,701);
  }finally{close()}
 });
 test("Notas y grupos peligrosos son texto, no HTML ejecutable",()=>{
  const {w,close}=setup();
  try{
-  w.eval('data.reconciliations.push({id:"r1",date:"2026-11-10",amount:41000,currency:"CRC",note:"<img src=x onerror=alert(1)>",createdAt:"2026-11-10T00:00:00Z"});renderReconciliationStatus()');
+  w.__oneTest.data.reconciliations.push({id:"r1",date:"2026-11-10",amount:41000,currency:"CRC",note:"<img src=x onerror=alert(1)>",createdAt:"2026-11-10T00:00:00Z"});w.__oneTest.renderReconciliationStatus();
   assert.equal(w.document.querySelector("#reconcileStatus img"),null);
   assert(w.document.getElementById("reconcileStatus").textContent.includes("<img src=x"));
-  w.eval('data.sharedChargeGroups.push({id:"grp1",name:"<img src=x onerror=alert(2)>",person:"Persona",notes:"<svg onload=alert(3)>",status:"active"});renderSharedCharges()');
+  w.__oneTest.data.sharedChargeGroups.push({id:"grp1",name:"<img src=x onerror=alert(2)>",person:"Persona",notes:"<svg onload=alert(3)>",status:"active"});w.__oneTest.renderSharedCharges();
   assert.equal(w.document.querySelector("#sharedGroupsContainer img"),null);
   assert.equal(w.document.querySelector("#sharedGroupsContainer svg"),null);
  }finally{close()}
