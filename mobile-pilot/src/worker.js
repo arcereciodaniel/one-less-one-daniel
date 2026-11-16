@@ -106,6 +106,8 @@ export default {
     }
     if(path==="/api/inbox"&&request.method==="GET"){
      if(!permitted(request,env,"desktop"))return json({error:"Acceso denegado"},401,headers);
+     // Los registros importados se eliminan después de 30 días; solo se ejecuta al sincronizar.
+     await env.DB.prepare("DELETE FROM pilot_inbox WHERE status='imported' AND imported_at < datetime('now', '-30 days')").run();
      const res=await env.DB.prepare("SELECT id,payload,created_at FROM pilot_inbox WHERE status='pending' ORDER BY created_at,id LIMIT 100").all();
      return json({items:(res.results||[]).map(x=>({id:x.id,movement:JSON.parse(x.payload),receivedAt:x.created_at}))},200,headers);
     }
