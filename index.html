@@ -3453,10 +3453,22 @@ function debtCommitmentsNextDays(days=30){
 }
 
 function fillSelect(el,values,current){
-  el.innerHTML=values.map(v=>`<option value="${v}" ${v===current?"selected":""}>${v}</option>`).join("")
+  // textContent protege los selectores aunque una categoría tenga caracteres HTML.
+  const options=values.map(v=>{
+    const option=document.createElement("option");
+    option.value=String(v);option.textContent=String(v);option.selected=v===current;
+    return option;
+  });
+  el.replaceChildren(...options);
 }
 function fillObjectSelect(el,values,current){
-  el.innerHTML=values.map(v=>`<option value="${v.value}" ${v.value===current?"selected":""}>${v.label}</option>`).join("")
+  const options=values.map(v=>{
+    const option=document.createElement("option");
+    option.value=String(v.value);option.textContent=String(v.label);
+    option.selected=v.value===current;
+    return option;
+  });
+  el.replaceChildren(...options);
 }
 function syncPeriodFilter(prefix,preferred){
   const levelEl=document.getElementById(prefix+"Level"), periodEl=document.getElementById(prefix+"Period");
@@ -4002,7 +4014,7 @@ function openAssignSharedGroup(ids=null){
   if(Array.isArray(ids)){sharedSelectedChargeIds.clear();ids.forEach(x=>sharedSelectedChargeIds.add(x))}
   const rows=selectedSharedCharges();if(!rows.length)return alert("Seleccioná al menos un cobro.");
   const groups=activeSharedGroups(), sel=document.getElementById("assignGroupSelect");
-  sel.innerHTML=groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join("");
+  fillObjectSelect(sel,groups.map(g=>({value:g.id,label:g.name})),groups[0]?.id||"");
   document.getElementById("assignSharedGroupSummary").textContent=`Vas a agrupar ${rows.length} ${rows.length===1?"cobro":"cobros"}.`;
   document.getElementById("assignNewGroupName").value="";document.getElementById("assignNewGroupPerson").value="";document.getElementById("assignNewGroupNotes").value="";
   setAssignSharedMode(groups.length?"existing":"new");
@@ -4032,7 +4044,7 @@ function refreshSharedGroupSelects(selected=""){
     let groups=activeSharedGroups();
     const currentGroup=sharedGroupById(current);
     if(currentGroup&&sharedGroupStatus(currentGroup)==="archived"&&!groups.some(g=>g.id===currentGroup.id))groups=[currentGroup,...groups];
-    form.innerHTML=`<option value="">Sin grupo</option>`+groups.map(g=>`<option value="${g.id}">${g.name}${sharedGroupStatus(g)==="archived"?" (archivado)":""}</option>`).join("");
+    fillObjectSelect(form,[{value:"",label:"Sin grupo"},...groups.map(g=>({value:g.id,label:g.name+(sharedGroupStatus(g)==="archived"?" (archivado)":"")}))],current);
     form.value=groups.some(g=>g.id===current)?current:"";
   }
 }
@@ -6216,7 +6228,7 @@ renderMovements=function(){
     }else{const k=movementCategoryName(m)||"Otros";byCat[k]=(byCat[k]||0)+movementAmountCRC(m)}
   });
   const ranked=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5),topPct=tot&&ranked.length?Math.round(ranked[0][1]/tot*100):0;
-  document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${selectedLabel(level,value)}</div>
+  document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${v7SafeText(selectedLabel(level,value))}</div>
     <div class="v7-donut-placeholder" style="--v7-pct:${topPct}%"><div class="v7-donut-center"><strong>${money(expense)}</strong><span>Gastos</span></div></div>
     <div class="v7-mini-bars">${ranked.length?ranked.map(([name,val])=>`<div class="v7-mini-bar"><div><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span>${v7SafeText(name)}</span><span>${tot?Math.round(val/tot*100):0}%</span></div><div class="v7-mini-bar-track"><span style="width:${tot?Math.min(100,val/tot*100):0}%"></span></div></div><strong style="font-size:.66rem;text-align:right">${money(val)}</strong></div>`).join(""):`<div class="muted" style="font-size:.72rem">Todavía no hay gastos reales en este periodo.</div>`}</div>`;
   m2RenderAccountSummary(rows);m2RenderTemplates();m2RenderAudit();

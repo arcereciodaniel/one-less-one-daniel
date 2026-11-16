@@ -28,7 +28,7 @@ function setup(){
    {id:"i",name:"Salario",type:"Ingreso",group:"Trabajo",active:true,budgetable:true,sort:1}],
   reserves:[],reserveMovements:[],sharedCharges:[],sharedChargeGroups:[],receivableRecurring:[]
  }));
- w.eval(script+"\nwindow.__oneTest={data,save,renderReconciliationStatus,renderSharedCharges};");
+ w.eval(script+"\nwindow.__oneTest={data,save,renderReconciliationStatus,renderSharedCharges,fillSelect,fillObjectSelect};");
  return {w,errors,close:()=>w.close()};
 }
 test("Lab V7 antiguo redirige, sin escribir finanzas",()=>{
@@ -87,4 +87,17 @@ test("V10.3 identifica Daniel y Lab sin alterar claves",()=>{
  assert(lab.includes('<small class="brand-version">v10.3.0 LAB</small>'));
  assert(lab.includes('src="../mobile-pilot/desktop.js"'));
  assert(html.includes('src="mobile-pilot/desktop.js"'));
+});
+
+test("Los selectores no interpretan contenido HTML de categorías y grupos",()=>{
+ const {w,close}=setup();
+ try{
+  const select=w.document.getElementById("scGroup");
+  w.__oneTest.fillObjectSelect(select,[{value:"id",label:"<img src=x onerror=alert(4)>"}],"id");
+  assert.equal(select.querySelector("img"),null);
+  assert.equal(select.options[0].textContent,"<img src=x onerror=alert(4)>");
+  w.__oneTest.fillSelect(select,["<svg onload=alert(5)>"],"<svg onload=alert(5)>");
+  assert.equal(select.querySelector("svg"),null);
+  assert.equal(select.options[0].value,"<svg onload=alert(5)>");
+ }finally{close()}
 });
