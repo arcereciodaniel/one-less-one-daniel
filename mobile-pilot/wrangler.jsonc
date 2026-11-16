@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "one-less-one-mobile-pilot",
+  "name": "one-less-one-mobile-daniel",
   "main": "src/worker.js",
   "compatibility_date": "2026-11-16",
   "workers_dev": true,
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "one-less-one-mobile-pilot",
+      "database_name": "one-less-one-mobile-daniel",
       "database_id": "REEMPLAZAR_CON_DATABASE_ID"
     }
   ],
