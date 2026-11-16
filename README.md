@@ -45,3 +45,8 @@ No borrar la carpeta `lab/` ni el repositorio antiguo sin comprobar la equivalen
 
 
 Referencia de activación de Pages V10.3: [publicación verificada](docs/pages-v10-3.md).
+
+
+## V10.4 · Motor financiero verificable
+
+Se amplían las pruebas de Movimientos, Deudas, Cobros, Metas, conciliaciones y CRC/USD con casos de saldos esperados. Los nuevos abonos en USD registran la tasa de conversión al cobrar. Los abonos anteriores y los historiales existentes se conservan. Las conciliaciones antiguas sin secuencia de operaciones dejan de duplicar movimientos del mismo día sin posterioridad verificable.

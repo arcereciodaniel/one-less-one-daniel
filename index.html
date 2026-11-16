@@ -1454,7 +1454,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.3.0</small>
+      <small class="brand-version">v10.4.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1916,7 +1916,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.3.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -3218,7 +3218,18 @@ function reserveTotals(asOfDate=todayIso()){
 }
 function reconciliationAmountCRC(r){return recordToCRC(r,"receive")}
 function eventAfterReconciliation(createdAt,date,rec){
-  return date>rec.date || (date===rec.date && String(createdAt||"")>String(rec.createdAt||""));
+  if(date>rec.date)return true;
+  // Sin marca de tiempo de conciliación no se puede demostrar que una transferencia
+  // del mismo día haya ocurrido después: se evita sumarla dos veces.
+  return date===rec.date&&!!rec.createdAt&&!!createdAt&&String(createdAt)>String(rec.createdAt);
+}
+function movementAfterReconciliation(m,rec){
+  if(m.date>rec.date)return true;
+  if(m.date!==rec.date)return false;
+  if(rec.afterSeq!==undefined&&rec.afterSeq!==null&&Number.isFinite(Number(rec.afterSeq)))
+    return num(m.seq)>Number(rec.afterSeq);
+  // Respaldos previos sin afterSeq: usar marcas de creación sólo si existen ambas.
+  return !!rec.createdAt&&!!m.createdAt&&String(m.createdAt)>String(rec.createdAt);
 }
 function latestReconciliation(asOfDate=todayIso()){
   return [...(data.reconciliations||[])]
@@ -3238,7 +3249,7 @@ function actualBalanceAt(asOfDate){
   const rec=latestReconciliation(asOfDate);
   if(rec){
     const movementDelta=data.movements
-      .filter(m=>m.date<=asOfDate && (m.date>rec.date || (m.date===rec.date && num(m.seq)>num(rec.afterSeq))))
+      .filter(m=>m.date<=asOfDate&&movementAfterReconciliation(m,rec))
       .reduce((s,m)=>s+signedMovement(m),0);
     const reserveDelta=(data.reserveMovements||[])
       .filter(t=>t.date<=asOfDate&&eventAfterReconciliation(t.createdAt,t.date,rec))
@@ -4156,7 +4167,19 @@ function cobroPaidOriginal(c){
 }
 function cobroRemainingOriginal(c){return Math.max(0,num(c.amount)-cobroPaidOriginal(c))}
 function cobroRemainingCRC(c){return currentToCRC(cobroRemainingOriginal(c),c.currency||"CRC","receive")}
-function cobroReceivedCRC(c){return currentToCRC(cobroPaidOriginal(c),c.currency||"CRC","receive")}
+// Los ingresos ya cobrados mantienen la tasa registrada, a diferencia de un saldo
+// pendiente que sí puede visualizarse a la cotización actual.
+function cobroPaymentCRC(c,p){
+  const linked=oneCobroMovement(c,p);
+  if(linked)return movementAmountCRC(linked);
+  return recordToCRC({...p,currency:c.currency||"CRC"},"receive");
+}
+function cobroReceivedCRC(c){
+  const payments=Array.isArray(c.payments)?c.payments:[];
+  return payments.length
+    ?payments.reduce((total,p)=>total+cobroPaymentCRC(c,p),0)
+    :c.status==="paid"?currentToCRC(c.amount,c.currency||"CRC","receive"):0;
+}
 function cobroPaymentState(c){return cobroRemainingOriginal(c)<.005?"Pagado":cobroPaidOriginal(c)>.005?"Parcial":"Pendiente"}
 function syncCobroPaymentState(c){
  if((c.payments||[]).length){
@@ -4169,7 +4192,7 @@ function recordCobroPayment(c,amount,date,note=""){
  if(!c||!Number.isFinite(value)||value<=0||value-cobroRemainingOriginal(c)>.005)return false;
  c.payments=Array.isArray(c.payments)?c.payments:[];
  if(c.status==="paid"&&!c.payments.length)return false;
- c.payments.push({id:id(),date,amount:value,note});
+ c.payments.push({id:id(),date,amount:value,note,...currentFxSnapshot()});
  syncCobroPaymentState(c);c.snoozedUntil="";
  return true;
 }
@@ -4234,7 +4257,10 @@ function oneUpsertCobroLinkedMovement(c,p,kind="reimbursement",categoryId=""){
     description:`Cobro · ${cobroPerson(c)} · ${c.description||c.kind||"Abono"}`,
     amount:p.amount,currency:normalizeCurrency(c.currency),
     ...((old&&normalizeCurrency(old.currency)===normalizeCurrency(c.currency))?
-      {fxBuy:old.fxBuy,fxSell:old.fxSell,fxRef:old.fxRef,fxDate:old.fxDate}:currentFxSnapshot()),
+      {fxBuy:old.fxBuy,fxSell:old.fxSell,fxRef:old.fxRef,fxDate:old.fxDate}:
+      (num(p.fxBuy)>0&&num(p.fxSell)>0
+        ?{fxBuy:p.fxBuy,fxSell:p.fxSell,fxRef:p.fxRef,fxDate:p.fxDate}
+        :currentFxSnapshot())),
     period:periodKey(period),quarter:budgetQuarter(period)};
   if(old){
     m2Audit("edit",obj,old);
@@ -4250,7 +4276,7 @@ function oneCommitCobroPayment(c,{paymentId="",amount,date,note="",linked=false,
   const old=(c.payments||[]).find(p=>p.id===paymentId)||null;
   if(paymentId&&!old)return {ok:false,error:"Este abono ya no existe."};
   const value=Math.round(Number(amount)*100)/100;
-  if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(value)||value<=0)
+  if(!restoreValidDate(date)||!Number.isFinite(value)||value<=0)
     return {ok:false,error:"Ingresá una fecha y un importe mayor que cero."};
   const other=(c.payments||[]).filter(p=>p.id!==paymentId).reduce((sum,p)=>sum+num(p.amount),0);
   if(value+other-num(c.amount)>.005)return {ok:false,error:"El abono supera el saldo pendiente del cobro."};
@@ -4389,9 +4415,11 @@ function renderSharedCharges(){
   const carryRows=displayRows.filter(c=>isReceivableCarryover(c,month)),carryPending=carryRows.reduce((s,c)=>s+cobroRemainingCRC(c),0),pending=displayRows.reduce((s,c)=>s+cobroRemainingCRC(c),0);
   const today=todayIso(),overdue=displayRows.filter(c=>c.dueDate&&c.dueDate<today).reduce((s,c)=>s+cobroRemainingCRC(c),0);
   const recoveredMonth=(data.sharedCharges||[]).reduce((sum,c)=>{
-    const abonos=(c.payments||[]).filter(p=>p.date?.startsWith(month)).reduce((n,p)=>n+num(p.amount),0);
-    const legacy=!(c.payments||[]).length&&c.status==="paid"&&c.paidAt?.startsWith(month)?num(c.amount):0;
-    return sum+currentToCRC(abonos+legacy,c.currency||"CRC","receive");
+    const abonos=(c.payments||[]).filter(p=>p.date?.startsWith(month))
+      .reduce((total,p)=>total+cobroPaymentCRC(c,p),0);
+    const legacy=!(c.payments||[]).length&&c.status==="paid"&&c.paidAt?.startsWith(month)
+      ?currentToCRC(c.amount,c.currency||"CRC","receive"):0;
+    return sum+abonos+legacy;
   },0);
   const ungrouped=receivableDisplayRows("",month),ungroupedPending=ungrouped.reduce((s,c)=>s+cobroRemainingCRC(c),0),ungroupedCarry=ungrouped.filter(c=>isReceivableCarryover(c,month)).reduce((s,c)=>s+receivableAmountCRC(c),0);
   document.getElementById("sharedKpis").innerHTML=[["Por recuperar",pending],["Vencido",overdue],["Recuperado en el mes",recoveredMonth],["Cargos del mes",currentTotal]].map(([name,value])=>`<div><small>${name}</small><strong>${money(value)}</strong></div>`).join("");
