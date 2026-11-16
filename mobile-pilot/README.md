@@ -96,3 +96,18 @@ Las pruebas de interfaz requieren `jsdom@26` instalado por el workflow del repos
 
 ## Costo esperado
 Cloudflare Workers y D1 ofrecen cuotas gratuitas; este piloto personal está diseñado para mantenerse dentro del plan **Free**. El precio esperado es **$0/mes mientras se respeten los límites**, pero no se ha hecho una prueba de facturación ni un despliegue real en una cuenta Cloudflare.
+
+
+## V10.1 — captura móvil simplificada
+La interfaz de iPhone ahora ofrece únicamente Gasto, Ingreso y Cobro. Fecha, categorías y demás campos tienen el mismo tamaño, con tema oscuro uniforme y monto en texto claro. La fecha incorpora una acción Hoy.
+
+La clave guardada en el iPhone, la base de datos D1 y la URL pública permanecen intactas. El servidor y el importador de escritorio siguen admitiendo envíos anteriores de Pago deuda y Aporte que ya estuvieran pendientes; el nuevo formulario no permite crear esos registros. Ningún histórico se elimina.
+
+### Publicar V10.1 desde una Mac ya configurada
+El commit de GitHub NO actualiza automáticamente el Worker de Cloudflare. Si ya tenés un piloto funcionando:
+1. Conservá una copia del archivo local mobile-pilot/wrangler.jsonc; allí está tu database_id real y el dominio autorizado.
+2. Descargá el ZIP actualizado del repositorio one-less-one-daniel.
+3. Copiá solamente los tres archivos nuevos de mobile-pilot/public (index.html, style.css y app.js) encima de los de tu carpeta mobile-pilot local.
+4. No sobrescribás el archivo wrangler.jsonc local con el del repositorio: su database_id es un marcador de posición.
+5. Desde tu carpeta mobile-pilot local, ejecutá npm run deploy. No creés otra base D1 ni reinstalés las claves.
+6. Abrí nuevamente el formulario en Safari y probá un Gasto, Ingreso y Cobro. El atajo y el widget existentes siguen utilizando la misma URL.

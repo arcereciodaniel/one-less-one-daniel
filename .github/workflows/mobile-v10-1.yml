@@ -1,0 +1,19 @@
+name: Validar piloto móvil V10.1
+on:
+  push:
+    paths:
+      - "mobile-pilot/**"
+      - ".github/workflows/mobile-v10-1.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Probar Worker y formulario móvil
+        run: node --test mobile-pilot/tests/*.test.mjs

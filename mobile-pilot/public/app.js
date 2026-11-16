@@ -1,99 +1,97 @@
 "use strict";
 const KEY="one_one_mobile_v1_key",DRAFT="one_one_mobile_v1_draft";
+const TYPES=["Gasto","Ingreso","Cobro"];
+const LABELS={Gasto:"Registrar gasto",Ingreso:"Registrar ingreso",Cobro:"Crear cobro"};
 const $=id=>document.getElementById(id);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 let catalog=null,kind="Gasto",pending=null,submitting=false;
-function status(message="",tone=""){const e=$("status");e.textContent=message;e.className="status "+tone;}
+function status(message="",tone=""){const e=$("status");e.textContent=message;e.className="status"+(tone?" "+tone:"");}
 function auth(){return {"Authorization":"Bearer "+(localStorage.getItem(KEY)||"")};}
 async function api(path,{method="GET",data}={}){
  const response=await fetch("/api/"+path,{method,cache:"no-store",headers:{...auth(),...(data?{"Content-Type":"application/json"}:{})},...(data?{body:JSON.stringify(data)}:{})});
- let payload;try{payload=await response.json();}catch{throw Error("No se recibió una respuesta válida");}
- if(!response.ok)throw Error(payload.error||"No se pudo conectar");
- return payload;
+ let result;try{result=await response.json();}catch{throw Error("No se recibió una respuesta válida");}
+ if(!response.ok)throw Error(result.error||"No se pudo conectar");return result;
 }
-function fill(id,rows){const select=$(id);select.replaceChildren();const empty=document.createElement("option");empty.value="";empty.textContent="Seleccioná una opción";select.append(empty);for(const item of rows){const o=document.createElement("option");o.value=item.id;o.textContent=item.name;select.append(o);}}
-function options(){
- const categories=(catalog?.categories||[]).filter(c=>c.type===kind);
- fill("categoryId",categories);fill("debtId",catalog?.debts||[]);fill("reserveId",catalog?.goals||[]);
+function showCapture(connected){$("setup").hidden=connected;$("capture").hidden=!connected;$("connectedFooter").hidden=!connected;}
+function fill(id,rows){
+ const select=$(id),previous=select.value;select.replaceChildren();
+ const empty=document.createElement("option");empty.value="";empty.textContent="Seleccioná una opción";select.append(empty);
+ for(const row of rows){const o=document.createElement("option");o.value=row.id;o.textContent=row.name;select.append(o);}
+ if(rows.some(row=>row.id===previous))select.value=previous;
 }
+function options(){fill("categoryId",(catalog?.categories||[]).filter(c=>c.type===kind));}
 async function refresh(){
  try{
   const result=await api("catalog");
   if(!result.catalog)throw Error("Primero vinculá el piloto desde One Less One Daniel");
-  catalog=result.catalog;options();status("");
-  $("setup").hidden=true;$("capture").hidden=false;
-  return true;
- }catch(e){status(e.message,"error");return false;}
+  catalog=result.catalog;options();showCapture(true);if(!pending)status("");return true;
+ }catch(e){showCapture(false);status(e.message,"error");return false;}
 }
 function setType(type){
- kind=type;for(const b of document.querySelectorAll("[data-type]")){const active=b.dataset.type===type;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));}
- $("categoryField").hidden=!["Gasto","Ingreso"].includes(type);
- $("debtField").hidden=type!=="Pago deuda";$("goalField").hidden=type!=="Aporte";
- $("personField").hidden=type!=="Cobro";$("dueField").hidden=type!=="Cobro";
- $("categoryId").required=["Gasto","Ingreso"].includes(type);
- $("debtId").required=type==="Pago deuda";$("reserveId").required=type==="Aporte";
- $("person").required=type==="Cobro";
- $("submit").textContent=type==="Gasto"?"Registrar gasto":type==="Ingreso"?"Registrar ingreso":type==="Pago deuda"?"Registrar pago":type==="Cobro"?"Crear cobro":"Aportar a meta";
- options();
-}
-function restoreDraft(){
- try{
-  const x=JSON.parse(localStorage.getItem(DRAFT)||"null");
-  if(!x?.id||!x?.movement)return;
-  pending=x;
-  const p=x.movement;
-  setType(p.type);for(const field of ["date","amount","categoryId","debtId","reserveId","person","description","dueDate"]){
-   if($(field)&&p[field]!==undefined)$(field).value=p[field];
-  }
-  freeze(true);status("El último envío no fue confirmado. Tocá Reintentar para evitar duplicados.","error");
- }catch{}
+ if(!TYPES.includes(type))return false;
+ kind=type;
+ for(const b of document.querySelectorAll("[data-type]")){const active=b.dataset.type===type;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));}
+ const ordinary=type!=="Cobro",cobro=!ordinary;
+ $("categoryField").hidden=!ordinary;$("personField").hidden=!cobro;$("dueField").hidden=!cobro;
+ $("categoryId").required=ordinary;$("person").required=cobro;
+ $("descriptionLabel").innerHTML=cobro?'Concepto <span class="optional">(opcional)</span>':'Detalle <span class="optional">(opcional)</span>';
+ $("description").placeholder=cobro?"¿Qué te deben?":type==="Ingreso"?"¿De dónde viene?":"¿En qué fue?";
+ $("submit").textContent=LABELS[type];options();return true;
 }
 function freeze(locked){
  for(const field of $("entryForm").querySelectorAll("input,select"))field.disabled=locked;
  for(const b of document.querySelectorAll("[data-type]"))b.disabled=locked;
- $("submit").textContent=locked?"Reintentar envío":kind==="Gasto"?"Registrar gasto":kind==="Ingreso"?"Registrar ingreso":kind==="Pago deuda"?"Registrar pago":kind==="Cobro"?"Crear cobro":"Aportar a meta";
+ $("todayButton").disabled=locked;$("submit").textContent=locked?"Reintentar envío":LABELS[kind];
+ $("discardDraft").hidden=!pending;$("discardDraft").disabled=submitting;
+}
+function restoreDraft(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(DRAFT)||"null");if(!saved?.id||!saved?.movement)return;
+  pending=saved;const p=saved.movement,old=!TYPES.includes(p.type);
+  setType(old?"Gasto":p.type);
+  for(const id of ["date","amount","categoryId","person","description","dueDate"]){if($(id)&&p[id]!==undefined)$(id).value=p[id];}
+  freeze(true);
+  status(old?"Hay un envío anterior de "+p.type+" sin confirmar. Podés reintentarlo sin duplicarlo o descartarlo.":"El último envío no fue confirmado. Tocá Reintentar para evitar duplicados.","error");
+ }catch{}
 }
 function movement(){
- const out={type:kind,date:$("date").value,amount:Number($("amount").value),currency:"CRC",description:$("description").value.trim()};
- if(["Gasto","Ingreso"].includes(kind))out.categoryId=$("categoryId").value;
- if(kind==="Pago deuda")out.debtId=$("debtId").value;
- if(kind==="Aporte")out.reserveId=$("reserveId").value;
- if(kind==="Cobro"){out.person=$("person").value.trim();out.dueDate=$("dueDate").value;}
- return out;
+ const m={type:kind,date:$("date").value,amount:Number($("amount").value),currency:"CRC",description:$("description").value.trim()};
+ if(kind!=="Cobro")m.categoryId=$("categoryId").value;
+ else {m.person=$("person").value.trim();m.dueDate=$("dueDate").value;}
+ return m;
 }
 async function send(event){
  event.preventDefault();if(submitting)return;
  if(!pending){
-  const p=movement();
-  if(!Number.isFinite(p.amount)||p.amount<=0)return status("Ingresá un monto mayor que cero.","error");
-  pending={id:crypto.randomUUID(),movement:p};
-  localStorage.setItem(DRAFT,JSON.stringify(pending));
+  const m=movement();if(!Number.isFinite(m.amount)||m.amount<=0)return status("Ingresá un monto mayor que cero.","error");
+  pending={id:crypto.randomUUID(),movement:m};localStorage.setItem(DRAFT,JSON.stringify(pending));
  }
  submitting=true;freeze(true);$("submit").disabled=true;status("Enviando a One Less One…");
  try{
-  const res=await api("inbox",{method:"POST",data:pending});
-  if(res.id!==pending.id||res.received!==true)throw Error("No se confirmó la recepción");
-  localStorage.removeItem(DRAFT);pending=null;
-  $("entryForm").reset();$("date").value=today();setType("Gasto");freeze(false);
-  status("Recibido ✓ Se incorporará cuando One Less One Daniel sincronice.","ok");
+  const result=await api("inbox",{method:"POST",data:pending});
+  if(result.id!==pending.id||result.received!==true)throw Error("No se confirmó la recepción");
+  localStorage.removeItem(DRAFT);pending=null;$("entryForm").reset();$("date").value=today();
+  setType("Gasto");freeze(false);status("Recibido ✓ Se incorporará cuando One Less One Daniel sincronice.","ok");
  }catch(e){status("No confirmado: "+e.message+". Reintentá sin crear otro movimiento.","error");}
- finally{submitting=false;$("submit").disabled=false;}
+ finally{submitting=false;$("submit").disabled=false;freeze(!!pending);}
 }
-$("date").value=today();
-$("setup").hidden=!!localStorage.getItem(KEY);
-$("capture").hidden=!localStorage.getItem(KEY);
-$("setupForm").addEventListener("submit",async e=>{
- e.preventDefault();const token=$("mobileKey").value.trim();
- if(token.length<32)return;
- localStorage.setItem(KEY,token);$("setup").hidden=true;$("capture").hidden=false;
- await refresh();restoreDraft();
-});
+$("date").value=today();$("date").max=today();
+showCapture(!!localStorage.getItem(KEY));
+$("setupForm").addEventListener("submit",async e=>{e.preventDefault();const key=$("mobileKey").value.trim();if(key.length<32)return;localStorage.setItem(KEY,key);if(await refresh())restoreDraft();});
 $("entryForm").addEventListener("submit",send);
-for(const b of document.querySelectorAll("[data-type]"))b.addEventListener("click",()=>setType(b.dataset.type));
+for(const b of document.querySelectorAll("[data-type]"))b.addEventListener("click",()=>{if(!pending)setType(b.dataset.type);});
+$("todayButton").addEventListener("click",()=>{$("date").value=today();});
 $("refreshCatalog").addEventListener("click",refresh);
+$("discardDraft").addEventListener("click",()=>{
+ if(!pending||submitting)return;
+ if(!confirm("Este envío podría haber llegado al servidor. Descartarlo no cancela un registro recibido. ¿Descartar el borrador local?"))return;
+ localStorage.removeItem(DRAFT);pending=null;$("entryForm").reset();$("date").value=today();
+ setType("Gasto");freeze(false);
+ status("Borrador local descartado. Si el servidor recibió el movimiento, podría aparecer en Daniel.");
+});
 $("disconnect").addEventListener("click",()=>{
- if(!confirm("¿Desvincular este iPhone? Un envío no confirmado seguirá pendiente para reintentar después."))return;
- localStorage.removeItem(KEY);$("capture").hidden=true;$("setup").hidden=false;status("");
+ if(!confirm("¿Desvincular este iPhone? Los registros ya recibidos permanecerán en Cloudflare."))return;
+ localStorage.removeItem(KEY);showCapture(false);status("");
 });
 setType("Gasto");
-if(localStorage.getItem(KEY)){refresh().then(()=>restoreDraft());}
+if(localStorage.getItem(KEY))refresh().then(ok=>{if(ok)restoreDraft();});
