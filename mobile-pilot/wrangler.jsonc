@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "one-less-one-mobile-pilot",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "one-less-one-mobile-pilot",
+      "database_id": "REEMPLAZAR_CON_DATABASE_ID"
+    }
+  ],
+  "vars": {
+    "ALLOWED_DESKTOP_ORIGINS": "https://TU-DOMINIO-DE-ONE-LESS-ONE"
+  }
+}
