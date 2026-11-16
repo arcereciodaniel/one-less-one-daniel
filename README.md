@@ -42,3 +42,6 @@ No borrar la carpeta `lab/` ni el repositorio antiguo sin comprobar la equivalen
 - La operación **Respaldar** registra la fecha de solicitud localmente, pero la aplicación no puede garantizar que el archivo se haya guardado externamente. Confirmá su presencia en Descargas.
 - La integración de Cloudflare se limita a Daniel y no se muestra en Lab.
 - La publicación web con pruebas previas requiere elegir **GitHub Actions** en Settings → Pages → Build and deployment → Source, cuando el flujo de Pages verificado se encuentre configurado.
+
+
+Referencia de activación de Pages V10.3: [publicación verificada](docs/pages-v10-3.md).

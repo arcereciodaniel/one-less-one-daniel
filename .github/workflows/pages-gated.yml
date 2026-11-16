@@ -1,0 +1,74 @@
+name: Publicar One Less One web con pruebas
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: one-less-one-web-pages
+  cancel-in-progress: false
+jobs:
+  validar:
+    name: Validar finanzas, aislamiento, seguridad y piloto
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar dependencias
+        run: npm install jsdom@26 --no-save --no-package-lock
+      - name: Comprobar Lab generado desde Daniel
+        run: node scripts/build-lab.cjs --check
+      - name: Probar metas y presupuestos
+        run: |
+          node tests/metas-render.test.cjs
+          node tests/quincenas-metas-presupuesto.test.cjs
+      - name: Probar movimientos, formularios y deudas
+        run: |
+          node tests/movimientos-integrados.test.cjs
+          node tests/formularios-v8.test.cjs
+          node tests/tipo-cambio-deudas-v9.test.cjs
+      - name: Probar movil y protecciones V10.3
+        run: |
+          node tests/mobile-pilot-v10.test.cjs
+          node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs
+          node --test mobile-pilot/tests/*.test.mjs
+      - name: Construir el sitio publico sin codigo interno
+        run: |
+          mkdir -p _site/lab _site/mobile-pilot
+          cp index.html site.webmanifest index-lab.html _site/
+          cp lab/index.html lab/site.webmanifest _site/lab/
+          cp mobile-pilot/desktop.js mobile-pilot/desktop.css _site/mobile-pilot/
+          touch _site/.nojekyll
+      - name: Guardar artefacto verificado
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-less-one-validated-site
+          path: _site
+          if-no-files-found: error
+          retention-days: 7
+  publicar:
+    name: Publicar solo con pruebas satisfactorias
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: one-less-one-validated-site
+          path: _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publicar paginas verificadas
+        id: deployment
+        uses: actions/deploy-pages@v4
