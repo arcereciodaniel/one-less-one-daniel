@@ -1,6 +1,8 @@
 "use strict";
 /* One Less One Mobile Pilot — optional, scoped to this browser's private STORAGE_KEY. */
 (function(){
+  // El piloto móvil de Cloudflare pertenece únicamente al perfil Daniel.
+  if(STORAGE_KEY!=="daniel_finanzas_local_v1")return;
   const PREFS_KEY=STORAGE_KEY+"_iphone_pilot_v1";
   const $=id=>document.getElementById(id);
   const status=(message,tone="")=>{const el=$("oneMobileStatus");if(el){el.textContent=message;el.dataset.tone=tone;}};

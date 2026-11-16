@@ -1441,6 +1441,10 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-cobro-advanced-grid #scStatus[hidden],.one-cobro-advanced-grid #scReminderField[hidden]{display:none!important}
 @media(max-width:520px){.one-cobro-advanced-grid{grid-template-columns:1fr}.one-cobro-advanced-grid>.field{grid-column:1/-1}}
 .one-saving-category-label{display:block;font-size:.69rem;color:var(--muted);margin-top:3px}
+.one-storage-guard-banner{display:flex;align-items:center;gap:14px;justify-content:space-between;margin:10px 16px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);position:sticky;top:8px;z-index:80;box-shadow:0 6px 16px #0002}
+.one-storage-guard-banner[hidden]{display:none!important}
+.one-storage-guard-banner button{border:1px solid var(--border);background:var(--panel-2,var(--panel));color:inherit;padding:8px 11px;border-radius:8px;cursor:pointer}
+@media(max-width:600px){.one-storage-guard-banner{flex-direction:column;align-items:stretch}}
 </style>
 <link rel="stylesheet" href="mobile-pilot/desktop.css">
 </head>
@@ -1450,7 +1454,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v8.4.0</small>
+      <small class="brand-version">v10.3.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1478,6 +1482,10 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
     </div>
   </div>
 </header>
+<div class="one-storage-guard-banner" id="oneStorageGuardBanner" role="alert" hidden>
+  <span id="oneStorageGuardMessage">Cambios externos detectados. El guardado está protegido.</span>
+  <button type="button" id="oneStorageReload">Recargar datos actuales</button>
+</div>
 <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Ocultar menú lateral" title="Ocultar menú lateral">«</button>
 
 <main>
@@ -1908,7 +1916,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v8.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.3.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2220,6 +2228,8 @@ const ONE_DEFAULT_PAY_DAYS={first:14,second:28};
 "use strict";
 const STORAGE_KEY = "daniel_finanzas_local_v1";
 const INTEGRITY_SNAPSHOT_KEY=STORAGE_KEY+"_pre_integrity_fix_v813";
+let oneStorageSnapshot=null;
+let oneStorageConflict=false;
 var storageReadError=false,storageHasSavedData=false;
 const UI_STORAGE_KEY = "daniel_finanzas_ui_v1";
 const RECEIVABLE_CLEAN_START_KEY = "rastro_receivables_clean_start_v57";
@@ -2826,15 +2836,65 @@ function oneBackupBeforeReplace(snapshotKey,prefix){
   }
   return previous;
 }
+// V10.3: bloqueo conservador ante conflictos de escritura entre pestañas.
+function oneStorageGuardWarn(message){
+ const banner=document.getElementById("oneStorageGuardBanner");
+ const text=document.getElementById("oneStorageGuardMessage");
+ if(text)text.textContent=message;
+ if(banner)banner.hidden=false;
+}
+function oneStorageAssertCurrent(){
+ if(storageReadError){
+  const message="No se pudo leer el historial. No se permite sobrescribirlo: restaurá un respaldo JSON.";
+  oneStorageGuardWarn(message);throw Error(message);
+ }
+ let latest;
+ try{latest=localStorage.getItem(STORAGE_KEY)}
+ catch(error){oneStorageGuardWarn("No se pudo acceder al almacenamiento. Conservá tus datos y revisá el navegador.");throw error}
+ if(oneStorageConflict||latest!==oneStorageSnapshot){
+  oneStorageConflict=true;
+  const message="Los datos cambiaron en otra pestaña. Esta pestaña no guardará para proteger el historial. Recargá para ver los datos actuales.";
+  oneStorageGuardWarn(message);throw Error(message);
+ }
+}
+function oneStoragePersist(serialized){
+ oneStorageAssertCurrent();
+ try{
+  localStorage.setItem(STORAGE_KEY,serialized);
+  if(localStorage.getItem(STORAGE_KEY)!==serialized)throw Error("No se pudo verificar el guardado local.");
+  oneStorageSnapshot=serialized;
+  return true;
+ }catch(error){
+  oneStorageGuardWarn("No se pudo guardar o verificar el registro. No cerrés esta pestaña; revisá el almacenamiento y recuperá un respaldo si es necesario.");
+  throw error;
+ }
+}
+function oneStorageGuardInit(){
+ const verify=()=>{
+  if(oneStorageConflict)return;
+  try{
+   if(localStorage.getItem(STORAGE_KEY)!==oneStorageSnapshot){
+    oneStorageConflict=true;
+    oneStorageGuardWarn("Se detectó un cambio financiero en otra pestaña. Esta vista quedó protegida contra sobrescrituras. Recargá los datos actuales.");
+   }
+  }catch{oneStorageGuardWarn("No se puede comprobar el almacenamiento local en este momento.")}
+ };
+ window.addEventListener("storage",event=>{
+  if(event.key===STORAGE_KEY||event.key===null)verify();
+ });
+ window.addEventListener("focus",verify);
+ window.addEventListener("pageshow",verify);
+ document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verify()});
+ document.getElementById("oneStorageReload")?.addEventListener("click",()=>location.reload());
+ const last=localStorage.getItem(STORAGE_KEY+"_last_backup_requested");
+ const btn=document.getElementById("exportBtn");
+ if(btn&&last)btn.title="Guardar respaldo JSON · último respaldo solicitado: "+last;
+}
 function restoreSafely(raw){
   const prepared=restorePrepare(raw),serialized=JSON.stringify(prepared);
-  const previous=oneBackupBeforeReplace(RESTORE_SAFETY_KEY,"respaldo-previo-restauracion");
-  localStorage.setItem(STORAGE_KEY,serialized);
-  if(localStorage.getItem(STORAGE_KEY)!==serialized){
-    try{if(previous!==null)localStorage.setItem(STORAGE_KEY,previous);else localStorage.removeItem(STORAGE_KEY)}catch(e){}
-    throw Error("No se pudo verificar la restauración. Revisá la copia de seguridad.");
-  }
-  return true;
+  oneStorageAssertCurrent();
+  oneBackupBeforeReplace(RESTORE_SAFETY_KEY,"respaldo-previo-restauracion");
+  return oneStoragePersist(serialized);
 }
 function load(){
   try{
@@ -2845,7 +2905,9 @@ function load(){
       try{if(localStorage.getItem(INTEGRITY_SNAPSHOT_KEY)===null)localStorage.setItem(INTEGRITY_SNAPSHOT_KEY,saved)}
       catch(e){console.warn("No se pudo crear copia preventiva del historial",e)}
     }
-    return migrateData(saved!==null?JSON.parse(saved):clone(initialData));
+    const result=migrateData(saved!==null?JSON.parse(saved):clone(initialData));
+    oneStorageSnapshot=saved;
+    return result;
   }catch(e){
     storageReadError=true;
     console.error("Error al leer datos locales; se bloquea el guardado.",e);
@@ -2859,9 +2921,9 @@ function initDataIntegrityNotice(){
   else if(!storageHasSavedData){note.hidden=false;note.textContent="No se encontró historial guardado en este navegador y dirección. Si ya utilizabas la aplicación, comprobá la dirección original o restaurá tu respaldo; los datos iniciales no son tu historial.";}
 }
 function save(){
-  if(storageReadError){alert("No se puede guardar: no se pudo leer el historial. Restaurá un respaldo antes de continuar.");return}
+  oneStorageAssertCurrent();
   data.version=6.2;data.currencySchemaVersion=1;data.categorySchemaVersion=1;data.incomeSchemaVersion=1;
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  return oneStoragePersist(JSON.stringify(data));
 }
 function num(v){return Number(v)||0}
 function normalizeCurrency(v){return String(v||"").toUpperCase()==="USD"?"USD":"CRC"}
@@ -3519,11 +3581,11 @@ function renderReconciliationStatus(){
   const latestCRC=reconciliationAmountCRC(latest),diff=latest.calculatedBefore===null?null:latestCRC-num(latest.calculatedBefore);
   const recent=[...(data.reconciliations||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,3);
   box.innerHTML=`<div class="reconcile-row">
-    <div><strong>Último saldo operativo conciliado: ${money(latestCRC)}</strong><div class="muted">${dateLabel(latest.date)}${latest.note?` · ${latest.note}`:""} · saldo actual después de movimientos posteriores: ${money(current)}</div></div>
+    <div><strong>Último saldo operativo conciliado: ${money(latestCRC)}</strong><div class="muted">${dateLabel(latest.date)}${latest.note?` · ${safe(latest.note)}`:""} · saldo actual después de movimientos posteriores: ${money(current)}</div></div>
     ${diff===null?"":`<div class="delta ${diff>=0?"positive":"negative"}">Ajuste ${diff>=0?"+":""}${money(diff)}</div>`}
   </div>
   <div class="table-wrap" style="margin-top:10px"><table style="min-width:650px"><thead><tr><th>Fecha</th><th>Saldo real</th><th>Ajuste</th><th>Nota</th><th></th></tr></thead><tbody>
-  ${recent.map(r=>`<tr><td>${dateLabel(r.date)}</td><td class="num">${money(reconciliationAmountCRC(r))}${originalHint(r.amount,r.currency)}</td><td class="num">${r.calculatedBefore===null?"—":money(reconciliationAmountCRC(r)-num(r.calculatedBefore))}</td><td>${r.note||""}</td><td><button class="btn danger small" data-delete-reconcile="${r.id}">Eliminar</button></td></tr>`).join("")}
+  ${recent.map(r=>`<tr><td>${dateLabel(r.date)}</td><td class="num">${money(reconciliationAmountCRC(r))}${originalHint(r.amount,r.currency)}</td><td class="num">${r.calculatedBefore===null?"—":money(reconciliationAmountCRC(r)-num(r.calculatedBefore))}</td><td>${safe(r.note||"")}</td><td><button class="btn danger small" data-delete-reconcile="${safe(r.id)}">Eliminar</button></td></tr>`).join("")}
   </tbody></table></div>`;
 }
 function openReconcile(){
@@ -3866,7 +3928,7 @@ function renderMovements(){
   const rows=selectedMovements(level,value).filter(m=>!type||m.type===type).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("movementCount").textContent=`${rows.length} movimientos`;
   document.getElementById("movementTable").innerHTML=`<thead><tr><th>Fecha</th><th>Mes presupuestario</th><th>Quincena</th><th>Tipo</th><th>Categoría</th><th>Deuda</th><th>Cuenta</th><th>Descripción</th><th>Monto</th><th></th></tr></thead><tbody>${
-    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${movementDebtName(m)}</td><td>${m.account||""}</td><td>${m.description||""}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${m.id}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
+    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
   }</tbody>`;
 }
 function renderDebts(){
@@ -3884,13 +3946,13 @@ function renderDebts(){
       const status=archivedDebt?`<span class="pill">Pagada / archivada</span>`:`<span class="pill">Activa</span>`;
       const closure=archivedDebt?`${d.closedAt?dateLabel(d.closedAt):"Fecha no indicada"}${d.closedReason?` · ${d.closedReason}`:""}`:(d.goal||"");
       const actions=archivedDebt
-        ? `<button class="btn secondary small" data-reactivate-debt="${d.id}">Reactivar</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button>`
-        : `<button class="btn small" data-pay-debt="${d.id}">Registrar pago</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button><button class="btn secondary small" data-archive-debt="${d.id}">Cerrar / archivar</button>`;
+        ? `<button class="btn secondary small" data-reactivate-debt="${safe(d.id)}">Reactivar</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button>`
+        : `<button class="btn small" data-pay-debt="${safe(d.id)}">Registrar pago</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button><button class="btn secondary small" data-archive-debt="${safe(d.id)}">Cerrar / archivar</button>`;
       return `<tr class="${archivedDebt?"archived-row":""}">
-      <td>${status}</td><td class="center">${d.priority}</td><td><strong>${d.name}</strong><br><small class="muted">${d.notes||""}</small></td><td>${d.type}</td>
+      <td>${status}</td><td class="center">${safe(d.priority)}</td><td><strong>${safe(d.name)}</strong><br><small class="muted">${safe(d.notes||"")}</small></td><td>${safe(d.type)}</td>
       <td class="num">${money(debtEquivalent(d))}<span class="original-money">Base: ${d.usd?originalMoney(d.usd,"USD"):""}${d.usd&&d.crc?" + ":""}${d.crc?originalMoney(d.crc,"CRC"):""}</span></td><td class="num">${money(debtPayments(d))}</td><td class="num">${money(debtOutstanding(d))}</td>
       <td>${d.limit?`<div class="progress"><span style="width:${Math.min(100,debtUtil(d)*100)}%"></span></div><small>${(debtUtil(d)*100).toFixed(1)}%</small>`:"—"}</td>
-      <td class="num">${money(debtMinimumCRC(d))}${originalHint(d.minimum,d.minimumCurrency)}</td><td class="center">${d.payDay||""}</td><td>${closure||""}</td>
+      <td class="num">${money(debtMinimumCRC(d))}${originalHint(d.minimum,d.minimumCurrency)}</td><td class="center">${d.payDay||""}</td><td>${safe(closure||"")}</td>
       <td><div class="actions">${actions}</div></td>
     </tr>`}).join(""):`<tr><td colspan="12" class="empty">No hay deudas en esta vista.</td></tr>`
   }</tbody>`;
@@ -4334,10 +4396,10 @@ function renderSharedCharges(){
   const ungroupedCard=ungrouped.length?`<div class="card receivable-group ungrouped-card"><div class="receivable-group-head"><div><div class="receivable-group-title">Sin agrupar</div><div class="receivable-group-meta">Cobros rápidos todavía sin grupo. Los pendientes anteriores también aparecen aquí hasta pagarse.</div></div><div class="actions"><button class="btn small" data-select-all-ungrouped>Agrupar varios</button><button class="btn secondary small" data-add-shared-to-group="">Agregar cobro</button></div></div><div class="receivable-group-stats"><span>Pendiente: <strong>${money(ungroupedPending)}</strong></span>${ungroupedCarry?`<span>Arrastre: <strong>${money(ungroupedCarry)}</strong></span>`:""}<span>Cargos visibles: <strong>${ungrouped.length}</strong></span></div>${receivableRowsTable(ungrouped,"__ungrouped__",month)}</div>`:"";
   const groupCards=groups.map(g=>{
     const rows=receivableDisplayRows(g.id,month),current=groupReceivableRows(g.id,month),gCurrent=current.reduce((s,c)=>s+receivableAmountCRC(c),0),gPending=rows.reduce((s,c)=>s+cobroRemainingCRC(c),0),gCarry=rows.filter(c=>isReceivableCarryover(c,month)).reduce((s,c)=>s+receivableAmountCRC(c),0),gPaid=current.reduce((s,c)=>s+cobroReceivedCRC(c),0),recCount=groupRecurringCount(g.id,month),status=sharedGroupStatus(g);
-    const lifecycle=status==="active"?`<button class="btn secondary small" data-archive-shared-group="${g.id}">Archivar</button>`:`<button class="btn secondary small" data-reactivate-shared-group="${g.id}">Reactivar</button>`;
-    const add=status==="active"?`<button class="btn small" data-add-shared-to-group="${g.id}">Agregar cobro</button>`:"";
-    const archivedMeta=status==="archived"?`<span class="status-badge archived">Archivado</span>${g.closedReason?` · ${g.closedReason}`:""}${g.closedAt?` · ${dateLabel(g.closedAt)}`:""}`:"";
-    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${g.name}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${g.person}`:"Sin persona principal"}${g.notes?` · ${g.notes}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${g.id}">PDF</button><button class="btn secondary small" data-edit-shared-group="${g.id}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${g.id}">Eliminar</button></div></div><div class="receivable-group-stats"><span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${receivableRowsTable(rows,g.id,month)}</div>`;
+    const lifecycle=status==="active"?`<button class="btn secondary small" data-archive-shared-group="${safe(g.id)}">Archivar</button>`:`<button class="btn secondary small" data-reactivate-shared-group="${safe(g.id)}">Reactivar</button>`;
+    const add=status==="active"?`<button class="btn small" data-add-shared-to-group="${safe(g.id)}">Agregar cobro</button>`:"";
+    const archivedMeta=status==="archived"?`<span class="status-badge archived">Archivado</span>${g.closedReason?` · ${safe(g.closedReason)}`:""}${g.closedAt?` · ${dateLabel(g.closedAt)}`:""}`:"";
+    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${safe(g.name)}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${safe(g.person)}`:"Sin persona principal"}${g.notes?` · ${safe(g.notes)}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${safe(g.id)}">PDF</button><button class="btn secondary small" data-edit-shared-group="${safe(g.id)}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${safe(g.id)}">Eliminar</button></div></div><div class="receivable-group-stats"><span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${receivableRowsTable(rows,g.id,month)}</div>`;
   }).join("");
   if(!ungroupedCard&&!groupCards){
     const msg=view==="archived"?"No tienes grupos archivados.":"Todavía no tienes cobros ni grupos. Puedes registrar un cobro suelto o crear un grupo primero.";
@@ -5104,7 +5166,7 @@ function renderCategories(){
     ["Categorías activas",active.length],["En presupuesto",budgetable],["Ingresos",active.filter(c=>c.type==="Ingreso").length],["Gastos / deuda",active.filter(c=>["Gasto","Pago deuda"].includes(c.type)).length]
   ].map(([l,v])=>`<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
   document.getElementById("categoryCount").textContent=`${rows.length} visibles · ${archived.length} archivadas`;
-  document.getElementById("categoryTable").innerHTML=`<thead><tr><th>Estado</th><th>Nombre</th><th>Tipo financiero</th><th>Grupo</th><th>Presupuesto</th><th>Planificación</th><th>Uso histórico</th><th>Acciones</th></tr></thead><tbody>${rows.length?rows.map(c=>`<tr><td><span class="status-badge ${categoryIsActive(c)?"active":"archived"}">${categoryIsActive(c)?"Activa":"Archivada"}</span></td><td><strong class="${categoryIsActive(c)?"":"category-name-archived"}">${safe(c.name)}</strong></td><td><span class="category-type ${categoryClass(c.type)}">${categoryTypeLabel(c.type)}</span></td><td>${safe(c.group||"—")}</td><td>${c.budgetable!==false&&c.type!=="Movimiento patrimonial"?"Sí":"No"}</td><td>${c.type==="Ingreso"?incomePlanSummary(c):"—"}</td><td>${categoryUsageCount(c)} mov. · ${categoryBudgetUsage(c)} presup.</td><td><div class="actions"><button class="btn secondary small" data-edit-category="${c.id}">Editar</button>${categoryIsActive(c)?`<button class="btn secondary small" data-archive-category="${c.id}">Archivar</button>`:`<button class="btn small" data-reactivate-category="${c.id}">Reactivar</button>`}</div></td></tr>`).join(""):`<tr><td colspan="8" class="empty">No hay categorías en esta vista.</td></tr>`}</tbody>`;
+  document.getElementById("categoryTable").innerHTML=`<thead><tr><th>Estado</th><th>Nombre</th><th>Tipo financiero</th><th>Grupo</th><th>Presupuesto</th><th>Planificación</th><th>Uso histórico</th><th>Acciones</th></tr></thead><tbody>${rows.length?rows.map(c=>`<tr><td><span class="status-badge ${categoryIsActive(c)?"active":"archived"}">${categoryIsActive(c)?"Activa":"Archivada"}</span></td><td><strong class="${categoryIsActive(c)?"":"category-name-archived"}">${safe(c.name)}</strong></td><td><span class="category-type ${categoryClass(c.type)}">${categoryTypeLabel(c.type)}</span></td><td>${safe(c.group||"—")}</td><td>${c.budgetable!==false&&c.type!=="Movimiento patrimonial"?"Sí":"No"}</td><td>${c.type==="Ingreso"?incomePlanSummary(c):"—"}</td><td>${categoryUsageCount(c)} mov. · ${categoryBudgetUsage(c)} presup.</td><td><div class="actions"><button class="btn secondary small" data-edit-category="${safe(c.id)}">Editar</button>${categoryIsActive(c)?`<button class="btn secondary small" data-archive-category="${safe(c.id)}">Archivar</button>`:`<button class="btn small" data-reactivate-category="${safe(c.id)}">Reactivar</button>`}</div></td></tr>`).join(""):`<tr><td colspan="8" class="empty">No hay categorías en esta vista.</td></tr>`}</tbody>`;
 }
 function updateIncomeConfigVisibility(){
   const isIncome=document.getElementById("cType")?.value==="Ingreso",panel=document.getElementById("incomeConfigFields");if(panel)panel.hidden=!isIncome;if(!isIncome)return;
@@ -5562,6 +5624,7 @@ function bind(){
   document.getElementById("exportBtn").addEventListener("click",()=>{
     if(storageReadError)return alert("No se puede crear un respaldo porque no se pudo leer el historial local original.");
     download("respaldo-finanzas-"+todayIso()+".json",JSON.stringify(data,null,2),"application/json");
+    try{localStorage.setItem(STORAGE_KEY+"_last_backup_requested",todayIso())}catch{}
   });
   const restoreDialog=document.getElementById("restorePreviewDialog");
   let pendingRestore=null;
@@ -5603,7 +5666,7 @@ function bind(){
       const fresh=migrateData(clone(initialData));
       fresh.version=6.2;fresh.currencySchemaVersion=1;fresh.categorySchemaVersion=1;fresh.incomeSchemaVersion=1;
       oneBackupBeforeReplace(RESET_SAFETY_KEY,"respaldo-previo-restablecimiento");
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(fresh));
+      oneStoragePersist(JSON.stringify(fresh));
       data=fresh;
       syncQuarterSelectors();refreshDebtSelect();refreshReserveSelect();refreshSharedGroupSelects();refreshMovementCategorySelect();
       navigate("dashboard");updateCurrencyHeader();
@@ -6607,7 +6670,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="mobile-pilot/desktop.js"></script>
 </body>

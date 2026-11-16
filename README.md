@@ -33,3 +33,12 @@ El manifest de Lab se genera desde el manifest principal. No se modifica el Work
 4. Publicar en `main`. GitHub Pages publica tanto la raíz como la subcarpeta `lab/`, y las pruebas automáticas rechazan desajustes entre versiones.
 
 No borrar la carpeta `lab/` ni el repositorio antiguo sin comprobar la equivalencia de datos desde el navegador usado para Lab. Si alguna vez se decide eliminar el repositorio antiguo, su dirección GitHub Pages dejará de funcionar, salvo que se configure un sitio/redireccionamiento alternativo.
+
+## Seguridad y estabilidad V10.3
+
+- `index-lab.html` (Lab V7.1) ahora redirige a `lab/` y no puede escribir en el mismo historial con un esquema anterior.
+- Cada pestaña de Daniel y de Lab verifica su propia clave de datos antes de guardar. Si detecta cambios en otra pestaña o una falla de verificación, bloquea la escritura y presenta un aviso con opción de recargar. **Es una detección conservadora de conflictos, no una operación atómica de base de datos:** evitá editar simultáneamente en dos pestañas.
+- Restaurar y restablecer pasan por la misma comprobación, sin mezclar perfiles.
+- La operación **Respaldar** registra la fecha de solicitud localmente, pero la aplicación no puede garantizar que el archivo se haya guardado externamente. Confirmá su presencia en Descargas.
+- La integración de Cloudflare se limita a Daniel y no se muestra en Lab.
+- La publicación web con pruebas previas requiere elegir **GitHub Actions** en Settings → Pages → Build and deployment → Source, cuando el flujo de Pages verificado se encuentre configurado.
