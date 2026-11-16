@@ -5,7 +5,7 @@
 - Registra: **Gasto**, **Ingreso**, **Pago deuda**, **Cobro pendiente** y **Aporte a meta**.
 - El teléfono envía únicamente nuevos registros a una bandeja temporal D1; el historial financiero principal continúa en el navegador de One Less One.
 - Piloto **solo CRC**; USD, abonos recibidos en Cobros, gastos divididos y registro sin conexión se reservaron para una segunda fase.
-- **No hay publicación automática ni despliegue** sin iniciar sesión en una cuenta Cloudflare y configurar credenciales personales.
+- **Publicación automática disponible:** tras guardar las credenciales de CI en GitHub, los cambios del móvil en main pueden desplegarse automáticamente al Worker existente; el primer despliegue requiere la configuración personal de Cloudflare.
 - El repositorio público no debe contener secretos ni respaldos de finanzas personales.
 
 ## Preparar Cloudflare Workers + D1 (plan Free, sin tarjeta si la cuenta lo permite)
@@ -54,7 +54,7 @@ El `DESKTOP_SYNC_KEY` se almacena en el navegador local, **fuera del JSON de res
 
 1. Abrir en Safari la URL real del Worker desplegado (sin tokens en el enlace).
 2. Pegar **MOBILE_WRITE_KEY** en la pantalla «Conectar iPhone». El valor se almacena solamente en el navegador de ese iPhone.
-3. Seleccionar Gasto / Ingreso / Deuda / Cobro / Ahorro, monto CRC, categoría o destino, fecha y detalle opcional.
+3. Seleccionar Gasto / Ingreso / Cobro, monto CRC, categoría o persona, fecha y detalle opcional.
 4. Pulsar Registrar. Solo si Cloudflare confirma la recepción aparecerá «Recibido». Una conexión fallida permite **Reintentar** el mismo identificador sin duplicar.
 5. Volver a One Less One Daniel para sincronizar y verificar la incorporación.
 
@@ -120,3 +120,27 @@ El commit de GitHub NO actualiza automáticamente el Worker de Cloudflare. Si ya
 - Se aplica el mismo tratamiento a la fecha esperada de Cobro y se mantiene la acción Hoy.
 - No se cambia la API, la base D1, el identificador de reintento ni las claves existentes.
 - La implementación en GitHub no cambia automáticamente el Worker ya publicado. En la Mac configurada hay que actualizar los archivos public/index.html, public/style.css y public/app.js y ejecutar npm run deploy, sin reemplazar wrangler.jsonc.
+
+
+## Publicación automática en Cloudflare — activación única
+
+Ahora existe el workflow **Publicar One Less One Movil en Cloudflare** en GitHub Actions. Sus pruebas se ejecutan en cada cambio del código móvil de la rama main. Para que pueda publicar en tu Worker real, configurá los siguientes **tres secretos** en el repositorio Daniel (jamás en un archivo de código o en el chat):
+
+- CLOUDFLARE_API_TOKEN — un API token de Cloudflare con privilegios de despliegue, creado con la plantilla Edit Cloudflare Workers y limitado a tu cuenta/Worker.
+- CLOUDFLARE_ACCOUNT_ID — Account ID de la cuenta donde ya publicaste el Worker de Daniel.
+- CLOUDFLARE_D1_DATABASE_ID — el UUID de la misma base D1 existente llamada one-less-one-mobile-daniel.
+
+### Cómo encontrar los datos
+- Account ID: Cloudflare Dashboard → seleccioná tu cuenta → información de la cuenta o Workers & Pages.
+- Database ID: en la Mac, abrí el archivo local mobile-pilot/wrangler.jsonc, que ya contiene el database_id auténtico después de la configuración inicial; también podés verlo desde Cloudflare D1.
+- API token: Cloudflare Dashboard → API Tokens → Create Token → Edit Cloudflare Workers. Otorgá solo el alcance necesario. No utilicés la clave global de API.
+
+### Dónde guardarlos en GitHub
+Abrí el repositorio arcereciodaniel/one-less-one-daniel → Settings → Secrets and variables → Actions → New repository secret. Agregá los tres nombres indicados, uno a uno.
+
+### Primera ejecución y operaciones futuras
+Tras guardar los secretos, entrá en GitHub → Actions → Publicar One Less One Movil en Cloudflare → Run workflow → rama main. Cuando finalice en verde, el formulario de la URL workers.dev que ya usás habrá recibido los cambios. Las siguientes modificaciones en mobile-pilot/public, src, scripts o configuración se publicarán automáticamente al subirlas a main si pasan las pruebas.
+
+**Seguridad:** si falta uno de los tres secretos, se omite el despliegue y el Worker que ya funciona no se toca. El workflow genera su archivo wrangler.ci.jsonc temporal en el ejecutor de GitHub, no lo versiona, y no imprime el UUID. Las claves MOBILE_WRITE_KEY y DESKTOP_SYNC_KEY permanecen únicamente en los secretos del Worker existente y **NO** deben agregarse a GitHub. No se recrea D1, no se ejecuta schema.sql y no se modifican Lab ni Gloriana. El nombre del Worker y la dirección para los widgets y Atajos continúan iguales.
+
+**Atención:** la plantilla wrangler.jsonc de GitHub sigue teniendo un database_id de ejemplo, para evitar publicar el real. Si trabajás en tu Mac, conservá tu copia local con el ID correcto, aunque descargués nuevos archivos del repositorio.
