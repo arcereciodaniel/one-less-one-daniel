@@ -24,9 +24,11 @@ test("Daniel y Lab tienen claves distintas; no comparten registros locales", () 
     ["UI_PREFS_KEY", "rastro-ui-v6", "rastro_lab_v7_1_prefs_v1"]
   ];
   for (const [variable, danielKey, labKey] of identifiers) {
-    assert.match(daniel, new RegExp("const " + variable + "\\\\s*=\\\\s*[\\"']" + danielKey));
-    assert.match(lab, new RegExp("const " + variable + "\\\\s*=\\\\s*[\\"']" + labKey));
-    assert.doesNotMatch(lab, new RegExp("const " + variable + "\\\\s*=\\\\s*[\\"']" + danielKey));
+    assert(daniel.includes('const ' + variable + ' = "' + danielKey + '";') ||
+           daniel.includes('const ' + variable + '="' + danielKey + '";'));
+    assert(lab.includes('const ' + variable + ' = "' + labKey + '";') ||
+           lab.includes('const ' + variable + '="' + labKey + '";'));
+    assert(!lab.includes('const ' + variable + ' = "' + danielKey + '";'));
   }
   assert.match(lab, /ONE_DEFAULT_SHOW_COBROS=false/);
   assert.match(daniel, /ONE_DEFAULT_SHOW_COBROS=true/);
