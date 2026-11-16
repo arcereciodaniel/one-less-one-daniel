@@ -1,0 +1,26 @@
+name: Verificar Lab y Daniel unificados
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "site.webmanifest"
+      - "lab/**"
+      - "scripts/build-lab.cjs"
+      - "tests/lab-consolidation.test.cjs"
+      - ".github/workflows/lab-consolidation.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  comprobar-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Confirmar que Lab deriva del código Daniel
+        run: node scripts/build-lab.cjs --check
+      - name: Comprobar datos aislados y rutas
+        run: node --test tests/lab-consolidation.test.cjs
