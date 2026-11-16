@@ -84,7 +84,7 @@ El acceso inicia desde el estado bloqueado, pero iOS puede solicitar Face ID/des
   - Aporte: traslada liquidez hacia una meta, **sin** crear un gasto.
 - El escritorio guarda primero y confirma después; si la confirmación falla, reconocerá el ID ya importado en un reintento.
 - No se envían al servidor saldos bancarios, movimientos antiguos, archivos de respaldo ni configuraciones del presupuesto.
-- Cloudflare D1 sí almacena los importes y detalles de los registros móviles recibidos, incluidos los ya importados. Se debe definir una política de retención antes de pasar a producción. Es un piloto privado, no un producto terminado.
+- Cloudflare D1 sí almacena los importes y detalles de los registros móviles recibidos. Los ya importados se eliminan después de 30 días al ejecutar una sincronización posterior; los pendientes permanecen hasta que se importen. Es un piloto privado, no un producto terminado.
 
 ## Pruebas automatizadas
 \`\`\`bash
