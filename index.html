@@ -2886,7 +2886,8 @@ function oneStorageGuardInit(){
  window.addEventListener("pageshow",verify);
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verify()});
  document.getElementById("oneStorageReload")?.addEventListener("click",()=>location.reload());
- const last=localStorage.getItem(STORAGE_KEY+"_last_backup_requested");
+ let last="";
+ try{last=localStorage.getItem(STORAGE_KEY+"_last_backup_requested")||""}catch{}
  const btn=document.getElementById("exportBtn");
  if(btn&&last)btn.title="Guardar respaldo JSON · último respaldo solicitado: "+last;
 }
