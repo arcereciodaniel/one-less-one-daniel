@@ -38,6 +38,7 @@ jobs:
       - name: Probar movil y protecciones V10.3
         run: |
           node tests/mobile-pilot-v10.test.cjs
+          node --test tests/mobile-trust-v10-8.test.cjs
           node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs
           node --test mobile-pilot/tests/*.test.mjs
       - name: Construir el sitio publico sin codigo interno
