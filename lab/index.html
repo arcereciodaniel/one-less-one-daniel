@@ -1486,7 +1486,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.7.0 LAB</small>
+      <small class="brand-version">v10.8.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1949,7 +1949,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.7.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.8.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -4225,7 +4225,7 @@ function openSharedCharge(c=null,preferredGroupId="",options={}){
 
 
 /* V10.5 · Los cobros divididos son varios derechos de cobro, no gastos adicionales. */
-function oneCreateSplitFare(raw,{sourceId=""}={}){
+function oneCreateSplitFare(raw,{sourceId="",fxSnapshot=null}={}){
  const p=globalThis.OneSplitFare.normalize(raw);
  if(!restoreValidDate(p.date))throw Error("Fecha de gasto inválida.");
  if(p.dueDate&&!restoreValidDate(p.dueDate))throw Error("Fecha esperada inválida.");
@@ -4242,7 +4242,7 @@ function oneCreateSplitFare(raw,{sourceId=""}={}){
     totalShares:p.totalShares,mode:p.splitMode,date:p.date},
   ...(sourceId?{mobilePilotId:sourceId}:{})
  };
- const expenseId=id(),snapshot=currentFxSnapshot(),createdAt=new Date().toISOString();
+ const expenseId=id(),snapshot=fxSnapshot||currentFxSnapshot(),createdAt=new Date().toISOString();
  const charges=p.participants.map(row=>({
   id:id(),groupId:group.id,person:row.person,date:p.date,dueDate:p.dueDate,
   remindBeforeDays:p.dueDate?3:0,chargeMonth:monthKey(p.date),
