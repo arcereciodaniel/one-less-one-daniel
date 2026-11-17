@@ -739,15 +739,15 @@
       <div class="field"><label>Saldo base CRC</label><input id="dCrc" type="number" min="0" step="1" value="0"></div>
       <div class="field"><label>Conversión USD</label><input id="dFxPreview" readonly value="Usa TC venta diario"></div>
       <div class="field one-debt-field" data-debt-fields="card"><label>Límite de crédito</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
-      <div class="field one-debt-field" data-debt-fields="card loan installments"><label id="dMinimumLabel">Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
-      <div class="field one-debt-field" data-debt-fields="card loan installments family"><label>Día de pago</label><input id="dPayDay" inputmode="numeric" placeholder="Ej. 4, 20, 30"></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments family other"><label id="dMinimumLabel">Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments family other"><label>Día de pago</label><input id="dPayDay" inputmode="numeric" placeholder="Ej. 4, 20, 30"></div>
       <div class="field one-debt-field" data-debt-fields="card"><label>Fecha de corte (día)</label><input id="dCloseDay" type="number" min="1" max="31" step="1"></div>
-      <div class="field one-debt-field" data-debt-fields="card"><label>Pago de contado (opcional)</label><input id="dFullPayment" type="number" min="0" step=".01"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Pago de contado (opcional)</label><div class="money-input"><input id="dFullPayment" type="number" min="0" step=".01"><select id="dFullPaymentCurrency" aria-label="Moneda del pago de contado"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
       <div class="field one-debt-field" data-debt-fields="loan installments family"><label>Entidad o persona</label><input id="dLender" maxlength="120"></div>
       <div class="field one-debt-field" data-debt-fields="loan installments"><label>Fecha de finalización (opcional)</label><input id="dEndDate" type="date"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas totales</label><input id="dInstallmentsTotal" type="number" min="1" max="600" step="1"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas restantes</label><input id="dInstallmentsLeft" type="number" min="0" max="600" step="1"></div>
-      <div class="field one-debt-field" data-debt-fields="card loan installments"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments family other"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
       <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
       <div class="field wide"><label>Meta</label><input id="dGoal"></div>
       <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>
