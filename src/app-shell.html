@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.0.0</small>
+      <small class="brand-version">v11.1.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -41,6 +41,7 @@
         <button type="button" data-display-currency="USD">$ USD</button>
       </div>
       <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
+      <button id="oneSettingsBtn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">⚙</button>
       <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
       <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
       <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
@@ -488,7 +489,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.1.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -538,6 +539,44 @@
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
+</dialog>
+
+<dialog id="oneSettingsDialog" class="one-settings-dialog" aria-labelledby="oneSettingsTitle">
+ <div class="dialog-body">
+  <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+  <h2 id="oneSettingsTitle">Configuración</h2>
+  <p class="muted">Personalizá One Less One. Tus registros siguen almacenados en este navegador.</p>
+  <div class="one-settings-group">
+   <h3>Estructura financiera</h3>
+   <button type="button" id="oneSettingsCategories" class="one-settings-action"><span><strong>Categorías</strong><small>Ingresos, gastos y grupos personalizados</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="oneSettingsDebtTypes" class="one-settings-action"><span><strong>Tipos de deuda</strong><small>Tarjetas, préstamos, cuotas y tipos propios</small></span><span aria-hidden="true">›</span></button>
+  </div>
+  <div class="one-settings-group">
+   <h3>Moneda y calendario</h3>
+   <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small>Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <div id="oneSettingsPaydayMount"></div>
+  </div>
+  <div class="one-settings-group">
+   <h3>Datos y seguridad</h3>
+   <p class="muted">Los archivos de respaldo son locales. Comprobá su descarga antes de restaurar o restablecer datos.</p>
+   <div class="one-settings-buttons"><button class="btn secondary" type="button" id="oneSettingsBackup">Respaldar</button><button class="btn secondary" type="button" id="oneSettingsRestore">Restaurar</button></div>
+   <div id="oneSettingsMaintenanceMount"></div>
+  </div>
+ </div>
+</dialog>
+<dialog id="oneDebtTypesDialog" class="one-settings-dialog" aria-labelledby="oneDebtTypesTitle">
+ <div class="dialog-body">
+  <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+  <h2 id="oneDebtTypesTitle">Tipos de deuda</h2>
+  <p class="muted">El nombre es personalizable. La estructura define el formulario y los cálculos; las deudas existentes conservan su historial.</p>
+  <form id="oneDebtTypeForm" class="form-grid">
+   <input type="hidden" id="oneDebtTypeId">
+   <div class="field"><label for="oneDebtTypeName">Nombre</label><input id="oneDebtTypeName" maxlength="70" required placeholder="Ej. Préstamo BAC"></div>
+   <div class="field"><label for="oneDebtTypeShape">Estructura</label><select id="oneDebtTypeShape"><option value="card">Tarjeta de crédito</option><option value="loan">Préstamo</option><option value="installments">Compra en cuotas</option><option value="family">Préstamo familiar</option><option value="other">Otra deuda</option></select></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneDebtTypeCancel">Nuevo tipo</button><button type="submit" class="btn">Guardar tipo</button></div>
+  </form>
+  <div id="oneDebtTypesList" class="one-debt-type-list" aria-live="polite"></div>
+ </div>
 </dialog>
 <dialog id="categoryManagerDialog" class="rastro-category-manager">
   <div class="rastro-category-manager-header"><div><strong>Tu estructura financiera</strong><p>Administrá tus categorías sin abandonar el presupuesto o los movimientos.</p></div><button type="button" class="v7-icon-button" id="closeCategoryManager" aria-label="Cerrar">×</button></div>
@@ -693,16 +732,22 @@
     <h2 id="debtDialogTitle">Agregar deuda</h2>
     <form id="debtForm" class="form-grid">
       <input type="hidden" id="dId">
-      <div class="field"><label>Tipo</label><select id="dType"><option>Tarjeta</option><option>Préstamo</option><option>Familiar</option><option>Otra</option></select></div>
+      <div class="field wide"><label for="dType">Tipo de deuda</label><select id="dType" required></select><small class="muted">Administrá tus tipos desde Configuración.</small></div>
       <div class="field"><label>Nombre / ID</label><input id="dName" required></div>
       <div class="field"><label>Estado</label><select id="dStatus"><option value="active">Activa</option><option value="archived">Pagada / archivada</option></select></div>
       <div class="field"><label>Saldo base USD</label><input id="dUsd" type="number" min="0" step=".01" value="0"></div>
       <div class="field"><label>Saldo base CRC</label><input id="dCrc" type="number" min="0" step="1" value="0"></div>
       <div class="field"><label>Conversión USD</label><input id="dFxPreview" readonly value="Usa TC venta diario"></div>
-      <div class="field"><label>Límite</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
-      <div class="field"><label>Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
-      <div class="field"><label>Día de pago</label><input id="dPayDay" placeholder="Ej. 4, 20, 30"></div>
-      <div class="field"><label>Tasa</label><input id="dRate"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Límite de crédito</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments"><label id="dMinimumLabel">Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments family"><label>Día de pago</label><input id="dPayDay" inputmode="numeric" placeholder="Ej. 4, 20, 30"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Fecha de corte (día)</label><input id="dCloseDay" type="number" min="1" max="31" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Pago de contado (opcional)</label><input id="dFullPayment" type="number" min="0" step=".01"></div>
+      <div class="field one-debt-field" data-debt-fields="loan installments family"><label>Entidad o persona</label><input id="dLender" maxlength="120"></div>
+      <div class="field one-debt-field" data-debt-fields="loan installments"><label>Fecha de finalización (opcional)</label><input id="dEndDate" type="date"></div>
+      <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas totales</label><input id="dInstallmentsTotal" type="number" min="1" max="600" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas restantes</label><input id="dInstallmentsLeft" type="number" min="0" max="600" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
       <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
       <div class="field wide"><label>Meta</label><input id="dGoal"></div>
       <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>
