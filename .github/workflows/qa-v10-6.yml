@@ -1,7 +1,7 @@
-name: QA V10.6 Grupos de gastos compartidos
+name: QA V10.6–V10.7 Móvil y finanzas
 on:
   push:
-    branches: [qa/v10-6-shared-trips]
+    branches: [qa/v10-6-shared-trips, qa/v10-7-mobile-crc-usd]
   workflow_dispatch:
 permissions:
   contents: read
