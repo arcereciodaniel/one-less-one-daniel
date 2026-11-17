@@ -191,6 +191,21 @@ function movement(){
  }
  return m;
 }
+function showMobileReceipt(entry){
+ const dialog=$("entrySuccessDialog");if(!dialog)return;
+ const label=entry.type==="Cobro dividido"?"Cobros compartidos":entry.type;
+ const symbol=entry.currency==="USD"?"$":"₡";
+ $("entrySuccessTitle").textContent="Registro recibido";
+ $("entrySuccessDescription").textContent=label+" · "+symbol+Number(entry.amount).toLocaleString(entry.currency==="USD"?"en-US":"es-CR",{maximumFractionDigits:2})+
+  (entry.description?" · "+entry.description:"")+
+  "\nEstá en la bandeja móvil; se incorporará a Daniel cuando sincronice. Todavía no se ha contabilizado.";
+ if(typeof dialog.showModal==="function")dialog.showModal();
+ else dialog.setAttribute("open","");
+}
+function closeMobileReceipt(){
+ const dialog=$("entrySuccessDialog");if(!dialog)return;
+ if(typeof dialog.close==="function")dialog.close();else dialog.removeAttribute("open");
+}
 async function send(event){
  event.preventDefault();if(submitting)return;
  if(!pending){
@@ -202,8 +217,10 @@ async function send(event){
  try{
   const result=await api("inbox",{method:"POST",data:pending});
   if(result.id!==pending.id||result.received!==true)throw Error("No se confirmó la recepción");
+  const received=pending.movement;
   localStorage.removeItem(DRAFT);pending=null;$("entryForm").reset();$("splitRows").replaceChildren();$("date").value=today();
   setType("Gasto");syncDateDisplays();freeze(false);status("Recibido ✓ Se incorporará cuando One Less One Daniel sincronice.","ok");
+  showMobileReceipt(received);
  }catch(e){status("No confirmado: "+e.message+". Reintentá sin crear otro movimiento.","error");}
  finally{submitting=false;$("submit").disabled=false;freeze(!!pending);}
 }
@@ -215,6 +232,8 @@ document.addEventListener("visibilitychange",()=>{
 showCapture(!!localStorage.getItem(KEY));
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();const key=$("mobileKey").value.trim();if(key.length<32)return;localStorage.setItem(KEY,key);if(await refresh())restoreDraft();});
 $("entryForm").addEventListener("submit",send);
+$("entrySuccessClose").addEventListener("click",closeMobileReceipt);
+$("entrySuccessDialog").addEventListener("click",event=>{if(event.target===$("entrySuccessDialog"))closeMobileReceipt()});
 for(const b of document.querySelectorAll("[data-type]"))b.addEventListener("click",()=>{if(!pending)setType(b.dataset.type);});
 $("todayButton").addEventListener("click",()=>{$("date").value=today();syncDateDisplays();});
 $("date").addEventListener("input",syncDateDisplays);
