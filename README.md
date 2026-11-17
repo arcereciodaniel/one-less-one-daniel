@@ -72,3 +72,11 @@ La pestaña **Grupos** incluye un resumen **por persona** con cobros de todos lo
 Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente, seleccionar participantes habituales y registrar el reparto o un cobro individual. Solo se sincronizan el ID/nombre del grupo y nombres de personas; no se envían balances, importes anteriores, notas ni respaldos. Se requiere haber sincronizado Daniel para actualizar el catálogo antes de reutilizar grupos en el teléfono.
 
 **Integridad:** una cena nueva no sobrescribe el hotel ni recrea el grupo; los reintentos móviles no duplican cargos. Ningún reparto agrega otro gasto o ingreso en Movimientos. Los abonos posteriores se registran individualmente como antes. Gloriana queda sin cambios.
+
+## V10.7 — Cobros individuales desde iPhone y CRC/USD en las tres acciones
+
+**Gasto, Ingreso y Cobro** aceptan CRC o USD desde el formulario móvil. Recibir $120 se captura como 120 USD, sin conversión manual. Daniel conserva importe y moneda originales; al importar aplica la tasa de **compra** confirmada para Ingreso y la de **venta** para Gasto, guardando una instantánea del TC. Si el navegador de Daniel no tiene TC confirmado, el registro USD permanece pendiente.
+
+En Cobro móvil se distingue entre **Sin grupo**, **+ Crear grupo nuevo** y **un grupo existente**. Se puede crear «Mamá» con su primer cobro individual sin activar Dividir gasto. Crear el grupo y el cobro se confirma en un único guardado local, sin duplicarlos por reintentos. El reparto V10.6 permanece intacto.
+
+El teléfono solo recibe el catálogo mínimo (categorías, grupos, nombres), nunca el historial de gastos, saldos ni respaldos. El tipo de cambio utilizado es el disponible en Daniel **al sincronizar**, no necesariamente el del día en que el iPhone capturó la operación si se sincronizó después. Cloudflare continúa siendo exclusivo de Daniel; Gloriana no se modifica.
