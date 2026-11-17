@@ -34,7 +34,7 @@ jobs:
           node tests/formularios-v8.test.cjs
           node tests/tipo-cambio-deudas-v9.test.cjs
           node --test tests/v10-4-ledger.test.cjs
-          node --test tests/split-fare-v10-5.test.cjs
+          node --test tests/split-fare-v10-5.test.cjs tests/mobile-split-ui-v10-5.test.cjs
       - name: Probar movil y protecciones V10.3
         run: |
           node tests/mobile-pilot-v10.test.cjs
