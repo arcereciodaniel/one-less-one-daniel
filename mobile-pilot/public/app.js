@@ -30,11 +30,46 @@ function fill(id,rows){
  if(rows.some(row=>row.id===previous))select.value=previous;
 }
 function options(){fill("categoryId",(catalog?.categories||[]).filter(c=>c.type===kind));}
+function mobileGroup(){
+ return (catalog?.groups||[]).find(g=>g.id===$("cobroGroup").value)||null;
+}
+function fillCobroGroups(){
+ fill("cobroGroup",catalog?.groups||[]);
+ $("cobroGroup").options[0].textContent="Nuevo grupo / sin grupo";
+ syncGroupSuggestions();
+}
+function syncGroupSuggestions(){
+ const group=mobileGroup(),names=Array.isArray(group?.people)?group.people:[];
+ const list=$("cobroPersonSuggestions");list.replaceChildren();
+ for(const name of names){
+  const option=document.createElement("option");option.value=name;list.append(option);
+ }
+ const box=$("splitMembers");box.replaceChildren();
+ const active=kind==="Cobro"&&$("splitToggle").checked&&names.length;
+ box.hidden=!active;
+ if(!active)return;
+ const caption=document.createElement("small");
+ caption.textContent="Personas habituales · elegí solo quienes participaron";
+ box.append(caption);
+ for(const name of names){
+  const used=[...$("splitRows").querySelectorAll(".split-person")].
+    some(x=>x.value.trim().toLocaleLowerCase("es")===name.trim().toLocaleLowerCase("es"));
+  const button=document.createElement("button");
+  button.type="button";button.textContent=name;button.disabled=used||!!pending;
+  button.addEventListener("click",()=>{
+   const blank=[...$("splitRows").querySelectorAll(".split-person")].find(x=>!x.value.trim());
+   if(blank){blank.value=name;blank.dispatchEvent(new Event("input",{bubbles:true}))}
+   else splitAddRow(name,1);
+   syncGroupSuggestions();
+  });
+  box.append(button);
+ }
+}
 async function refresh(){
  try{
   const result=await api("catalog");
   if(!result.catalog)throw Error("Primero vinculá el piloto desde One Less One Daniel");
-  catalog=result.catalog;options();showCapture(true);if(!pending)status("");return true;
+  catalog=result.catalog;options();fillCobroGroups();showCapture(true);if(!pending)status("");return true;
  }catch(e){showCapture(false);status(e.message,"error");return false;}
 }
 function setType(type){
@@ -43,7 +78,7 @@ function setType(type){
  for(const b of document.querySelectorAll("[data-type]")){const active=b.dataset.type===type;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));}
  const ordinary=type!=="Cobro",cobro=!ordinary;
  $("categoryField").hidden=!ordinary;$("dueField").hidden=!cobro;
- $("currencyField").hidden=!cobro;$("splitToggleField").hidden=!cobro;
+ $("currencyField").hidden=!cobro;$("splitToggleField").hidden=!cobro;$("cobroGroupField").hidden=!cobro;
  $("personField").hidden=!cobro||$("splitToggle").checked;
  syncSplitMode();
  $("categoryId").required=ordinary;$("person").required=cobro&&!$("splitToggle").checked;
@@ -54,6 +89,9 @@ function setType(type){
 function freeze(locked){
  for(const field of $("entryForm").querySelectorAll("input,select"))field.disabled=locked;
  for(const b of document.querySelectorAll("[data-type]"))b.disabled=locked;
+ $("splitAdd").disabled=locked;
+ $("splitRows").querySelectorAll(".split-remove").forEach(b=>b.disabled=locked);
+ $("splitMembers").querySelectorAll("button").forEach(b=>b.disabled=locked);
  $("todayButton").disabled=locked;$("submit").textContent=locked?"Reintentar envío":LABELS[kind];
  $("discardDraft").hidden=!pending;$("discardDraft").disabled=submitting;
 }
@@ -66,13 +104,15 @@ function restoreDraft(){
    if($(id)&&p[id]!==undefined)$(id).value=p[id];
   }
   if(p.type==="Cobro dividido"){
+   $("cobroGroup").value=p.groupId||"";
    $("splitToggle").checked=true;$("splitGroupName").value=p.groupName||"";
    $("splitMode").value=p.splitMode||"equal";$("splitSelfShares").value=p.selfShares??1;
    $("splitSelfAmount").value=p.selfAmount??0;$("splitRows").replaceChildren();
    for(const person of p.participants||[])splitAddRow(person.person,person.shares,person.amount);
    setType("Cobro");
   }
-  syncDateDisplays();freeze(true);
+  if(p.type==="Cobro")$("cobroGroup").value=p.groupId||"";
+  syncSplitMode();syncDateDisplays();freeze(true);
   status(old?"Hay un envío anterior de "+p.type+" sin confirmar. Podés reintentarlo sin duplicarlo o descartarlo.":"El último envío no fue confirmado. Tocá Reintentar para evitar duplicados.","error");
  }catch{}
 }
@@ -87,8 +127,8 @@ function splitAddRow(person="",shares=1,amount=""){
  row.querySelector(".split-person").value=person;
  row.querySelector(".split-shares").value=shares;
  if(amount!=="")row.querySelector(".split-amount").value=amount;
- row.querySelector(".split-remove").addEventListener("click",()=>{row.remove();splitPreview();});
- row.addEventListener("input",splitPreview);
+ row.querySelector(".split-remove").addEventListener("click",()=>{row.remove();splitPreview();syncGroupSuggestions();});
+ row.addEventListener("input",()=>{splitPreview();syncGroupSuggestions()});
  $("splitRows").append(row);syncSplitMode();
 }
 function syncSplitMode(){
@@ -96,6 +136,8 @@ function syncSplitMode(){
  $("splitFields").hidden=!split;$("personField").hidden=!cobro||split;
  $("splitGroupName").required=split;$("person").required=cobro&&!split;
  $("splitSelfSharesField").hidden=!split||custom;$("splitSelfAmountField").hidden=!split||!custom;
+ $("splitGroupNameField").hidden=!split||!!mobileGroup();
+ $("splitGroupName").required=split&&!mobileGroup();
  for(const row of $("splitRows").children){
   row.querySelector(".split-person").disabled=!split;
   row.querySelector(".split-shares").hidden=custom;row.querySelector(".split-shares").disabled=!split||custom;
@@ -103,9 +145,10 @@ function syncSplitMode(){
  }
  if(split&&!$("splitRows").children.length)splitAddRow("",1);
  if(split)splitPreview();
+ syncGroupSuggestions();
 }
 function splitPayload(){
- return globalThis.OneSplitFare.normalize({type:"Cobro dividido",amount:Number($("amount").value),
+ return globalThis.OneSplitFare.normalize({type:"Cobro dividido",groupId:$("cobroGroup").value,amount:Number($("amount").value),
   currency:$("currency").value,date:$("date").value,dueDate:$("dueDate").value,
   description:$("description").value.trim(),groupName:$("splitGroupName").value.trim(),
   splitMode:$("splitMode").value,selfShares:Number($("splitSelfShares").value),
@@ -132,7 +175,7 @@ function movement(){
  const m={type:kind,date:$("date").value,amount:Number($("amount").value),
  currency:kind==="Cobro"?$("currency").value:"CRC",description:$("description").value.trim()};
  if(kind!=="Cobro")m.categoryId=$("categoryId").value;
- else {m.person=$("person").value.trim();m.dueDate=$("dueDate").value;}
+ else {m.person=$("person").value.trim();m.dueDate=$("dueDate").value;m.groupId=$("cobroGroup").value;}
  return m;
 }
 async function send(event){
@@ -164,6 +207,7 @@ $("dueDate").addEventListener("change",syncDateDisplays);
 $("currency").addEventListener("change",()=>{setType(kind);splitPreview()});
 $("splitToggle").addEventListener("change",syncSplitMode);
 $("splitMode").addEventListener("change",syncSplitMode);
+$("cobroGroup").addEventListener("change",syncSplitMode);
 $("splitAdd").addEventListener("click",()=>splitAddRow());
 for(const id of ["splitGroupName","splitSelfShares","splitSelfAmount","amount"])$(id).addEventListener("input",splitPreview);
 $("refreshCatalog").addEventListener("click",refresh);

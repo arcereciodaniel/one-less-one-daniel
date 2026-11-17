@@ -39,3 +39,16 @@ test("Rechaza valores inconsistentes, duplicados, centavos inválidos y monedas 
   {...base,participants:[{person:"Charlie",shares:0}]}
  ])assert.throws(()=>normalize(payload));
 });
+
+test("Se puede reutilizar un grupo sin volver a crear el nombre",()=>{
+ const r=normalize({...base,groupId:"santa-teresa-2026-11",groupName:"",
+  amount:60,selfShares:1,participants:[{person:"Charlie",shares:1},{person:"Cardona",shares:1}]});
+ assert.equal(r.groupId,"santa-teresa-2026-11");
+ assert.equal(r.groupName,"");
+ assert.equal(r.selfAmount,20);
+ assert.equal(r.participants[0].amount,20);
+ assert.equal(r.participants[1].amount,20);
+});
+test("No se aceptan identificadores de grupo malformados",()=>{
+ assert.throws(()=>normalize({...base,groupId:"not an ID"}));
+});

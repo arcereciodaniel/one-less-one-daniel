@@ -42,7 +42,7 @@ function checkPayload(p){
  const now=new Date(),today=now.toISOString().slice(0,10),earliest=new Date(now.getTime()-366*864e5).toISOString().slice(0,10);
  if(date>today||date<earliest)throw Error("Fecha fuera del período permitido");
  const categoryId=clean(p.categoryId,80),debtId=clean(p.debtId,80),reserveId=clean(p.reserveId,80);
- const person=clean(p.person,120),description=clean(p.description,200);
+ const person=clean(p.person,120),description=clean(p.description,200),groupId=clean(p.groupId,80);
  const dueDate=clean(p.dueDate,10);
  if((type==="Gasto"||type==="Ingreso")&&!categoryId)throw Error("Elegí una categoría");
  if(type==="Pago deuda"&&!debtId)throw Error("Elegí la deuda");
@@ -54,7 +54,7 @@ function checkPayload(p){
   return result;
  }
  if(dueDate&&!validDate(dueDate))throw Error("Fecha esperada inválida");
- return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate};
+ return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate,groupId};
 }
 async function body(request){
  const size=Number(request.headers.get("Content-Length")||0);
@@ -89,6 +89,14 @@ export default {
       catalog[group]=payload[group].map(x=>({id:clean(x.id,80),name:clean(x.name,120),...(group==="categories"?{type:clean(x.type,24)}:{})}))
        .filter(x=>x.id&&x.name);
      }
+     // Solo se envían nombres de participantes y grupos activos. Nunca importes,
+     // saldos, notas, movimientos anteriores ni respaldos de Daniel.
+     if(payload.groups!==undefined&&(!Array.isArray(payload.groups)||payload.groups.length>100))
+       return json({error:"Catálogo de grupos inválido"},400,headers);
+     catalog.groups=(payload.groups||[]).map(g=>({
+       id:clean(g.id,80),name:clean(g.name,120),
+       people:Array.isArray(g.people)?[...new Set(g.people.slice(0,25).map(p=>clean(p,120)).filter(Boolean))]:[]
+     })).filter(g=>g.id&&g.name);
      await env.DB.prepare("INSERT INTO pilot_catalog(id,payload,updated_at) VALUES(1,?,datetime('now')) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at").bind(JSON.stringify(catalog)).run();
      return json({ok:true},200,headers);
     }
@@ -108,6 +116,9 @@ export default {
        return json({error:"Deuda no disponible"},409,headers);
      if(type==="Aporte"&&!catalog.goals.some(g=>g.id===cleanPayload.reserveId))
        return json({error:"Meta no disponible"},409,headers);
+     if((type==="Cobro"||type==="Cobro dividido")&&cleanPayload.groupId&&
+       !(catalog.groups||[]).some(g=>g.id===cleanPayload.groupId))
+       return json({error:"El grupo no está disponible. Abrí Daniel, sincronizá y actualizá el catálogo del iPhone."},409,headers);
      await env.DB.prepare("INSERT OR IGNORE INTO pilot_inbox(id,payload,created_at,status) VALUES(?,?,datetime('now'),'pending')").bind(submission.id,JSON.stringify(cleanPayload)).run();
      return json({ok:true,id:submission.id,received:true},200,headers);
     }

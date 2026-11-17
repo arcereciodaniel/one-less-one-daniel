@@ -36,13 +36,29 @@
     return body;
   }
   function catalog(){
+    // El teléfono conoce solo identificadores, nombres de grupos y participantes,
+    // sin importes, saldos, notas, respaldos ni historiales.
+    const groups=[];let nameBudget=2600;
+    for(const g of activeSharedGroups().slice(0,100)){
+      const people=new Map();
+      for(const c of data.sharedCharges||[]){
+        if(c.groupId!==g.id)continue;
+        const name=String(c.person||"").trim().slice(0,120);
+        if(name&&!people.has(name.toLocaleLowerCase("es")))people.set(name.toLocaleLowerCase("es"),name);
+      }
+      const item={id:g.id,name:g.name,people:[...people.values()].slice(0,12)};
+      const used=JSON.stringify(item).length;
+      if(used>nameBudget)continue;
+      groups.push(item);nameBudget-=used;
+    }
     return {
       categories:(data.categories||[]).filter(c=>categoryIsActive(c)&&["Ingreso","Gasto"].includes(c.type))
         .map(c=>({id:c.id,name:c.name,type:c.type})),
       debts:(data.debts||[]).filter(d=>debtStatus(d)==="active")
         .map(d=>({id:d.id,name:d.name})),
       goals:(data.reserves||[]).filter(r=>r.type==="goal"&&reserveStatus(r)==="active")
-        .map(r=>({id:r.id,name:r.name}))
+        .map(r=>({id:r.id,name:r.name})),
+      groups
     };
   }
   function alreadyImported(id){
@@ -88,7 +104,10 @@
       if(!person)throw Error("El cobro no tiene persona.");
       const dueDate=String(p.dueDate||"");
       if(dueDate&&!restoreValidDate(dueDate))throw Error("Fecha de cobro inválida.");
-      data.sharedCharges.push({...common,groupId:"",person,dueDate,chargeMonth:monthKey(date),
+      const groupId=String(p.groupId||"").trim();
+      if(groupId&&!activeSharedGroups().some(g=>g.id===groupId))
+        throw Error("Grupo inexistente o archivado. Actualizá la lista en el iPhone.");
+      data.sharedCharges.push({...common,groupId,person,dueDate,chargeMonth:monthKey(date),
         kind:"Uso / consumo",notes:"",payments:[],status:"pending",paidAt:"",
         remindBeforeDays:3,snoozedUntil:"",sourceRecurringId:""});
       return "inserted";

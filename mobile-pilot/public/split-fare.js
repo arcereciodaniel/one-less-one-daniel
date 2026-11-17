@@ -1,5 +1,5 @@
 "use strict";
-/* One Less One — Split fare V10.5. Shared by iPhone, Worker and desktop. */
+/* One Less One — Split fare V10.6. Shared by iPhone, Worker and desktop. */
 (function(root){
  const moneyCents=(value,label)=>{
   const n=Number(value);
@@ -16,11 +16,13 @@
  function normalize(input){
   if(!input||typeof input!=="object"||Array.isArray(input))throw Error("Datos incompletos del reparto.");
   const groupName=short(input.groupName,120),description=short(input.description,200);
+  const groupId=short(input.groupId,80);
+  if(groupId&&!/^[a-zA-Z0-9_-]{6,80}$/.test(groupId))throw Error("Identificador del grupo inválido.");
   const date=short(input.date,10),dueDate=short(input.dueDate,10);
   const currency=input.currency==="USD"?"USD":input.currency==="CRC"?"CRC":null;
   const splitMode=input.splitMode==="amount"?"amount":input.splitMode==="equal"?"equal":null;
   const cents=moneyCents(input.amount,"El total");
-  if(!groupName)throw Error("Escribí un nombre para el grupo.");
+  if(!groupId&&!groupName)throw Error("Escribí un nombre para el grupo.");
   if(!currency)throw Error("Moneda no válida.");
   if(!splitMode)throw Error("Elegí repartir por partes o por montos.");
   if(cents<=0)throw Error("Ingresá un total mayor que cero.");
@@ -56,7 +58,7 @@
   if(selfAmountCents+receivableCents!==cents)
    throw Error("El total no cierra: tu parte más los cobros deben sumar el importe pagado.");
   if(participants.some(row=>row.amount<=0))throw Error("Cada persona debe tener un monto mayor que cero.");
-  return {type:"Cobro dividido",groupName,description,date,dueDate,currency,amount:cents/100,
+  return {type:"Cobro dividido",groupId,groupName,description,date,dueDate,currency,amount:cents/100,
    splitMode,selfShares,selfAmount:selfAmountCents/100,totalShares,
    participants:participants.map(p=>({person:p.person,shares:p.shares,amount:p.amount}))};
  }

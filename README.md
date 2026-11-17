@@ -60,3 +60,15 @@ One Less One Móvil conserva las tres acciones principales y añade en **Cobro**
 Este reparto **no registra automáticamente un Gasto ni un Ingreso** en Movimientos: si pagaste un hotel de $328 y todavía no registraste ese gasto, registralo una vez por separado. Los pagos posteriores se anotan en cada cobro y, opcionalmente, como ingreso o reembolso vinculado al movimiento. Lab solo utiliza la interfaz local: Cloudflare permanece exclusivo para Daniel. Los registros históricos siguen intactos y Gloriana no fue modificada.
 
 Los cálculos de reparto se hacen en unidades monetarias mínimas (centavos), con validación de sumas exactas y sin permitir deudores repetidos. La función está cubierta por pruebas del Worker, el reparto y la interfaz de escritorio.
+
+## V10.6 — Gastos sucesivos dentro de un mismo grupo
+
+En **Cobros → Dividir gasto** podés elegir **Crear grupo nuevo** o un grupo activo existente, como **Viaje a Santa Teresa**. Al elegir un grupo ya creado aparecen las personas asociadas, pero **no se incluyen automáticamente**: escogé solo quienes participaron en cada gasto. Los cobros anteriores permanecen intactos; se agrega un cobro independiente por cada persona y concepto, con fecha y moneda original.
+
+Ejemplo: un hotel de $720 entre vos, Charlie, Cardona y Joshua (cada uno $180), seguido de una cena de $60 que pagaste para vos, Charlie y Cardona (cada uno $20). Solo se crean dos nuevos cobros por la cena: Charlie queda con $200 ($180 hotel + $20 cena), Cardona con $200 y Joshua conserva $180.
+
+La pestaña **Grupos** incluye un resumen **por persona** con cobros de todos los meses y desglose por concepto. Si un grupo tiene cobros en colones y dólares, conserva subtotales separados por moneda (sin mezclar montos originales); los indicadores generales de la aplicación mantienen sus equivalencias CRC de presentación.
+
+Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente, seleccionar participantes habituales y registrar el reparto o un cobro individual. Solo se sincronizan el ID/nombre del grupo y nombres de personas; no se envían balances, importes anteriores, notas ni respaldos. Se requiere haber sincronizado Daniel para actualizar el catálogo antes de reutilizar grupos en el teléfono.
+
+**Integridad:** una cena nueva no sobrescribe el hotel ni recrea el grupo; los reintentos móviles no duplican cargos. Ningún reparto agrega otro gasto o ingreso en Movimientos. Los abonos posteriores se registran individualmente como antes. Gloriana queda sin cambios.

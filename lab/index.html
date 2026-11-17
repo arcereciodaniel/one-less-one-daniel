@@ -1458,6 +1458,24 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-split-person .one-split-remove{height:40px;border:0;background:transparent;color:var(--muted);font-size:21px}
 .one-split-preview{padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);font-size:.78rem;color:var(--muted);line-height:1.55}
 .one-split-preview[data-valid="true"]{color:var(--text)}
+.one-split-members{display:flex;gap:7px;flex-wrap:wrap;padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.one-split-members[hidden]{display:none!important}
+.one-split-members>small{width:100%;color:var(--muted);font-size:.75rem}
+.one-split-members button{padding:7px 11px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;font-size:.78rem}
+.one-split-members button:disabled{opacity:.4;cursor:default}
+.one-group-person-summary{padding:13px 16px 8px;border-bottom:1px solid var(--border)}
+.one-group-person-caption{font-size:.78rem;color:var(--muted);margin-bottom:9px}
+.one-group-person-card{border:1px solid var(--border);border-radius:9px;background:var(--surface);overflow:hidden;margin-bottom:9px}
+.one-group-person-card>summary{cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;font-weight:700;font-size:.87rem;list-style:none}
+.one-group-person-card>summary::-webkit-details-marker{display:none}
+.one-group-person-values{display:flex;flex-wrap:wrap;gap:7px 14px;font-size:.73rem;color:var(--muted);font-weight:500}
+.one-group-person-values b{color:var(--text)}
+.one-group-person-items{padding:5px 14px 10px;margin:0;list-style:none;display:grid;gap:7px}
+.one-group-person-items li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.77rem}
+.one-group-person-items li span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+.one-group-person-items small{display:block;color:var(--muted);margin-top:3px}
+.one-group-person-card .table-wrap{margin:0;padding:0 10px 10px}
+@media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
@@ -1468,7 +1486,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.5.0 LAB</small>
+      <small class="brand-version">v10.6.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1931,7 +1949,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.5.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.6.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2001,8 +2019,10 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <h2>Dividir gasto entre personas</h2>
   <p class="muted">Un grupo con un cobro por persona. Tu parte no se cobra. No crea otro gasto ni ingreso en Movimientos.</p>
   <form id="oneSplitFareForm" class="one-split-form">
-   <label>Nombre del grupo<input id="oneSplitGroupName" maxlength="120" placeholder="Hotel con amigos" required></label>
-   <label>Concepto<input id="oneSplitDescription" maxlength="200" placeholder="Reserva de hotel"></label>
+   <label>Grupo<select id="oneSplitGroupChoice" aria-label="Elegir un grupo existente o crear uno nuevo"><option value="">Crear grupo nuevo</option></select></label>
+   <label id="oneSplitGroupNameField">Nombre del grupo nuevo<input id="oneSplitGroupName" maxlength="120" placeholder="Viaje a Santa Teresa" required></label>
+   <div id="oneSplitMembers" class="one-split-members" hidden></div>
+   <label>Concepto del gasto<input id="oneSplitDescription" maxlength="200" placeholder="Ej. Hotel o cena" required></label>
    <div class="one-split-grid">
     <label>Monto total<input id="oneSplitTotal" type="number" min="0.01" step="0.01" required placeholder="328.00"></label>
     <label>Moneda<select id="oneSplitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></label>
@@ -2012,11 +2032,11 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
     <label id="oneSplitSelfSharesField">Tus partes pagadas<input id="oneSplitSelfShares" type="number" min="0" max="20" step="1" value="1"></label>
     <label id="oneSplitSelfAmountField" hidden>Tu parte del gasto<input id="oneSplitSelfAmount" type="number" min="0" step="0.01" value="0"></label>
    </div>
-   <div class="one-split-people-heading"><strong>Personas que te deben</strong><small>Podés asignarle dos partes a Charlie en una sola fila.</small></div>
+   <div class="one-split-people-heading"><strong>Personas de este gasto</strong><small>Elegí únicamente a quienes participaron. Podés asignarle dos partes a Charlie en una sola fila.</small></div>
    <div id="oneSplitPeople" class="one-split-people"></div>
    <button class="btn secondary small" type="button" id="oneSplitAddPerson">+ Persona</button>
    <div id="oneSplitPreview" class="one-split-preview" role="status" aria-live="polite"></div>
-   <div class="dialog-actions"><button class="btn secondary" type="button" id="oneSplitCancel">Cancelar</button><button class="btn" type="submit">Crear grupo y cobros</button></div>
+   <div class="dialog-actions"><button class="btn secondary" type="button" id="oneSplitCancel">Cancelar</button><button class="btn" id="oneSplitSubmit" type="submit">Guardar reparto y cobros</button></div>
   </form>
  </div>
 </dialog>
@@ -4209,28 +4229,32 @@ function oneCreateSplitFare(raw,{sourceId=""}={}){
  const p=globalThis.OneSplitFare.normalize(raw);
  if(!restoreValidDate(p.date))throw Error("Fecha de gasto inválida.");
  if(p.dueDate&&!restoreValidDate(p.dueDate))throw Error("Fecha esperada inválida.");
- if(sourceId&&(data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===sourceId))
-  return {already:true};
- const group={
+ if(sourceId&&((data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===sourceId)||
+    (data.sharedCharges||[]).some(c=>c.mobilePilotId===sourceId)))
+   return {already:true};
+ const existing=p.groupId?sharedGroupById(p.groupId):null;
+ if(p.groupId&&(!existing||sharedGroupStatus(existing)!=="active"))
+   throw Error("El grupo fue archivado o ya no existe. Elegí un grupo activo.");
+ const group=existing||{
   id:id(),name:p.groupName,person:"",notes:"",cutDay:0,status:"active",
   closedAt:"",closedReason:"",createdAt:new Date().toISOString(),
   splitFare:{totalAmount:p.amount,currency:p.currency,selfAmount:p.selfAmount,
     totalShares:p.totalShares,mode:p.splitMode,date:p.date},
   ...(sourceId?{mobilePilotId:sourceId}:{})
  };
- const snapshot=currentFxSnapshot(),createdAt=new Date().toISOString();
+ const expenseId=id(),snapshot=currentFxSnapshot(),createdAt=new Date().toISOString();
  const charges=p.participants.map(row=>({
   id:id(),groupId:group.id,person:row.person,date:p.date,dueDate:p.dueDate,
   remindBeforeDays:p.dueDate?3:0,chargeMonth:monthKey(p.date),
-  kind:"Compra compartida",description:p.description||p.groupName,
+  kind:"Compra compartida",description:p.description||group.name,
   amount:row.amount,currency:p.currency,...snapshot,
   status:"pending",paidAt:"",payments:[],snoozedUntil:"",notes:"",
-  sourceRecurringId:"",createdAt,splitFareShares:row.shares,
+  sourceRecurringId:"",createdAt,splitFareShares:row.shares,splitFareExpenseId:expenseId,
   ...(sourceId?{mobilePilotId:sourceId}:{})
  }));
- data.sharedChargeGroups.push(group);
+ if(!existing)data.sharedChargeGroups.push(group);
  data.sharedCharges.push(...charges);
- return {group,charges};
+ return {group,charges,reused:!!existing};
 }
 function oneSplitFareAddRow(person="",shares=1,amount=""){
  const box=document.getElementById("oneSplitPeople");
@@ -4243,9 +4267,9 @@ function oneSplitFareAddRow(person="",shares=1,amount=""){
  row.querySelector(".one-split-name").value=person;
  row.querySelector(".one-split-shares").value=shares;
  if(amount!=="")row.querySelector(".one-split-amount").value=amount;
- row.querySelector("button").addEventListener("click",()=>{row.remove();oneSplitFarePreview()});
- row.addEventListener("input",oneSplitFarePreview);
- box.append(row);oneSplitFareMode();
+ row.querySelector("button").addEventListener("click",()=>{row.remove();oneSplitFarePreview();oneSplitFareRefreshMembers()});
+ row.addEventListener("input",()=>{oneSplitFarePreview();oneSplitFareRefreshMembers()});
+ box.append(row);oneSplitFareMode();oneSplitFareRefreshMembers();
 }
 function oneSplitFareMode(){
  const custom=document.getElementById("oneSplitMode").value==="amount";
@@ -4263,6 +4287,7 @@ function oneSplitFareMode(){
 }
 function oneSplitFarePayload(){
  return globalThis.OneSplitFare.normalize({
+  groupId:document.getElementById("oneSplitGroupChoice").value,
   groupName:document.getElementById("oneSplitGroupName").value,
   description:document.getElementById("oneSplitDescription").value,
   date:document.getElementById("oneSplitDate").value,
@@ -4289,19 +4314,67 @@ function oneSplitFarePreview(){
   out.dataset.valid="true";
  }catch(error){out.textContent=error.message;out.dataset.valid="false";}
 }
-function oneOpenSplitFare(){
+function oneSplitFareGroupChanged(){
+ const select=document.getElementById("oneSplitGroupChoice"),group=sharedGroupById(select.value);
+ const existing=!!group&&sharedGroupStatus(group)==="active";
+ document.getElementById("oneSplitGroupNameField").hidden=existing;
+ document.getElementById("oneSplitGroupName").required=!existing;
+ document.getElementById("oneSplitSubmit").textContent=existing?"Agregar gasto al grupo":"Crear grupo y cobros";
+ oneSplitFareRefreshMembers();
+ oneSplitFarePreview();
+}
+function oneSplitFareRefreshMembers(){
+ const box=document.getElementById("oneSplitMembers");if(!box)return;
+ const group=sharedGroupById(document.getElementById("oneSplitGroupChoice").value);
+ box.replaceChildren();
+ if(!group||sharedGroupStatus(group)!=="active"){box.hidden=true;return}
+ const people=new Map();
+ for(const charge of data.sharedCharges||[]){
+  if(charge.groupId!==group.id)continue;
+  const name=String(charge.person||"").trim(),key=name.toLocaleLowerCase("es");
+  if(name&&!people.has(key))people.set(key,name);
+ }
+ box.hidden=!people.size;
+ if(!people.size)return;
+ const header=document.createElement("small");
+ header.textContent="Personas de este grupo · seleccioná solo a quienes participaron";
+ box.append(header);
+ for(const [key,name] of people){
+  const used=[...document.querySelectorAll("#oneSplitPeople .one-split-name")].
+   some(el=>el.value.trim().toLocaleLowerCase("es")===key);
+  const button=document.createElement("button");button.type="button";button.textContent=name;button.disabled=used;
+  button.addEventListener("click",()=>{
+   const blank=[...document.querySelectorAll("#oneSplitPeople .one-split-name")].find(el=>!el.value.trim());
+   if(blank){blank.value=name;blank.dispatchEvent(new Event("input",{bubbles:true}))}
+   else oneSplitFareAddRow(name,1);
+   oneSplitFareRefreshMembers();
+  });
+  box.append(button);
+ }
+}
+function oneOpenSplitFare(groupId=""){
  const form=document.getElementById("oneSplitFareForm");form.reset();
+ const groups=activeSharedGroups();
+ fillObjectSelect(document.getElementById("oneSplitGroupChoice"),
+   [{value:"",label:"Crear grupo nuevo"},...groups.map(g=>({value:g.id,label:g.name}))],groupId);
+ document.getElementById("oneSplitGroupChoice").value=groups.some(g=>g.id===groupId)?groupId:"";
  document.getElementById("oneSplitDate").value=todayIso();
  document.getElementById("oneSplitPeople").replaceChildren();
  oneSplitFareAddRow("",1);oneSplitFareMode();
+ oneSplitFareGroupChanged();
  document.getElementById("oneSplitFareDialog").showModal();
 }
 function oneInitSplitFare(){
  const d=document.getElementById("oneSplitFareDialog");
- document.getElementById("oneSplitFareOpen")?.addEventListener("click",oneOpenSplitFare);
+ document.getElementById("oneSplitFareOpen")?.addEventListener("click",()=>oneOpenSplitFare());
+ document.addEventListener("click",event=>{
+  const button=event.target.closest("[data-split-add-to-group]");
+  if(button)oneOpenSplitFare(button.dataset.splitAddToGroup);
+ });
  document.getElementById("oneSplitCancel")?.addEventListener("click",()=>d.close());
  document.getElementById("oneSplitAddPerson")?.addEventListener("click",()=>oneSplitFareAddRow());
  document.getElementById("oneSplitMode")?.addEventListener("change",oneSplitFareMode);
+ document.getElementById("oneSplitGroupChoice")?.addEventListener("change",oneSplitFareGroupChanged);
  for(const name of ["oneSplitGroupName","oneSplitDescription","oneSplitTotal","oneSplitCurrency",
   "oneSplitDate","oneSplitDue","oneSplitSelfShares","oneSplitSelfAmount"])
    document.getElementById(name)?.addEventListener("input",oneSplitFarePreview);
@@ -4314,11 +4387,10 @@ function oneInitSplitFare(){
    uiState.cobrosDisplayMode="groups";saveUiState();
    document.getElementById("sharedStatementMonth").value=p.date.slice(0,7);
    renderSharedCharges();renderDashboard();
-   alert("Grupo creado: "+created.charges.length+" cobro(s) en "+p.currency+".");
+   alert((created.reused?"Gasto agregado al grupo: ":"Grupo creado: ")+created.charges.length+" cobro(s) en "+p.currency+".");
   }catch(error){
-   // Si la escritura falla, no conservar el reparto parcialmente creado en memoria.
    data=JSON.parse(snapshot);
-   alert(error.message||"No se pudo crear el reparto.");
+   alert(error.message||"No se pudo registrar el gasto compartido.");
   }
  });
 }
@@ -4563,6 +4635,43 @@ function receivableRowsTable(rows,sectionKey="",month=selectedReceivableMonth())
   </div></td></tr>`;
  }).join(""):`<tr><td colspan="9" class="empty">Sin cobros en ${monthLabel(month)}.</td></tr>`}</tbody></table></div>`;
 }
+
+function oneGroupPersonLedger(groupId){
+ const people=new Map();
+ for(const c of data.sharedCharges||[]){
+  if(c.groupId!==groupId)continue;
+  const name=String(c.person||"Sin nombre").trim()||"Sin nombre";
+  const key=name.toLocaleLowerCase("es");
+  if(!people.has(key))people.set(key,{name,charges:[],currencies:{}});
+  const row=people.get(key),currency=normalizeCurrency(c.currency||"CRC");
+  const totals=row.currencies[currency]||(row.currencies[currency]={charged:0,paid:0,pending:0});
+  const charged=Math.round(num(c.amount)*100);
+  const paid=Math.round(cobroPaidOriginal(c)*100);
+  totals.charged+=charged;totals.paid+=paid;totals.pending+=Math.max(0,charged-paid);
+  row.charges.push(c);
+ }
+ return [...people.values()].sort((a,b)=>a.name.localeCompare(b.name,"es"));
+}
+function oneGroupPersonBreakdown(groupId,month){
+ const people=oneGroupPersonLedger(groupId);
+ if(!people.length)return '<p class="empty">Este grupo todavía no tiene cobros.</p>';
+ return '<section class="one-group-person-summary">'+
+   '<div class="one-group-person-caption">Acumulado por persona · incluye los gastos de todos los meses. Los dólares y colones se muestran separados.</div>'+
+   people.map(p=>{
+    const amounts=Object.entries(p.currencies).map(([currency,t])=>
+      '<span>Total <b>'+originalMoney(t.charged/100,currency)+'</b> · Pendiente <b>'+
+      originalMoney(t.pending/100,currency)+'</b> · Abonado <b>'+originalMoney(t.paid/100,currency)+'</b></span>').join("");
+    const items=p.charges.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).
+      map(c=>'<li><span><strong>'+safe(c.description||c.kind||"Cobro")+'</strong>'+
+        '<small>'+dateLabel(c.date)+'</small></span><span>'+originalMoney(c.amount,c.currency)+
+        ' · Pendiente '+originalMoney(cobroRemainingOriginal(c),c.currency)+'</span></li>').join("");
+    return '<details class="one-group-person-card" open><summary><span>'+
+      safe(p.name)+'</span><span class="one-group-person-values">'+amounts+
+      '</span></summary><ul class="one-group-person-items">'+items+'</ul>'+
+      receivableRowsTable(p.charges,"people",month)+'</details>';
+   }).join("")+'</section>';
+}
+
 function renderSharedCharges(){
   const monthEl=document.getElementById("sharedStatementMonth");
   if(monthEl&&!monthEl.value)monthEl.value=currentFinancialContext().financialMonth||todayIso().slice(0,7);
@@ -4601,9 +4710,9 @@ function renderSharedCharges(){
   const groupCards=groups.map(g=>{
     const rows=receivableDisplayRows(g.id,month),current=groupReceivableRows(g.id,month),gCurrent=current.reduce((s,c)=>s+receivableAmountCRC(c),0),gPending=rows.reduce((s,c)=>s+cobroRemainingCRC(c),0),gCarry=rows.filter(c=>isReceivableCarryover(c,month)).reduce((s,c)=>s+receivableAmountCRC(c),0),gPaid=current.reduce((s,c)=>s+cobroReceivedCRC(c),0),recCount=groupRecurringCount(g.id,month),status=sharedGroupStatus(g);
     const lifecycle=status==="active"?`<button class="btn secondary small" data-archive-shared-group="${safe(g.id)}">Archivar</button>`:`<button class="btn secondary small" data-reactivate-shared-group="${safe(g.id)}">Reactivar</button>`;
-    const add=status==="active"?`<button class="btn small" data-add-shared-to-group="${safe(g.id)}">Agregar cobro</button>`:"";
+    const add=status==="active"?`<button class="btn small" data-split-add-to-group="${safe(g.id)}">+ Dividir gasto</button><button class="btn secondary small" data-add-shared-to-group="${safe(g.id)}">Cobro individual</button>`:"";
     const archivedMeta=status==="archived"?`<span class="status-badge archived">Archivado</span>${g.closedReason?` · ${safe(g.closedReason)}`:""}${g.closedAt?` · ${dateLabel(g.closedAt)}`:""}`:"";
-    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${safe(g.name)}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${safe(g.person)}`:"Sin persona principal"}${g.notes?` · ${safe(g.notes)}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${safe(g.id)}">PDF</button><button class="btn secondary small" data-edit-shared-group="${safe(g.id)}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${safe(g.id)}">Eliminar</button></div></div><div class="receivable-group-stats">${g.splitFare?`<span>Reparto inicial: <strong>${originalMoney(g.splitFare.totalAmount,g.splitFare.currency)}</strong> · Tu parte: ${originalMoney(g.splitFare.selfAmount,g.splitFare.currency)}</span>`:""}<span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${receivableRowsTable(rows,g.id,month)}</div>`;
+    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${safe(g.name)}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${safe(g.person)}`:"Sin persona principal"}${g.notes?` · ${safe(g.notes)}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${safe(g.id)}">PDF</button><button class="btn secondary small" data-edit-shared-group="${safe(g.id)}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${safe(g.id)}">Eliminar</button></div></div><div class="receivable-group-stats">${g.splitFare?`<span>Reparto inicial: <strong>${originalMoney(g.splitFare.totalAmount,g.splitFare.currency)}</strong> · Tu parte: ${originalMoney(g.splitFare.selfAmount,g.splitFare.currency)}</span>`:""}<span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${oneGroupPersonBreakdown(g.id,month)}</div>`;
   }).join("");
   if(!ungroupedCard&&!groupCards){
     const msg=view==="archived"?"No tienes grupos archivados.":"Todavía no tienes cobros ni grupos. Puedes registrar un cobro suelto o crear un grupo primero.";

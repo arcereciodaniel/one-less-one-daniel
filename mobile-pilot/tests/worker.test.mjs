@@ -125,3 +125,60 @@ test("D1: no admite repartos personalizados que no cierren",async()=>{
  assert.equal(bad.response.status,400);
  assert.equal(rows.size,0);
 });
+
+
+test("Catálogo del iPhone incluye grupos y personas pero nunca importes",async()=>{
+ const {env,req}=fixture();
+ const groupId="santa-teresa-2026-11";
+ const catalog={categories:[],debts:[],goals:[],groups:[{
+  id:groupId,name:"Viaje a Santa Teresa",amount:50000,notes:"Privadas",
+  people:["Charlie","Cardona","Joshua","charlie"]}]};
+ const put=await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,catalog);
+ assert.equal(put.response.status,200);
+ const r=(await req("/api/catalog","GET",env.MOBILE_WRITE_KEY)).json.catalog;
+ assert.equal(r.groups[0].id,groupId);
+ assert.equal(r.groups[0].name,"Viaje a Santa Teresa");
+ assert(!JSON.stringify(r).includes("50000"));
+ assert(!JSON.stringify(r).includes("Privadas"));
+ assert.equal(r.groups[0].people.length,4);
+});
+test("iPhone agrega una cena al grupo existente sin crear otro grupo, excluye a Joshua",async()=>{
+ const {env,req,rows}=fixture();
+ const groupId="santa-teresa-2026-11";
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{
+  categories:[],debts:[],goals:[],
+  groups:[{id:groupId,name:"Viaje a Santa Teresa",people:["Charlie","Cardona","Joshua"]}]});
+ const date=new Date().toISOString().slice(0,10);
+ const entry={id:"cena-santa-teresa-abc12345",movement:{
+  type:"Cobro dividido",groupId,groupName:"",description:"Cena del viernes",
+  date,dueDate:"",amount:60,currency:"USD",
+  splitMode:"equal",selfShares:1,participants:[{person:"Charlie",shares:1},{person:"Cardona",shares:1}]
+ }};
+ const first=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,entry);
+ assert.equal(first.response.status,200,JSON.stringify(first.json));
+ await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,entry);
+ assert.equal(rows.size,1);
+ const r=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items[0].movement;
+ assert.equal(r.groupId,groupId);
+ assert.deepEqual(r.participants.map(p=>p.person),["Charlie","Cardona"]);
+ assert.deepEqual(r.participants.map(p=>p.amount),[20,20]);
+ assert.equal(r.selfAmount,20);
+});
+test("D1 impide relacionar cobros con grupos desconocidos y admite cobro simple agrupado",async()=>{
+ const {env,req}=fixture();
+ const groupId="santa-teresa-2026-11";
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{
+  categories:[],debts:[],goals:[],groups:[{id:groupId,name:"Santa Teresa",people:["Charlie"]}]});
+ const date=new Date().toISOString().slice(0,10);
+ const missing=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{
+  id:"cena-grupo-inexistente-abc1",movement:{type:"Cobro dividido",groupId:"grupo-archivado",
+   groupName:"",description:"Cena",date,amount:30,currency:"USD",splitMode:"equal",selfShares:1,
+   participants:[{person:"Charlie",shares:1}]}});
+ assert.equal(missing.response.status,409);
+ const simple=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{
+  id:"cobro-simple-grupo-abc1234",movement:{type:"Cobro",groupId,person:"Charlie",
+   description:"Taxi",date,amount:10,currency:"USD"}});
+ assert.equal(simple.response.status,200);
+ const found=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items[0].movement;
+ assert.equal(found.groupId,groupId);
+});

@@ -134,3 +134,11 @@ footer { margin-top: 25px; }
 .split-add{justify-self:start;padding:8px 0;border:0;background:transparent;color:var(--text);font-size:13px;font-weight:700}
 .split-preview{margin:2px 0 0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .split-preview[data-valid="true"]{color:#c8f0d4;border-color:#315341}
+
+/* V10.6: reutilizar grupos y elegir participantes habituales sin incluirlos automáticamente */
+.split-existing-members{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--control)}
+.split-existing-members[hidden]{display:none!important}
+.split-existing-members small{width:100%;color:var(--muted);line-height:1.45;font-size:11px}
+.split-existing-members button{border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);padding:7px 11px;font-size:12px}
+.split-existing-members button:disabled{opacity:.4}
+.split-hint{font-size:11px;line-height:1.5;color:var(--dim);margin:-2px 0 0}
