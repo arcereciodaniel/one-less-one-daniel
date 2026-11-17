@@ -56,7 +56,7 @@ function oneStorageGuardInit(){
 function oneHealthCheck(raw){
  const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
  const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
- for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations"]){
+ for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans"]){
   const seen=new Set();let duplicate=0;
   for(const item of get(kind)){
    const recordId=kind==="periods"?(item.key||""):item.id;
@@ -93,6 +93,15 @@ function oneHealthCheck(raw){
  countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
  countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
  countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ const projectIds=new Set(get("projects").map(p=>p.id)),movementIds=new Set(get("movements").map(m=>m.id));
+ const linkedIds=new Set();let badProjectLinks=0,duplicateProjectLinks=0;
+ for(const link of get("projectLinks")){
+  if(linkedIds.has(link.movementId))duplicateProjectLinks++;
+  linkedIds.add(link.movementId);
+  if(!projectIds.has(link.projectId)||!movementIds.has(link.movementId))badProjectLinks++;
+ }
+ countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
+ countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
  return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
 }
 function oneRenderDataHealth(){
@@ -793,7 +802,7 @@ function syncQuarterSelectors(){
 }
 function navigate(view){
   if(ONE_OPTIONAL_MODULES.has(view)&&!oneModuleEnabled(view))view="dashboard";
-  if(!["dashboard","plan","movements","debts","shared","capital"].includes(view))view="dashboard";
+  if(!["dashboard","plan","movements","debts","shared","capital","projects"].includes(view))view="dashboard";
   uiState.activeView=view;
   saveUiState();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===`view-${view}`));
@@ -804,6 +813,7 @@ function navigate(view){
   if(view==="debts")renderDebts();
   if(view==="shared")renderSharedCharges();
   if(view==="capital")renderCapital();
+  if(view==="projects")renderProjects();
   if(view==="reports")return navigate("dashboard");
   if(view==="categories")renderCategories();
 }
