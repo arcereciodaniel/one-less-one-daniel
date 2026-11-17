@@ -1,7 +1,7 @@
-name: QA V10.6–V10.7 Móvil y finanzas
+name: QA V10.8 — confianza móvil y tipo de cambio
 on:
   push:
-    branches: [qa/v10-6-shared-trips, qa/v10-7-mobile-crc-usd]
+    branches: [qa/v10-6-shared-trips, qa/v10-7-mobile-crc-usd, qa/v10-8-mobile-trust-fx]
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +26,7 @@ jobs:
           node tests/formularios-v8.test.cjs
           node tests/tipo-cambio-deudas-v9.test.cjs
           node tests/mobile-pilot-v10.test.cjs
+          node --test tests/mobile-trust-v10-8.test.cjs
           node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs tests/v10-4-ledger.test.cjs tests/split-fare-v10-5.test.cjs tests/shared-groups-v10-6.test.cjs tests/mobile-split-ui-v10-5.test.cjs tests/mobile-group-ui-v10-6.test.cjs
       - name: Worker, privacidad y captura móvil
         run: node --test mobile-pilot/tests/*.test.mjs
