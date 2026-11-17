@@ -1581,3 +1581,42 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-move-project-fields small{grid-column:1/-1;line-height:1.5}
 @media(max-width:800px){.one-project-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.one-project-sections{grid-template-columns:1fr}}
 @media(max-width:560px){.one-project-detail-head{align-items:flex-start;flex-direction:column}.one-project-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.one-project-link-form{grid-template-columns:1fr}.one-project-link-form button{justify-self:start}.one-move-project-fields{grid-template-columns:1fr}.one-project-dialog .dialog-body{padding:17px}}
+
+
+/* V11.3 · Futuro Beta 1.0 — neutro, estructura idéntica claro/oscuro. */
+.one-future-selector{display:flex;align-items:center;gap:3px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;white-space:nowrap}
+.one-future-selector button{border:0;border-radius:7px;background:transparent;color:var(--muted);padding:8px 11px;font-size:.78rem;font-weight:650}
+.one-future-selector button:hover{background:var(--surface-hover);color:var(--text)}
+.one-future-selector button.active{background:var(--surface-hover);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}
+.one-future-date{color:var(--muted);font-size:.75rem;margin:0 0 14px}
+.one-future-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:15px}
+.one-future-stat{display:grid;gap:8px;min-width:0;padding:17px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.one-future-stat span{font-size:.72rem;color:var(--muted)}
+.one-future-stat strong{font-size:clamp(.96rem,1.9vw,1.26rem);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.one-future-panel{margin-bottom:15px}
+.one-future-panel h2{margin:0 0 8px;font-size:.99rem}
+.one-future-panel .muted{font-size:.75rem;line-height:1.56}
+.one-future-panel-head{display:flex;justify-content:space-between;gap:10px}
+.one-future-chart-wrap{width:100%;min-height:180px;margin:13px 0 6px;overflow:hidden}
+.one-future-chart{display:block;width:100%;height:auto;max-height:320px;overflow:visible}
+.one-future-gridline{stroke:var(--border);stroke-width:1;stroke-dasharray:4 5}
+.one-future-zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:7 6;opacity:.75}
+.one-future-line{stroke:var(--text);stroke-width:2.5;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.one-future-dot{stroke:var(--text);stroke-width:2;fill:var(--surface)}
+.one-future-tick{font-size:11px;fill:var(--muted);font-family:inherit}
+.one-future-minimum{font-size:.82rem;margin:7px 0 5px;font-weight:650}
+.one-future-status{font-size:.74rem;color:var(--muted);margin:5px 0 0}
+.one-future-status[data-level="review"]{color:var(--text)}
+.one-future-columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.one-future-breakdown-row,.one-future-milestone{display:flex;gap:14px;align-items:baseline;justify-content:space-between;border-top:1px solid var(--border);padding:12px 0;font-size:.8rem}
+.one-future-breakdown-row strong,.one-future-milestone>strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+.one-future-milestone>div{display:grid;gap:3px;min-width:0}
+.one-future-milestone>div strong{font-size:.79rem;overflow-wrap:anywhere}
+.one-future-milestone small{font-size:.7rem;color:var(--muted)}
+.one-future-explain{margin:15px 0 0}
+.one-future-assumptions{margin-top:0}
+.one-future-assumptions summary{font-size:.83rem;font-weight:650;cursor:pointer}
+.one-future-assumptions p,.one-future-assumptions li{font-size:.76rem;color:var(--muted);line-height:1.65}
+.one-future-assumptions ul{padding-left:20px}
+@media(max-width:950px){.one-future-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.one-future-columns{grid-template-columns:1fr}}
+@media(max-width:540px){#view-future>.v7-page-head{align-items:flex-start;gap:12px}.one-future-selector{width:100%;justify-content:stretch}.one-future-selector button{flex:1}.one-future-stats{gap:8px}.one-future-stat{padding:12px}.one-future-milestone,.one-future-breakdown-row{align-items:flex-start}.one-future-milestone>strong{white-space:normal;text-align:right}}
