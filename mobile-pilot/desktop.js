@@ -28,6 +28,7 @@
     if(/tipo de cambio/i.test(reason))return {label:"Revisar tipo de cambio",action:"fx"};
     if(/período|presupuestario|trimestre/i.test(reason))return {label:"Revisar presupuesto",action:"plan"};
     if(/categoría/i.test(reason))return {label:"Revisar categorías",action:"categories"};
+    if(/proyecto|concepto del proyecto/i.test(reason))return {label:"Revisar Proyectos",action:"projects"};
     if(/grupo/i.test(reason))return {label:"Revisar cobros",action:"shared"};
     return null;
   }
@@ -93,7 +94,18 @@
       if(used>nameBudget)continue;
       groups.push(item);nameBudget-=used;
     }
+    // Solo metadatos públicos mínimos. No se envía presupuesto, ejecución,
+    // categorías financieras internas, notas ni saldos de un Proyecto.
+    const projects=[];let projectNameBudget=3400;
+    if(oneModuleEnabled("projects"))for(const p of (data.projects||[]).filter(oneProjectEnabled).slice(0,35)){
+      const item={id:p.id,name:String(p.name||"").slice(0,100),buckets:(p.buckets||[]).slice(0,12)
+        .map(b=>({id:b.id,name:String(b.name||"").slice(0,80)}))};
+      const used=JSON.stringify(item).length;
+      if(used>projectNameBudget)continue;
+      projects.push(item);projectNameBudget-=used;
+    }
     return {
+      projects,
       categories:(data.categories||[]).filter(c=>categoryIsActive(c)&&["Ingreso","Gasto"].includes(c.type))
         .map(c=>({id:c.id,name:c.name,type:c.type})),
       debts:(data.debts||[]).filter(d=>debtStatus(d)==="active")
@@ -153,6 +165,17 @@
       if(!period||date>periodEndDate(period))throw Error("Este día no tiene período presupuestario. Configurá el trimestre primero.");
       const debt=p.type==="Pago deuda"?data.debts.find(d=>d.id===p.debtId&&debtStatus(d)==="active"):null;
       if(p.type==="Pago deuda"&&!debt)throw Error("Deuda no disponible.");
+      // Revalidar frente a datos locales al importar, no confiar solo en
+      // el catálogo D1 que pudo quedar obsoleto después de archivar.
+      const projectId=String(p.projectId||"").trim(),bucketId=String(p.projectBucketId||"").trim();
+      if(projectId||bucketId){
+        if(p.type!=="Gasto"||!projectId)throw Error("Proyecto inválido para este tipo de movimiento.");
+        const project=oneProjectById(projectId);
+        if(!oneModuleEnabled("projects")||!project||!oneProjectEnabled(project))
+          throw Error("El proyecto ya no está activo en Daniel. Revisá Proyectos y actualizá el catálogo del iPhone.");
+        if(bucketId&&!(project.buckets||[]).some(b=>b.id===bucketId))
+          throw Error("El concepto del proyecto ya no existe. Actualizá el catálogo del iPhone.");
+      }
       const categoryId=debt?suggestDebtCategoryId(debt):p.categoryId;
       const cat=categoryById(categoryId);
       if(!cat||!categoryIsActive(cat)||cat.type!==p.type)
@@ -161,7 +184,9 @@
       const movement={...common,seq:data.movementSeq,type:p.type,categoryId:cat.id,category:cat.name,
         debtId:debt?.id||"",debt:debt?.name||"",splits:[],account:"",paymentMethod:"",
         period:periodKey(period),quarter:budgetQuarter(period)};
-      data.movements.push(movement);m2Audit("create",movement);return "inserted";
+      data.movements.push(movement);
+      if(projectId)oneProjectAssignMovement(movement.id,projectId,bucketId);
+      m2Audit("create",movement);return "inserted";
     }
     if(p.type==="Cobro"){
       const person=String(p.person||"").trim().slice(0,120);
@@ -214,6 +239,12 @@
              ...(persisted.sharedCharges||[]),...(persisted.sharedChargeGroups||[])]
              .some(x=>x.mobilePilotId===id);
           if(!found)throw Error("No se verificó el guardado local.");
+          if(item.movement?.projectId){
+            const linked=(persisted.projectLinks||[]).some(link=>link.movementId===id&&
+              link.projectId===item.movement.projectId&&
+              (link.bucketId||"")===(item.movement.projectBucketId||""));
+            if(!linked)throw Error("No se verificó el enlace al proyecto. El registro sigue pendiente.");
+          }
           const importedRow=[...(persisted.movements||[]),...(persisted.reserveMovements||[]),
             ...(persisted.sharedCharges||[])].find(x=>x.mobilePilotId===id);
           if(item.movement?.currency==="USD"&&importedRow?.fxDate&&importedRow.fxDate<item.movement.date)priorFx++;
@@ -234,6 +265,7 @@
     if(imported){
       refreshV7MovementCategoryFilter();renderMovements();renderDashboard();renderPlan();renderDebts();
       renderCapital();renderSharedCharges();renderReports();
+      if(oneModuleEnabled("projects"))renderProjects();
     }
     showIssues(issues);
     const note=imported+" importado(s), "+duplicates+" repetido(s), "+issues.length+" por revisar."+
