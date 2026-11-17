@@ -1475,6 +1475,16 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-group-person-items li span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
 .one-group-person-items small{display:block;color:var(--muted);margin-top:3px}
 .one-group-person-card .table-wrap{margin:0;padding:0 10px 10px}
+.one-health-details{border-top:1px solid var(--border);padding:14px 0 2px;margin-top:12px}
+.one-health-details>summary{cursor:pointer;color:var(--text);font-weight:650;font-size:.83rem}
+.one-health-details>p{font-size:.75rem;line-height:1.55;margin:10px 0}
+.one-health-status{font-size:.8rem;font-weight:650;margin:8px 0}
+.one-health-status[data-level=review]{color:var(--danger)}
+.one-health-issues{padding-left:18px;display:grid;gap:8px;font-size:.77rem;line-height:1.5;color:var(--muted)}
+.one-health-note{margin-top:10px;font-size:.74rem;line-height:1.55;color:var(--muted)}
+.one-health-note strong{color:var(--text)}
+.one-reconcile-explainer{font-size:.77rem;line-height:1.55;margin:0}
+.one-backup-notice{display:block;width:100%;max-width:320px;font-size:.69rem;color:var(--muted);line-height:1.3}
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
@@ -1486,7 +1496,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.8.0 LAB</small>
+      <small class="brand-version">v10.9.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1508,8 +1518,9 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
         <button type="button" data-display-currency="USD">$ USD</button>
       </div>
       <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
-      <button id="exportBtn" title="Guardar un respaldo JSON">Respaldar</button>
+      <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
       <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
+      <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </div>
@@ -1630,10 +1641,15 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <summary>Conciliación de saldo</summary>
       <div class="v7-details-body">
         <div class="one-dashboard-reconcile-toolbar">
-          <p>Actualizá el saldo operativo cuando necesités conciliar tus movimientos.</p>
+          <p>Compará el saldo calculado con el dinero realmente disponible para operar. La conciliación no se cuenta como ingreso ni gasto.</p>
           <button class="btn secondary" id="reconcileBtn">Actualizar saldo real</button>
         </div>
         <div class="card reconcile" id="reconcileStatus"></div>
+        <details class="one-health-details" id="oneDataHealthDetails">
+          <summary>Estado de tus datos y respaldos</summary>
+          <p class="muted">Revisión local y de solo lectura. No modifica saldos ni envía información a ningún servidor.</p>
+          <div id="oneDataHealthReport" role="status" aria-live="polite"></div>
+        </details>
       </div>
     </details>
   </section>
@@ -1949,7 +1965,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.8.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.9.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2186,7 +2202,8 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <div class="field"><label>Fecha de conciliación</label><input type="date" id="rDate" required></div>
       <div class="field"><label>Saldo calculado antes del ajuste</label><input id="rCalculated" readonly></div>
       <div class="field"><label>Saldo operativo real</label><div class="money-input"><input id="rAmount" type="number" min="0" step="0.01" required><select id="rCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
-      <div class="field"><label>Diferencia</label><input id="rDifference" readonly></div>
+      <div class="field"><label>Diferencia (ajuste de saldo)</label><input id="rDifference" readonly></div>
+      <p class="muted one-reconcile-explainer wide" id="oneReconcileExplanation" role="status" aria-live="polite">Ingresá el saldo real para revisar cómo cambiaría el cálculo.</p>
       <div class="field wide"><label>Nota</label><input id="rNote" placeholder="Ej. concilié contra mi cuenta bancaria"></div>
       <div class="dialog-actions wide">
         <button type="button" class="btn secondary" id="cancelReconcileBtn">Cancelar</button>
@@ -2954,6 +2971,81 @@ function oneStorageGuardInit(){
  const btn=document.getElementById("exportBtn");
  if(btn&&last)btn.title="Guardar respaldo JSON · último respaldo solicitado: "+last;
 }
+// V10.9: diagnóstico conservador y de solo lectura; nunca repara ni modifica transacciones.
+function oneHealthCheck(raw){
+ const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
+ const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
+ for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations"]){
+  const seen=new Set();let duplicate=0;
+  for(const item of get(kind)){
+   const recordId=kind==="periods"?(item.key||""):item.id;
+   if(!recordId)continue;
+   if(seen.has(recordId))duplicate++;else seen.add(recordId);
+  }
+  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.");
+ }
+ const cats=new Set(get("categories").map(c=>c.id)),funds=new Set(get("reserves").map(r=>r.id)),
+  groups=new Set(get("sharedChargeGroups").map(g=>g.id)),debts=new Set(get("debts").map(d=>d.id));
+ let orphanCategory=0,orphanDebt=0,orphanGoal=0,orphanGroup=0,badAmount=0,badDate=0,missingUsdRate=0;
+ for(const m of get("movements")){
+  if(m.categoryId&&!cats.has(m.categoryId))orphanCategory++;
+  for(const split of Array.isArray(m.splits)?m.splits:[]){if(split.categoryId&&!cats.has(split.categoryId))orphanCategory++}
+  if(m.debtId&&!debts.has(m.debtId))orphanDebt++;
+  if(!restoreValidDate(m.date))badDate++;
+  if(!Number.isFinite(Number(m.amount))||Number(m.amount)<0)badAmount++;
+  if(m.currency==="USD"&&!(Number(m.fxBuy)>0&&Number(m.fxSell)>0))missingUsdRate++;
+ }
+ for(const t of get("reserveMovements")){
+  if(t.reserveId&&!funds.has(t.reserveId))orphanGoal++;
+  if(!restoreValidDate(t.date))badDate++;
+  if(!Number.isFinite(Number(t.amount))||Number(t.amount)<0)badAmount++;
+ }
+ for(const c of get("sharedCharges")){
+  if(c.groupId&&!groups.has(c.groupId))orphanGroup++;
+  if(!restoreValidDate(c.date))badDate++;
+  if(!Number.isFinite(Number(c.amount))||Number(c.amount)<0)badAmount++;
+ }
+ countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.");
+ countIssue(orphanDebt,"referencia(s) a deudas inexistentes.");
+ countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.");
+ countIssue(orphanGroup,"cobro(s) vinculados a grupos inexistentes.");
+ countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
+ countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
+ countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
+}
+function oneRenderDataHealth(){
+ const slot=document.getElementById("oneDataHealthReport");
+ if(!slot)return null;
+ const report=oneHealthCheck(data),date=todayIso();
+ const status=document.createElement("p");status.className="one-health-status";
+ status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
+ status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
+  oneStorageConflict?"Otro cambio detectado: recargá antes de modificar":
+  report.issues.length?report.issues.length+" tipo(s) de aviso para revisar":
+  "Sin anomalías detectadas en esta comprobación básica";
+ slot.replaceChildren(status);
+ if(report.issues.length){
+  const ul=document.createElement("ul");ul.className="one-health-issues";
+  for(const item of report.issues.slice(0,10)){
+   const li=document.createElement("li");li.textContent=item.count+" "+item.message;ul.append(li);
+  }
+  slot.append(ul);
+ }
+ const last=(()=>{
+  try{return localStorage.getItem(STORAGE_KEY+"_last_backup_requested")||""}catch{return ""}
+ })();
+ const valid=restoreValidDate(last),days=valid?Math.max(0,Math.floor((Date.parse(date+"T00:00:00Z")-Date.parse(last+"T00:00:00Z"))/86400000)):null;
+ const p=document.createElement("p");p.className="one-health-note";
+ const age=days===null?"No consta una descarga solicitada en este navegador":
+  days===0?"Se solicitó una descarga de respaldo hoy":
+  "Última descarga solicitada: hace "+days+" día(s)";
+ p.textContent=age+". "+(days===null||days>30?"Conviene solicitar y comprobar un respaldo JSON. ":"")+
+  "La aplicación no puede verificar si guardaste el archivo descargado: comprobalo en Descargas y conservá otra copia fuera de este navegador. "+
+  "Se revisaron "+report.checked+" registros. Esta verificación no sustituye un respaldo ni una conciliación real.";
+ slot.append(p);
+ return report;
+}
 function restoreSafely(raw){
   const prepared=restorePrepare(raw),serialized=JSON.stringify(prepared);
   oneStorageAssertCurrent();
@@ -3654,6 +3746,7 @@ function renderDashboard(){
   document.getElementById("kpiGrid").innerHTML=cards.map(([l,v,c])=>`<div class="card kpi ${c}"><div class="label">${l}</div><div class="value">${money(v)}</div></div>`).join("");
   document.getElementById("dashboardCategories").innerHTML=categoryTable(cat);
   renderReconciliationStatus();
+  if(document.getElementById("oneDataHealthDetails")?.open)oneRenderDataHealth();
   const labels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
   drawBarChart(document.getElementById("expenseChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.expenses):[0],labels.length?rows.map(r=>r.actualExpenses):[0]);
   drawLineChart(document.getElementById("cashChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.ending):[0],labels.length?rows.map(r=>r.actualBalance):[0]);
@@ -3662,14 +3755,14 @@ function renderReconciliationStatus(){
   const box=document.getElementById("reconcileStatus");if(!box)return;
   const today=todayIso(), latest=latestReconciliation(today), current=actualBalanceAt(today);
   if(!latest){
-    box.innerHTML=`<div class="reconcile-row"><div><strong>Conciliación de saldo</strong><div class="muted">Todavía no has fijado un saldo real. Cuando el registro se desordene, usa “Actualizar saldo real” y el flujo futuro se recalculará desde ese punto.</div></div><span class="pill">Saldo operativo calculado hoy: ${money(current)}</span></div>`;
+    box.innerHTML=`<div class="reconcile-row"><div><strong>Saldo calculado, todavía no confirmado</strong><div class="muted">Se estima con los movimientos registrados. Si no coincide con tu dinero disponible, usá «Actualizar saldo real» para establecer una referencia sin generar otro ingreso o gasto.</div></div><span class="pill">Calculado hoy: ${money(current)}</span></div>`;
     return;
   }
   const latestCRC=reconciliationAmountCRC(latest),diff=latest.calculatedBefore===null?null:latestCRC-num(latest.calculatedBefore);
   const recent=[...(data.reconciliations||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,3);
   box.innerHTML=`<div class="reconcile-row">
-    <div><strong>Último saldo operativo conciliado: ${money(latestCRC)}</strong><div class="muted">${dateLabel(latest.date)}${latest.note?` · ${safe(latest.note)}`:""} · saldo actual después de movimientos posteriores: ${money(current)}</div></div>
-    ${diff===null?"":`<div class="delta ${diff>=0?"positive":"negative"}">Ajuste ${diff>=0?"+":""}${money(diff)}</div>`}
+    <div><strong>Saldo confirmado en ${dateLabel(latest.date)}: ${money(latestCRC)}</strong><div class="muted">Saldo calculado hoy: ${money(current)} (incluye movimientos posteriores)${latest.note?` · ${safe(latest.note)}`:""}. Confirmar saldo no agrega un ingreso ni un gasto.</div></div>
+    ${diff===null?"":`<div class="delta ${diff>=0?"positive":"negative"}">Corrección del saldo: ${diff>=0?"+":""}${money(diff)}</div>`}
   </div>
   <div class="table-wrap" style="margin-top:10px"><table style="min-width:650px"><thead><tr><th>Fecha</th><th>Saldo real</th><th>Ajuste</th><th>Nota</th><th></th></tr></thead><tbody>
   ${recent.map(r=>`<tr><td>${dateLabel(r.date)}</td><td class="num">${money(reconciliationAmountCRC(r))}${originalHint(r.amount,r.currency)}</td><td class="num">${r.calculatedBefore===null?"—":money(reconciliationAmountCRC(r)-num(r.calculatedBefore))}</td><td>${safe(r.note||"")}</td><td><button class="btn danger small" data-delete-reconcile="${safe(r.id)}">Eliminar</button></td></tr>`).join("")}
@@ -3687,10 +3780,15 @@ function openReconcile(){
 }
 function updateReconcilePreview(){
   const date=document.getElementById("rDate").value||todayIso();
-  const calculated=actualBalanceAt(date), entered=document.getElementById("rAmount").value,currency=document.getElementById("rCurrency").value;
+  const calculated=actualBalanceAt(date),entered=document.getElementById("rAmount").value,currency=document.getElementById("rCurrency").value;
   document.getElementById("rCalculated").value=money(calculated);
-  const enteredCRC=entered===""?null:currentToCRC(entered,currency,"receive");
-  document.getElementById("rDifference").value=enteredCRC===null?"":money(enteredCRC-calculated);
+  const enteredCRC=entered===""?null:currentToCRC(entered,currency,"receive"),diff=enteredCRC===null?null:enteredCRC-calculated;
+  document.getElementById("rDifference").value=diff===null?"":money(diff);
+  const note=document.getElementById("oneReconcileExplanation");
+  if(note)note.textContent=diff===null?"Ingresá el saldo real para revisar cómo cambiaría el cálculo.":
+    Math.abs(diff)<.005?"El saldo real coincide con el calculado. No se generará una diferencia.":
+    "El saldo operativo calculado "+(diff>0?"aumentará":"disminuirá")+" en "+money(Math.abs(diff))+
+    ". Es una conciliación, no un ingreso, gasto ni pago de deuda.";
 }
 function categoryTable(rows){
   return `<table><thead><tr><th>Categoría</th><th>Presupuesto</th><th>Real</th><th>Disponible</th><th>Uso</th></tr></thead><tbody>${
@@ -5604,7 +5702,9 @@ function bind(){
   document.getElementById("reconcileForm").addEventListener("submit",e=>{
     e.preventDefault();
     const date=document.getElementById("rDate").value, amount=num(document.getElementById("rAmount").value),currency=normalizeCurrency(document.getElementById("rCurrency").value);
-    const p=periodForDate(date);if(!p)return alert("La fecha no pertenece a un periodo configurado.");
+    const p=periodForDate(date);
+    if(!restoreValidDate(date)||date>todayIso()||!p||date>periodEndDate(p))
+      return alert("La fecha debe ser válida, no futura y pertenecer a un período presupuestario.");
     const calculatedBefore=actualBalanceAt(date);
     data.reconciliations.push({id:id(),date,amount,currency,...currentFxSnapshot(),afterSeq:num(data.movementSeq),calculatedBefore,note:document.getElementById("rNote").value.trim(),createdAt:new Date().toISOString()});
     save();document.getElementById("reconcileDialog").close();syncQuarterSelectors();renderDashboard();renderPlan();
@@ -5936,8 +6036,15 @@ function bind(){
 
   document.getElementById("exportBtn").addEventListener("click",()=>{
     if(storageReadError)return alert("No se puede crear un respaldo porque no se pudo leer el historial local original.");
-    download("respaldo-finanzas-"+todayIso()+".json",JSON.stringify(data,null,2),"application/json");
-    try{localStorage.setItem(STORAGE_KEY+"_last_backup_requested",todayIso())}catch{}
+    try{
+      oneStorageAssertCurrent();
+      // Los navegadores no informan si el archivo fue finalmente guardado por el usuario.
+      download("respaldo-finanzas-"+todayIso()+".json",JSON.stringify(data,null,2),"application/json");
+      try{localStorage.setItem(STORAGE_KEY+"_last_backup_requested",todayIso())}catch{}
+      const notice=document.getElementById("oneBackupNotice");
+      if(notice){notice.hidden=false;notice.textContent="Descarga solicitada. Comprobá el archivo JSON en Descargas y guardá una copia fuera del navegador."}
+      oneRenderDataHealth();
+    }catch(error){alert("No se pudo solicitar el respaldo. "+String(error?.message||"Revisá el almacenamiento."));}
   });
   const restoreDialog=document.getElementById("restorePreviewDialog");
   let pendingRestore=null;
@@ -6365,14 +6472,15 @@ renderDashboard=function(){
     deltaEl.className="v7-hero-delta";
   }else if(previous>0){
     const pct=Math.abs(delta/previous)*100;
-    deltaEl.textContent=`${delta>=0?"↑":"↓"} ${pct.toFixed(0)}% respecto a hace 30 días`;
-    deltaEl.className=`v7-hero-delta ${delta>=0?"good":"bad"}`;
+    deltaEl.textContent=`Saldo operativo: ${delta>=0?"↑":"↓"} ${pct.toFixed(0)}% vs. hace 30 días`;
+    deltaEl.className="v7-hero-delta";
   }else{
     // Con una base cero o negativa, el cambio porcentual no representa
     // apropiadamente la mejora o caída del saldo disponible.
-    deltaEl.textContent=`Hace 30 días: ${money(previous)} · ${delta>=0?"↑":"↓"} ${money(Math.abs(delta))} de cambio`;
-    deltaEl.className=`v7-hero-delta ${delta>=0?"good":"bad"}`;
+    deltaEl.textContent=`Saldo operativo hace 30 días: ${money(previous)} · variación ${delta>=0?"+":"−"}${money(Math.abs(delta))}`;
+    deltaEl.className="v7-hero-delta";
   }
+  deltaEl.title="Comparación del saldo operativo, no del gasto. Incluye ingresos, egresos, aportes a metas y ajustes de conciliación.";
   oneRenderEstimatedAvailable(todayIso());
 
   document.getElementById("kpiGrid").innerHTML=[
@@ -6409,7 +6517,7 @@ renderDashboard=function(){
   if(usage===null){
     insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
   }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del periodo seleccionado.</p><span class="v7-status-pill">✓ Todo se ve bien</span>`;
+    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
   }else if(usage<=1){
     insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
   }else{
@@ -6926,6 +7034,9 @@ function initV7(){
   const advancedDetails=document.getElementById("dashboardAdvancedDetails");
   advancedDetails?.addEventListener("toggle",()=>{
     if(advancedDetails.open&&document.getElementById("view-dashboard")?.classList.contains("active"))renderDashboard();
+  });
+  document.getElementById("oneDataHealthDetails")?.addEventListener("toggle",event=>{
+    if(event.target.open)oneRenderDataHealth();
   });
   document.getElementById("movementSearch")?.addEventListener("input",renderMovements);
   document.getElementById("movementCategoryFilter")?.addEventListener("change",renderMovements);
