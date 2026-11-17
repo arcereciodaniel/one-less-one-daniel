@@ -4942,10 +4942,11 @@ function oneRenderGoalCards(){
   grid.innerHTML=visible.length?visible.map(r=>{
     const balance=reserveBalanceAt(r,today),target=reserveTargetCRC(r),remaining=Math.max(0,target-balance);
     const pct=target>0?Math.min(100,Math.max(0,balance/target*100)):0;
-    const archived=reserveStatus(r)==="archived",monthly=oneGoalMonthlySuggestion(r,today);
+    const archived=reserveStatus(r)==="archived",completed=archived&&r.closedReason==="Meta cumplida",monthly=oneGoalMonthlySuggestion(r,today);
+    const achieved=target>.005&&balance>=target-.005;
     const dateInfo=r.targetDate?(restoreValidDate(r.targetDate)?(r.targetDate<today?"Fecha objetivo pasada · "+dateLabel(r.targetDate):
       "Objetivo: "+dateLabel(r.targetDate)):"Revisá la fecha objetivo"):"Sin fecha límite";
-    const hint=target<=0?"Definí un monto objetivo para ver tu avance.":
+    const hint=completed?"Meta cumplida. El saldo del fondo sigue apartado hasta que lo utilicés.":target<=0?"Definí un monto objetivo para ver tu avance.":
       remaining<=.005?"¡Monto objetivo alcanzado!":
       archived?"La meta está archivada. Conservamos su historial.":
       r.targetDate&&r.targetDate<=today?"Fecha cumplida: revisá el plazo de tu meta.":
@@ -4954,7 +4955,7 @@ function oneRenderGoalCards(){
     const history=(data.reserveMovements||[]).filter(t=>t.reserveId===r.id)
       .sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt).localeCompare(String(a.createdAt)))
       .slice(0,5);
-    const status=archived?'<span class="one-goal-state">Archivada</span>':"";
+    const status=archived?'<span class="one-goal-state'+(completed?' completed':'')+'">'+(completed?'Cumplida':'Archivada')+'</span>':"";
     const linkedBudget=categoryById(oneGoalBudgetCategory(r))?.name||"Sin vincular";
     const ops=history.map(t=>'<div class="one-goal-history-row"><span>'+dateLabel(t.date)+' · '+safe(t.type)+'</span><strong>'+originalMoney(t.amount,t.currency||"CRC")+'</strong></div>').join("");
     return '<article class="one-goal-card">'+
@@ -4973,6 +4974,7 @@ function oneRenderGoalCards(){
       (archived?'<button type="button" class="btn secondary small" data-reactivate-reserve="'+safe(r.id)+'">Reactivar</button>':
         '<button type="button" class="btn secondary small" data-goal-txn="'+safe(r.id)+'" data-goal-type="Retiro a operación">Retirar</button>'+
         '<button type="button" class="btn secondary small" data-goal-txn="'+safe(r.id)+'" data-goal-type="Uso objetivo">Usar objetivo</button>'+
+        (achieved?'<button type="button" class="btn secondary small" data-complete-goal="'+safe(r.id)+'">Marcar cumplida</button>':'')+
         '<button type="button" class="btn secondary small" data-archive-reserve="'+safe(r.id)+'">Archivar</button>')+
       '</div></div></details></article>';
   }).join(""):'<div class="one-goal-empty">No hay metas en esta vista. Podés crear tu primera meta sin salir de One Less One.</div>';
@@ -5837,6 +5839,18 @@ function bind(){
       }
     }
     const editReserve=e.target.closest("[data-edit-reserve]");if(editReserve)openReserve(data.reserves.find(r=>r.id===editReserve.dataset.editReserve));
+    const markComplete=e.target.closest("[data-complete-goal]");
+    if(markComplete){
+      const r=data.reserves.find(x=>x.id===markComplete.dataset.completeGoal);
+      if(!r||r.type!=="goal"||reserveStatus(r)!=="active")return;
+      const balance=reserveBalanceAt(r,todayIso()),target=reserveTargetCRC(r);
+      if(!(target>.005&&balance>=target-.005))return alert("La meta todavía no alcanzó su monto objetivo.");
+      if(!confirm("¿Marcar “"+r.name+"” como cumplida?\n\nEl saldo "+money(balance)+" seguirá apartado y contará en tu patrimonio hasta registrar un Uso objetivo o Retiro. No se crea ningún ingreso ni gasto."))return;
+      r.status="archived";r.closedAt=todayIso();r.closedReason="Meta cumplida";
+      save();refreshReserveSelect();renderCapital();renderDashboard();renderPlan();
+      oneActionSaved("Meta cumplida",r.name+"\nEl ahorro sigue disponible en su fondo, sin movimientos contables adicionales.");
+      return;
+    }
     const archiveReserve=e.target.closest("[data-archive-reserve]");
     if(archiveReserve){const r=data.reserves.find(x=>x.id===archiveReserve.dataset.archiveReserve);if(r){const bal=reserveBalanceAt(r,todayIso()),reason=prompt(`Motivo para archivar “${r.name}” (por ejemplo: Meta lograda o Meta cancelada):`,"Meta lograda");if(reason!==null&&confirm(`¿Archivar “${r.name}”?${bal?`\n\nEl fondo conserva un saldo de ${money(bal)} y seguirá contando dentro de tu patrimonio hasta que registres un Uso objetivo o Retiro.`:""}`)){r.status="archived";r.closedAt=todayIso();r.closedReason=reason.trim()||"Meta finalizada";save();refreshReserveSelect();renderCapital();renderDashboard();}}}
     const reactivateReserve=e.target.closest("[data-reactivate-reserve]");if(reactivateReserve){const r=data.reserves.find(x=>x.id===reactivateReserve.dataset.reactivateReserve);if(r&&confirm(`¿Reactivar “${r.name}”?`)){r.status="active";r.closedAt="";r.closedReason="";save();refreshReserveSelect();renderCapital();renderDashboard();}}
@@ -6951,7 +6965,8 @@ function oneCentralSaveGoal(event){
   if(!oneModuleEnabled("capital"))oneSetModuleEnabled("capital",true);
   m2ResetComposer();
   renderMovements();renderDashboard();renderPlan();renderCapital();
-  oneCentralNotify(candidate.type+" de "+originalMoney(amount,candidate.currency)+" guardado en “"+fund.name+"”. No se creó un gasto ni un ingreso ficticio.");
+  oneActionSaved(candidate.type==="Aporte"?"Ahorro registrado":"Movimiento de meta registrado",
+    originalMoney(amount,candidate.currency)+" · "+fund.name+"\nTransferencia interna: no se creó un gasto ni un ingreso ficticio.");
 }
 
 function oneInitPaydayControls(){
