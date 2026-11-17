@@ -159,3 +159,6 @@ footer { margin-top: 25px; }
 .entry-success-body h2{font-size:19px;line-height:1.35;margin:0}
 .entry-success-body p{font-size:13px;line-height:1.6;color:var(--muted);margin:0;white-space:pre-line;overflow-wrap:anywhere}
 .entry-success-body button{min-width:130px;margin-top:6px;max-width:100%}
+
+/* V11.8: asociación opcional y discreta de gastos con Proyectos. */
+.field-hint{display:block;margin:7px 2px 0;font-size:11px;line-height:1.5;color:var(--dim)}
