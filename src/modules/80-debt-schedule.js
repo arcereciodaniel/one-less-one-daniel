@@ -114,8 +114,8 @@ renderDebts=function(){
   const currentMonth=todayIso().slice(0,7);
   const paidMonth=(data.movements||[]).filter(m=>m.type==="Pago deuda"&&v7MonthKey(m.date)===currentMonth).reduce((s,m)=>s+movementAmountCRC(m),0);
   const upcoming=oneDebtUpcomingEntries().find(x=>x.date>=todayIso()&&x.minimum>0);
-  const structured=active.filter(d=>d.type==="Préstamo"||d.type==="Familiar").reduce((sum,d)=>sum+debtOutstanding(d),0);
-  const revolving=active.filter(d=>d.type==="Tarjeta").reduce((sum,d)=>sum+debtOutstanding(d),0);
+  const structured=active.filter(d=>debtNature(d)==="structured").reduce((sum,d)=>sum+debtOutstanding(d),0);
+  const revolving=active.filter(d=>debtNature(d)==="revolving").reduce((sum,d)=>sum+debtOutstanding(d),0);
   document.getElementById("debtKpis").innerHTML=[
     v7Kpi("↑","green","Pagado este mes",money(paidMonth),paidMonth?"Registrado en Movimientos":"Sin pagos este mes",paidMonth?"good":""),
     v7Kpi("◫","purple","Próxima cuota",upcoming?dateLabel(upcoming.date):"—",upcoming?`${v7SafeText(upcoming.debt.name)} · ${money(upcoming.minimum)}`:"Sin cuotas con fecha pendiente",""),
@@ -142,7 +142,7 @@ renderDebts=function(){
       ? `<button class="btn secondary small" data-reactivate-debt="${d.id}">Reactivar</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button>`
       : `<button class="btn secondary small" data-pay-debt="${d.id}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${d.id}">Actualizar saldo real</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button><button class="btn secondary small" data-archive-debt="${d.id}">Archivar</button>`;
     return `<div class="v7-debt-card ${archivedDebt?"archived":""}">
-      <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(d.type)}${archivedDebt?" · archivada":""}</span></div></div>
+      <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(oneDebtTypeName(d))}${archivedDebt?" · archivada":""}</span></div></div>
       <div class="v7-debt-cell"><span>Saldo pendiente</span><strong>${money(out)}</strong></div>
       <div class="v7-debt-cell">${debtLatestAdjustment(d)?`<span>Saldo conciliado · ${debtLatestAdjustment(d).date}</span><strong>${money(out)}</strong><span>Pagos históricos: ${money(paid)}</span>`:`<span>${pct.toFixed(0)}% pagado</span><div class="progress"><span style="width:${pct}%"></span></div><span>${money(paid)} de ${money(base)}</span>`}</div>
       <div class="v7-debt-cell"><span>Fecha de cuota estimada</span><strong>${next?.date?dateLabel(next.date):"—"}</strong></div>
