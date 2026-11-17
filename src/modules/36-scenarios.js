@@ -112,7 +112,7 @@ function oneScenarioChart(scenario){
  dates+'</svg>';
 }
 function oneScenarioFormatInput(crc,currency){
- const n=fromCRC(crc,currency);
+ const rates=currentRates(),n=currency==="USD"?(rates.sell>0?crc/rates.sell:0):crc;
  return String(Number(n.toFixed(currency==="USD"?2:0)));
 }
 function oneScenarioSyncControls(){
