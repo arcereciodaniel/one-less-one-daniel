@@ -142,3 +142,11 @@ footer { margin-top: 25px; }
 .split-existing-members button{border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--text);padding:7px 11px;font-size:12px}
 .split-existing-members button:disabled{opacity:.4}
 .split-hint{font-size:11px;line-height:1.5;color:var(--dim);margin:-2px 0 0}
+
+/* V10.7: selector CRC/USD compacto y accesible junto al monto */
+.amount-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.amount-top>label{font-size:12px;font-weight:650;color:var(--muted)}
+.currency-picker{flex:none}
+.currency-picker select{height:35px;min-height:35px;width:112px;padding:0 26px 0 10px;background:var(--control);color:var(--text);border:1px solid var(--line);border-radius:9px;font-size:13px;font-weight:650;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23aaaeb6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:14px}
+.currency-picker select:focus-visible{outline:2px solid #d0d1d4;outline-offset:2px}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
