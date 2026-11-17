@@ -1475,6 +1475,16 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-group-person-items li span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
 .one-group-person-items small{display:block;color:var(--muted);margin-top:3px}
 .one-group-person-card .table-wrap{margin:0;padding:0 10px 10px}
+.one-health-details{border-top:1px solid var(--border);padding:14px 0 2px;margin-top:12px}
+.one-health-details>summary{cursor:pointer;color:var(--text);font-weight:650;font-size:.83rem}
+.one-health-details>p{font-size:.75rem;line-height:1.55;margin:10px 0}
+.one-health-status{font-size:.8rem;font-weight:650;margin:8px 0}
+.one-health-status[data-level=review]{color:var(--danger)}
+.one-health-issues{padding-left:18px;display:grid;gap:8px;font-size:.77rem;line-height:1.5;color:var(--muted)}
+.one-health-note{margin-top:10px;font-size:.74rem;line-height:1.55;color:var(--muted)}
+.one-health-note strong{color:var(--text)}
+.one-reconcile-explainer{font-size:.77rem;line-height:1.55;margin:0}
+.one-backup-notice{display:block;width:100%;max-width:320px;font-size:.69rem;color:var(--muted);line-height:1.3}
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
@@ -1486,7 +1496,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.8.0</small>
+      <small class="brand-version">v10.9.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1508,8 +1518,9 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
         <button type="button" data-display-currency="USD">$ USD</button>
       </div>
       <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
-      <button id="exportBtn" title="Guardar un respaldo JSON">Respaldar</button>
+      <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
       <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
+      <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </div>
@@ -1630,10 +1641,15 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <summary>Conciliación de saldo</summary>
       <div class="v7-details-body">
         <div class="one-dashboard-reconcile-toolbar">
-          <p>Actualizá el saldo operativo cuando necesités conciliar tus movimientos.</p>
+          <p>Compará el saldo calculado con el dinero realmente disponible para operar. La conciliación no se cuenta como ingreso ni gasto.</p>
           <button class="btn secondary" id="reconcileBtn">Actualizar saldo real</button>
         </div>
         <div class="card reconcile" id="reconcileStatus"></div>
+        <details class="one-health-details" id="oneDataHealthDetails">
+          <summary>Estado de tus datos y respaldos</summary>
+          <p class="muted">Revisión local y de solo lectura. No modifica saldos ni envía información a ningún servidor.</p>
+          <div id="oneDataHealthReport" role="status" aria-live="polite"></div>
+        </details>
       </div>
     </details>
   </section>
@@ -1949,7 +1965,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.8.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.9.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2186,7 +2202,8 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <div class="field"><label>Fecha de conciliación</label><input type="date" id="rDate" required></div>
       <div class="field"><label>Saldo calculado antes del ajuste</label><input id="rCalculated" readonly></div>
       <div class="field"><label>Saldo operativo real</label><div class="money-input"><input id="rAmount" type="number" min="0" step="0.01" required><select id="rCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
-      <div class="field"><label>Diferencia</label><input id="rDifference" readonly></div>
+      <div class="field"><label>Diferencia (ajuste de saldo)</label><input id="rDifference" readonly></div>
+      <p class="muted one-reconcile-explainer wide" id="oneReconcileExplanation" role="status" aria-live="polite">Ingresá el saldo real para revisar cómo cambiaría el cálculo.</p>
       <div class="field wide"><label>Nota</label><input id="rNote" placeholder="Ej. concilié contra mi cuenta bancaria"></div>
       <div class="dialog-actions wide">
         <button type="button" class="btn secondary" id="cancelReconcileBtn">Cancelar</button>
@@ -5936,8 +5953,15 @@ function bind(){
 
   document.getElementById("exportBtn").addEventListener("click",()=>{
     if(storageReadError)return alert("No se puede crear un respaldo porque no se pudo leer el historial local original.");
-    download("respaldo-finanzas-"+todayIso()+".json",JSON.stringify(data,null,2),"application/json");
-    try{localStorage.setItem(STORAGE_KEY+"_last_backup_requested",todayIso())}catch{}
+    try{
+      oneStorageAssertCurrent();
+      // Los navegadores no informan si el archivo fue finalmente guardado por el usuario.
+      download("respaldo-finanzas-"+todayIso()+".json",JSON.stringify(data,null,2),"application/json");
+      try{localStorage.setItem(STORAGE_KEY+"_last_backup_requested",todayIso())}catch{}
+      const notice=document.getElementById("oneBackupNotice");
+      if(notice){notice.hidden=false;notice.textContent="Descarga solicitada. Comprobá el archivo JSON en Descargas y guardá una copia fuera del navegador."}
+      oneRenderDataHealth();
+    }catch(error){alert("No se pudo solicitar el respaldo. "+String(error?.message||"Revisá el almacenamiento."));}
   });
   const restoreDialog=document.getElementById("restorePreviewDialog");
   let pendingRestore=null;
