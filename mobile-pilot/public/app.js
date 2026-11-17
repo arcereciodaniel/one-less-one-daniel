@@ -31,6 +31,22 @@ function fill(id,rows){
  if(rows.some(row=>row.id===previous))select.value=previous;
 }
 function options(){fill("categoryId",(catalog?.categories||[]).filter(c=>c.type===kind));}
+function selectedProject(){return (catalog?.projects||[]).find(p=>p.id===$("projectId").value)||null;}
+function fillProjectBuckets(selected=""){
+ const pick=$("projectBucketId"),project=selectedProject();
+ const previous=selected||pick.value;
+ fill("projectBucketId",project?.buckets||[]);
+ pick.options[0].textContent="Sin concepto";
+ if((project?.buckets||[]).some(b=>b.id===previous))pick.value=previous;
+ $("projectBucketField").hidden=kind!=="Gasto"||!project||!project.buckets?.length;
+}
+function fillProjects(){
+ const rows=catalog?.projects||[];
+ fill("projectId",rows);
+ $("projectId").options[0].textContent="Sin proyecto";
+ $("projectField").hidden=kind!=="Gasto"||!rows.length;
+ fillProjectBuckets();
+}
 function mobileGroup(){
  return (catalog?.groups||[]).find(g=>g.id===$("cobroGroup").value)||null;
 }
@@ -74,7 +90,7 @@ async function refresh(){
  try{
   const result=await api("catalog");
   if(!result.catalog)throw Error("Primero vinculá el piloto desde One Less One Daniel");
-  catalog=result.catalog;options();fillCobroGroups();showCapture(true);if(!pending)status("");return true;
+  catalog=result.catalog;options();fillCobroGroups();fillProjects();showCapture(true);if(!pending)status("");return true;
  }catch(e){showCapture(false);status(e.message,"error");return false;}
 }
 function setType(type){
@@ -89,7 +105,7 @@ function setType(type){
  $("categoryId").required=ordinary;$("person").required=cobro&&!$("splitToggle").checked;
  $("descriptionLabel").innerHTML=cobro?'Concepto <span class="optional">(opcional)</span>':'Detalle <span class="optional">(opcional)</span>';
  $("description").placeholder=cobro?"¿Qué te deben?":type==="Ingreso"?"¿De dónde viene?":"¿En qué fue?";
- $("submit").textContent=LABELS[type];$("moneySymbol").textContent=$("currency").value==="USD"?"$":"₡";$("currencyHint").hidden=$("currency").value!=="USD";options();return true;
+ $("submit").textContent=LABELS[type];$("moneySymbol").textContent=$("currency").value==="USD"?"$":"₡";$("currencyHint").hidden=$("currency").value!=="USD";options();fillProjects();return true;
 }
 function freeze(locked){
  for(const field of $("entryForm").querySelectorAll("input,select"))field.disabled=locked;
@@ -107,6 +123,10 @@ function restoreDraft(){
   setType(old?"Gasto":p.type);
   for(const id of ["date","amount","categoryId","person","description","dueDate","currency"]){
    if($(id)&&p[id]!==undefined)$(id).value=p[id];
+  }
+  if(p.type==="Gasto"&&p.projectId){
+   $("projectId").value=p.projectId;
+   fillProjectBuckets(p.projectBucketId||"");
   }
   if(p.type==="Cobro dividido"){
    $("cobroGroup").value=p.groupId||NEW_GROUP;
@@ -183,7 +203,14 @@ function movement(){
  if(kind==="Cobro"&&$("splitToggle").checked)return splitPayload();
  const m={type:kind,date:$("date").value,amount:Number($("amount").value),
  currency:$("currency").value,description:$("description").value.trim()};
- if(kind!=="Cobro")m.categoryId=$("categoryId").value;
+ if(kind!=="Cobro"){
+  m.categoryId=$("categoryId").value;
+  if(kind==="Gasto"&&selectedProject()){
+   m.projectId=selectedProject().id;
+   if((selectedProject().buckets||[]).some(b=>b.id===$("projectBucketId").value))
+    m.projectBucketId=$("projectBucketId").value;
+  }
+ }
  else {
   m.person=$("person").value.trim();m.dueDate=$("dueDate").value;
   m.groupId=mobileGroup()?.id||"";
@@ -198,6 +225,7 @@ function showMobileReceipt(entry){
  $("entrySuccessTitle").textContent="Registro recibido";
  $("entrySuccessDescription").textContent=label+" · "+symbol+Number(entry.amount).toLocaleString(entry.currency==="USD"?"en-US":"es-CR",{maximumFractionDigits:2})+
   (entry.description?" · "+entry.description:"")+
+  (entry.projectId?" · "+((catalog?.projects||[]).find(p=>p.id===entry.projectId)?.name||"Proyecto"):"")+
   "\nEstá en la bandeja móvil; se incorporará a Daniel cuando sincronice. Todavía no se ha contabilizado.";
  if(typeof dialog.showModal==="function")dialog.showModal();
  else dialog.setAttribute("open","");
@@ -242,6 +270,7 @@ $("dueDate").addEventListener("input",syncDateDisplays);
 $("dueDate").addEventListener("change",syncDateDisplays);
 $("currency").addEventListener("change",()=>{setType(kind);splitPreview()});
 $("splitToggle").addEventListener("change",syncSplitMode);
+$("projectId").addEventListener("change",()=>fillProjectBuckets());
 $("splitMode").addEventListener("change",syncSplitMode);
 $("cobroGroup").addEventListener("change",()=>{
  if(kind==="Cobro"&&!$("splitToggle").checked){
