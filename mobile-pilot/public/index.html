@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#101114">
 <meta name="color-scheme" content="dark">
 <title>Registrar · One Less One</title>
-<link rel="stylesheet" href="./style.css?v=10.7.0">
-<script defer src="./split-fare.js?v=10.7.0"></script>
-<script defer src="./app.js?v=10.7.0"></script>
+<link rel="stylesheet" href="./style.css?v=10.8.0">
+<script defer src="./split-fare.js?v=10.8.0"></script>
+<script defer src="./app.js?v=10.8.0"></script>
 </head>
 <body><main class="shell">
 <header class="app-header"><div class="brand">One Less One</div><p>Registro rápido</p></header>
@@ -26,7 +26,7 @@
 <button type="button" data-type="Cobro" aria-pressed="false">Cobro</button>
 </div>
 <form id="entryForm">
-<div class="amount-card"><div class="amount-top"><label for="amount">Monto</label><div id="currencyField" class="currency-picker"><label for="currency" class="sr-only">Moneda del registro</label><select id="currency" aria-label="Moneda del registro"><option value="CRC">₡ CRC</option><option value="USD">$ USD</option></select></div></div><div class="money"><span id="moneySymbol" aria-hidden="true">₡</span><input id="amount" type="number" inputmode="decimal" min="0.01" max="1000000000" step="0.01" placeholder="0" autocomplete="off" required></div></div>
+<div class="amount-card"><div class="amount-top"><label for="amount">Monto</label><div id="currencyField" class="currency-picker"><label for="currency" class="sr-only">Moneda del registro</label><select id="currency" aria-label="Moneda del registro"><option value="CRC">₡ CRC</option><option value="USD">$ USD</option></select></div></div><div class="money"><span id="moneySymbol" aria-hidden="true">₡</span><input id="amount" type="number" inputmode="decimal" min="0.01" max="1000000000" step="0.01" placeholder="0" autocomplete="off" required></div><p id="currencyHint" hidden>El monto original seguirá en dólares; Daniel aplicará el tipo de cambio histórico al sincronizar.</p></div>
 <div class="form-fields">
 <div id="cobroGroupField" class="field" hidden><label for="cobroGroup">Grupo <span class="optional">(opcional)</span></label><select id="cobroGroup"><option value="">Sin grupo</option></select></div>
 <div class="field" id="splitGroupNameField" hidden><label for="splitGroupName">Nombre del grupo nuevo</label><input id="splitGroupName" maxlength="120" placeholder="Ej. Mamá o viaje con amigos"></div>
