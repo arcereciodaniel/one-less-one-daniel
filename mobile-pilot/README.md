@@ -174,3 +174,11 @@ Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente,
 - En Cobro se distingue entre **Sin grupo**, **Crear grupo nuevo** y grupos existentes. El grupo nuevo se crea junto al primer cobro individual, sin tener que dividirlo. Solo si se activa «Dividir gasto» aparecen los participantes y las reglas de reparto.
 - El Worker no recibe saldos, gastos antiguos ni respaldos; solo nuevos registros enviados y catálogos mínimos. Los cobros pendientes no crean gastos ni ingresos en Movimientos.
 - Antes de probar los cambios en Safari, verificar que el Worker Cloudflare se haya desplegado efectivamente. Una actualización de GitHub sin el despliegue móvil no modifica el formulario alojado en Workers.
+
+## V10.8 — Tasas históricas y registros pendientes con solución
+
+- En el escritorio, un USD importado toma la tasa registrada para el día del movimiento; si no existe, la última **anterior** de hasta **7 días**. No usa tasas posteriores. Si no existe ninguna cotización verificable en ese intervalo, permanece pendiente en D1 sin contabilizarse ni desaparecer.
+- Las tasas se consultan desde el historial de tipo de cambio de Daniel, con **compra** para ingresos y **venta** para gastos. Se guarda `fxDate` y ambas tasas en el registro original para impedir que cambios posteriores del TC lo alteren.
+- En **Movimientos → Registro desde iPhone** aparece un detalle de incidencias con fecha, concepto, causa y acceso a TC, presupuesto, categorías o cobros según el error. Tras resolverlo, pulsar **Sincronizar ahora**.
+- El iPhone muestra una explicación únicamente al elegir USD y actualiza el máximo de fecha al volver desde otra aplicación, sin cambiar la fecha seleccionada.
+- La bandeja sigue siendo temporal e idempotente. Los registros por revisar no reciben confirmación ni se purgan como importados. La lógica de sincronización permanece exclusiva de Daniel.
