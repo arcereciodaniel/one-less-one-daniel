@@ -159,6 +159,7 @@ test("V11.6: respaldo rechaza plan huérfano, proyecto ajeno y concepto incompat
   const missing=structuredClone(good);missing.projectLinks.find(x=>x.id===base.id).planId="desaparecido";
   assert.throws(()=>e.w.restorePrepare(missing),/conciliación/i);
   const wrong=structuredClone(good);wrong.projectLinks.find(x=>x.id===base.id).projectId=B;
+  wrong.projectLinks.find(x=>x.id===base.id).bucketId="";
   assert.throws(()=>e.w.restorePrepare(wrong),/conciliación/i);
   const badBucket=structuredClone(good);badBucket.projectLinks.find(x=>x.id===base.id).bucketId="";
   assert.throws(()=>e.w.restorePrepare(badBucket),/concepto/i);
