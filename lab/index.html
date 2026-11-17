@@ -1486,7 +1486,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.6.0 LAB</small>
+      <small class="brand-version">v10.7.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1949,7 +1949,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.6.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.7.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -6508,7 +6508,7 @@ renderMovements=function(){
         <div class="v7-transaction-icon">${v7MovementIcon(m)}</div>
         <div class="v7-transaction-main"><strong>${v7SafeText(label)}</strong><span>${v7SafeText(oneIsCobroReimbursement(m)?"Reembolso · Cobros":oneIsLinkedCobroMovement(m)?"Ingreso · Cobros":m.account||m.type)}${m.paymentMethod?` · ${v7SafeText(m.paymentMethod)}`:""}${movementDebtName(m)?` · ${v7SafeText(movementDebtName(m))}`:""}</span></div>
         <div class="v7-category-chip">${v7SafeText(movementDisplayCategory(m)||m.type)}</div>
-        <div class="v7-transaction-amount ${positive?"income":""}">${positive?"+":"−"} ${money(amt)}</div>
+        <div class="v7-transaction-amount ${positive?"income":""}">${positive?"+":"−"} ${money(amt)}${originalHint(m.amount,m.currency)}</div>
         <div class="m2-feed-actions">
           ${oneIsLinkedCobroMovement(m)?
           `<button type="button" data-open-linked-cobro="${safe(m.receivableChargeId)}" title="Este movimiento se modifica desde Cobros">Ver en Cobros</button>`:
