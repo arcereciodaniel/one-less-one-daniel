@@ -2,6 +2,7 @@
 const KEY="one_one_mobile_v1_key",DRAFT="one_one_mobile_v1_draft";
 const TYPES=["Gasto","Ingreso","Cobro"];
 const LABELS={Gasto:"Registrar gasto",Ingreso:"Registrar ingreso",Cobro:"Crear cobro"};
+const NEW_GROUP="__new__";
 const $=id=>document.getElementById(id);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 let catalog=null,kind="Gasto",pending=null,submitting=false;
@@ -34,8 +35,12 @@ function mobileGroup(){
  return (catalog?.groups||[]).find(g=>g.id===$("cobroGroup").value)||null;
 }
 function fillCobroGroups(){
+ const choice=$("cobroGroup"),previous=choice.value;
  fill("cobroGroup",catalog?.groups||[]);
- $("cobroGroup").options[0].textContent="Nuevo grupo / sin grupo";
+ choice.options[0].textContent="Sin grupo";
+ const option=document.createElement("option");option.value=NEW_GROUP;option.textContent="+ Crear grupo nuevo";
+ choice.insertBefore(option,choice.options[1]||null);
+ if(previous===NEW_GROUP)choice.value=NEW_GROUP;
  syncGroupSuggestions();
 }
 function syncGroupSuggestions(){
@@ -78,13 +83,13 @@ function setType(type){
  for(const b of document.querySelectorAll("[data-type]")){const active=b.dataset.type===type;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));}
  const ordinary=type!=="Cobro",cobro=!ordinary;
  $("categoryField").hidden=!ordinary;$("dueField").hidden=!cobro;
- $("currencyField").hidden=!cobro;$("splitToggleField").hidden=!cobro;$("cobroGroupField").hidden=!cobro;
+ $("currencyField").hidden=false;$("splitToggleField").hidden=!cobro;$("cobroGroupField").hidden=!cobro;
  $("personField").hidden=!cobro||$("splitToggle").checked;
  syncSplitMode();
  $("categoryId").required=ordinary;$("person").required=cobro&&!$("splitToggle").checked;
  $("descriptionLabel").innerHTML=cobro?'Concepto <span class="optional">(opcional)</span>':'Detalle <span class="optional">(opcional)</span>';
  $("description").placeholder=cobro?"¿Qué te deben?":type==="Ingreso"?"¿De dónde viene?":"¿En qué fue?";
- $("submit").textContent=LABELS[type];$("moneySymbol").textContent=kind==="Cobro"&&$("currency").value==="USD"?"$":"₡";options();return true;
+ $("submit").textContent=LABELS[type];$("moneySymbol").textContent=$("currency").value==="USD"?"$":"₡";options();return true;
 }
 function freeze(locked){
  for(const field of $("entryForm").querySelectorAll("input,select"))field.disabled=locked;
@@ -104,14 +109,17 @@ function restoreDraft(){
    if($(id)&&p[id]!==undefined)$(id).value=p[id];
   }
   if(p.type==="Cobro dividido"){
-   $("cobroGroup").value=p.groupId||"";
+   $("cobroGroup").value=p.groupId||NEW_GROUP;
    $("splitToggle").checked=true;$("splitGroupName").value=p.groupName||"";
    $("splitMode").value=p.splitMode||"equal";$("splitSelfShares").value=p.selfShares??1;
    $("splitSelfAmount").value=p.selfAmount??0;$("splitRows").replaceChildren();
    for(const person of p.participants||[])splitAddRow(person.person,person.shares,person.amount);
    setType("Cobro");
   }
-  if(p.type==="Cobro")$("cobroGroup").value=p.groupId||"";
+  if(p.type==="Cobro"){
+   $("cobroGroup").value=p.groupId||(p.groupName?NEW_GROUP:"");
+   $("splitGroupName").value=p.groupName||"";
+  }
   syncSplitMode();syncDateDisplays();freeze(true);
   status(old?"Hay un envío anterior de "+p.type+" sin confirmar. Podés reintentarlo sin duplicarlo o descartarlo.":"El último envío no fue confirmado. Tocá Reintentar para evitar duplicados.","error");
  }catch{}
@@ -133,11 +141,12 @@ function splitAddRow(person="",shares=1,amount=""){
 }
 function syncSplitMode(){
  const cobro=kind==="Cobro",split=cobro&&$("splitToggle").checked,custom=$("splitMode").value==="amount";
+ if(split&&!$("cobroGroup").value)$("cobroGroup").value=NEW_GROUP;
+ const newGroup=cobro&&$("cobroGroup").value===NEW_GROUP;
  $("splitFields").hidden=!split;$("personField").hidden=!cobro||split;
- $("splitGroupName").required=split;$("person").required=cobro&&!split;
+ $("splitGroupNameField").hidden=!newGroup;
+ $("splitGroupName").required=newGroup;$("person").required=cobro&&!split;
  $("splitSelfSharesField").hidden=!split||custom;$("splitSelfAmountField").hidden=!split||!custom;
- $("splitGroupNameField").hidden=!split||!!mobileGroup();
- $("splitGroupName").required=split&&!mobileGroup();
  for(const row of $("splitRows").children){
   row.querySelector(".split-person").disabled=!split;
   row.querySelector(".split-shares").hidden=custom;row.querySelector(".split-shares").disabled=!split||custom;
@@ -148,9 +157,9 @@ function syncSplitMode(){
  syncGroupSuggestions();
 }
 function splitPayload(){
- return globalThis.OneSplitFare.normalize({type:"Cobro dividido",groupId:$("cobroGroup").value,amount:Number($("amount").value),
+ return globalThis.OneSplitFare.normalize({type:"Cobro dividido",groupId:mobileGroup()?.id||"",amount:Number($("amount").value),
   currency:$("currency").value,date:$("date").value,dueDate:$("dueDate").value,
-  description:$("description").value.trim(),groupName:$("splitGroupName").value.trim(),
+  description:$("description").value.trim(),groupName:$("cobroGroup").value===NEW_GROUP?$("splitGroupName").value.trim():"",
   splitMode:$("splitMode").value,selfShares:Number($("splitSelfShares").value),
   selfAmount:Number($("splitSelfAmount").value),
   participants:[...$("splitRows").children].map(row=>({
@@ -173,9 +182,13 @@ function splitPreview(){
 function movement(){
  if(kind==="Cobro"&&$("splitToggle").checked)return splitPayload();
  const m={type:kind,date:$("date").value,amount:Number($("amount").value),
- currency:kind==="Cobro"?$("currency").value:"CRC",description:$("description").value.trim()};
+ currency:$("currency").value,description:$("description").value.trim()};
  if(kind!=="Cobro")m.categoryId=$("categoryId").value;
- else {m.person=$("person").value.trim();m.dueDate=$("dueDate").value;m.groupId=$("cobroGroup").value;}
+ else {
+  m.person=$("person").value.trim();m.dueDate=$("dueDate").value;
+  m.groupId=mobileGroup()?.id||"";
+  if($("cobroGroup").value===NEW_GROUP)m.groupName=$("splitGroupName").value.trim();
+ }
  return m;
 }
 async function send(event){
@@ -207,7 +220,13 @@ $("dueDate").addEventListener("change",syncDateDisplays);
 $("currency").addEventListener("change",()=>{setType(kind);splitPreview()});
 $("splitToggle").addEventListener("change",syncSplitMode);
 $("splitMode").addEventListener("change",syncSplitMode);
-$("cobroGroup").addEventListener("change",syncSplitMode);
+$("cobroGroup").addEventListener("change",()=>{
+ if(kind==="Cobro"&&!$("splitToggle").checked){
+  const people=mobileGroup()?.people||[];
+  $("person").value=people.length===1?people[0]:"";
+ }
+ syncSplitMode();
+});
 $("splitAdd").addEventListener("click",()=>splitAddRow());
 for(const id of ["splitGroupName","splitSelfShares","splitSelfAmount","amount"])$(id).addEventListener("input",splitPreview);
 $("refreshCatalog").addEventListener("click",refresh);
