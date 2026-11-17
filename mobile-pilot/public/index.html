@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#101114">
 <meta name="color-scheme" content="dark">
 <title>Registrar · One Less One</title>
-<link rel="stylesheet" href="./style.css?v=10.8.0">
-<script defer src="./split-fare.js?v=10.8.0"></script>
-<script defer src="./app.js?v=10.8.0"></script>
+<link rel="stylesheet" href="./style.css?v=10.10.0">
+<script defer src="./split-fare.js?v=10.10.0"></script>
+<script defer src="./app.js?v=10.10.0"></script>
 </head>
 <body><main class="shell">
 <header class="app-header"><div class="brand">One Less One</div><p>Registro rápido</p></header>
@@ -51,6 +51,14 @@
 <button id="submit" class="primary" type="submit">Registrar gasto</button>
 <button id="discardDraft" class="subtle-action" type="button" hidden>Descartar envío pendiente</button>
 </form></section>
+<dialog id="entrySuccessDialog" class="entry-success-dialog" aria-labelledby="entrySuccessTitle" aria-describedby="entrySuccessDescription">
+ <div class="entry-success-body">
+  <div class="entry-success-mark" aria-hidden="true">✓</div>
+  <h2 id="entrySuccessTitle">Registro recibido</h2>
+  <p id="entrySuccessDescription"></p>
+  <button id="entrySuccessClose" type="button" class="primary">Listo</button>
+ </div>
+</dialog>
 <p id="status" role="status" aria-live="polite" class="status"></p>
 <footer id="connectedFooter" hidden>
 <div class="footer-actions"><button type="button" id="refreshCatalog">Actualizar</button><button type="button" id="disconnect">Desvincular</button></div>
