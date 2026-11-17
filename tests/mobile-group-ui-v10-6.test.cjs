@@ -184,3 +184,46 @@ test("V10.8: tras falla de conexión, reintentar conserva mismo ID y no pierde e
   assert.equal(x.errors.length,0);
  }finally{x.close()}
 });
+
+
+test("V10.10: iPhone confirma recepción en la bandeja, sin afirmar que Daniel ya contabilizó",async()=>{
+ const x=boot();try{
+  const {w,doc,submitted}=x;await new Promise(r=>setTimeout(r,20));
+  doc.querySelector('[data-type="Ingreso"]').click();
+  doc.getElementById("categoryId").value="cat-i";
+  doc.getElementById("currency").value="USD";
+  doc.getElementById("amount").value="120";
+  doc.getElementById("description").value="Transferencia";
+  const receipt=doc.getElementById("entrySuccessDialog");
+  assert.equal(receipt.hasAttribute("open"),false);
+  doc.getElementById("entryForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+  await new Promise(r=>setTimeout(r,40));
+  assert.equal(submitted.length,1);
+  assert.equal(receipt.hasAttribute("open"),true);
+  assert.match(doc.getElementById("entrySuccessTitle").textContent,/Registro recibido/);
+  assert.match(doc.getElementById("entrySuccessDescription").textContent,/Ingreso/);
+  assert.match(doc.getElementById("entrySuccessDescription").textContent,/120/);
+  assert.match(doc.getElementById("entrySuccessDescription").textContent,/Todavía no se ha contabilizado/);
+  doc.getElementById("entrySuccessClose").click();
+  assert.equal(receipt.hasAttribute("open"),false);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
+test("V10.10: iPhone no muestra éxito cuando falla el envío",async()=>{
+ const x=boot();try{
+  const {w,doc,submitted}=x;await new Promise(r=>setTimeout(r,20));
+  w.fetch=async(path,opts={})=>{
+   if(path==="/api/inbox"&&opts.method==="POST")throw Error("Sin conexión");
+   throw Error("Ruta inesperada "+path);
+  };
+  doc.getElementById("categoryId").value="cat-g";
+  doc.getElementById("amount").value="980";
+  doc.getElementById("entryForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+  await new Promise(r=>setTimeout(r,35));
+  assert.equal(submitted.length,0);
+  assert.equal(doc.getElementById("entrySuccessDialog").hasAttribute("open"),false);
+  assert(w.localStorage.getItem("one_one_mobile_v1_draft"),"Debe retener el envío para reintentar");
+  assert.match(doc.getElementById("status").textContent,/No confirmado/);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
