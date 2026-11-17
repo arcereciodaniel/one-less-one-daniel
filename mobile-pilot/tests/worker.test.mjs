@@ -78,3 +78,50 @@ test("D1: no expone la interfaz a escritura con permisos de escritorio",async()=
  assert.equal(res.status,200);
  assert.match(res.headers.get("Content-Security-Policy"),/script-src 'self'/);
 });
+
+
+test("D1: un split USD llega como un único registro idempotente con cobros individuales",async()=>{
+ const {env,req,rows}=fixture();
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[],debts:[],goals:[]});
+ const today=new Date().toISOString().slice(0,10);
+ const movement={type:"Cobro dividido",date:today,amount:328,currency:"USD",
+  groupName:"Hotel con amigos",description:"Reserva de hotel",dueDate:"",
+  splitMode:"equal",selfShares:1,participants:[
+   {person:"Charlie",shares:2},{person:"Ana",shares:1}]};
+ const id="split-hotel-abcdefgh123456";
+ const first=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{id,movement});
+ assert.equal(first.response.status,200,JSON.stringify(first.json));
+ const retry=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{id,movement});
+ assert.equal(retry.response.status,200);
+ assert.equal(rows.size,1,"No crear lotes duplicados por reintentar");
+ const inbox=await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY);
+ const p=inbox.json.items[0].movement;
+ assert.equal(p.type,"Cobro dividido");assert.equal(p.currency,"USD");
+ assert.equal(p.selfAmount,82);assert.equal(p.participants[0].amount,164);
+ assert.equal(p.participants[1].amount,82);
+ await req("/api/ack","POST",env.DESKTOP_SYNC_KEY,{id});
+ assert.equal((await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items.length,0);
+});
+
+test("D1: Cobro simple puede ser USD, pero gastos e ingresos móviles continúan CRC",async()=>{
+ const {env,req}=fixture();
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[{id:"g1",name:"Alimentación",type:"Gasto"}],debts:[],goals:[]});
+ const day=new Date().toISOString().slice(0,10);
+ const cobro=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
+  {id:"simple-usd-abcdefgh123456",movement:{type:"Cobro",date:day,amount:50.5,currency:"USD",person:"Charlie",description:"Cena"}});
+ assert.equal(cobro.response.status,200);
+ const gasto=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
+  {id:"gasto-usd-abcdefgh123456",movement:{type:"Gasto",date:day,amount:50,currency:"USD",categoryId:"g1"}});
+ assert.equal(gasto.response.status,400);
+});
+test("D1: no admite repartos personalizados que no cierren",async()=>{
+ const {env,req,rows}=fixture();
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[],debts:[],goals:[]});
+ const today=new Date().toISOString().slice(0,10);
+ const bad=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{
+  id:"split-invalid-abcdefgh123456",movement:{type:"Cobro dividido",date:today,amount:328,
+    currency:"USD",groupName:"Hotel",splitMode:"amount",selfAmount:82,selfShares:1,
+    participants:[{person:"Charlie",amount:100,shares:2}]}});
+ assert.equal(bad.response.status,400);
+ assert.equal(rows.size,0);
+});

@@ -34,6 +34,7 @@ jobs:
           node tests/formularios-v8.test.cjs
           node tests/tipo-cambio-deudas-v9.test.cjs
           node --test tests/v10-4-ledger.test.cjs
+          node --test tests/split-fare-v10-5.test.cjs
       - name: Probar movil y protecciones V10.3
         run: |
           node tests/mobile-pilot-v10.test.cjs
@@ -44,7 +45,7 @@ jobs:
           mkdir -p _site/lab _site/mobile-pilot
           cp index.html site.webmanifest index-lab.html _site/
           cp lab/index.html lab/site.webmanifest _site/lab/
-          cp mobile-pilot/desktop.js mobile-pilot/desktop.css _site/mobile-pilot/
+          cp mobile-pilot/desktop.js mobile-pilot/desktop.css mobile-pilot/public/split-fare.js _site/mobile-pilot/
           touch _site/.nojekyll
       - name: Guardar artefacto verificado
         uses: actions/upload-artifact@v4

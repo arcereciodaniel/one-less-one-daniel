@@ -13,7 +13,7 @@ const labManifest = fs.readFileSync(path.join(root, "lab/site.webmanifest"), "ut
 test("Lab se genera desde una sola fuente de Daniel", () => {
   assert.equal(labFromDaniel(daniel), lab);
   assert.equal(labManifestFromDaniel(mainManifest), labManifest);
-  assert.equal(REPLACEMENTS.length, 9);
+  assert.equal(REPLACEMENTS.length, 10);
 });
 
 test("Datos y preferencias de Daniel y Lab quedan separados", () => {

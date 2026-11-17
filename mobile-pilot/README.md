@@ -144,3 +144,12 @@ Tras guardar los secretos, entrá en GitHub → Actions → Publicar One Less On
 **Seguridad:** si falta uno de los tres secretos, se omite el despliegue y el Worker que ya funciona no se toca. El workflow genera su archivo wrangler.ci.jsonc temporal en el ejecutor de GitHub, no lo versiona, y no imprime el UUID. Las claves MOBILE_WRITE_KEY y DESKTOP_SYNC_KEY permanecen únicamente en los secretos del Worker existente y **NO** deben agregarse a GitHub. No se recrea D1, no se ejecuta schema.sql y no se modifican Lab ni Gloriana. El nombre del Worker y la dirección para los widgets y Atajos continúan iguales.
 
 **Atención:** la plantilla wrangler.jsonc de GitHub sigue teniendo un database_id de ejemplo, para evitar publicar el real. Si trabajás en tu Mac, conservá tu copia local con el ID correcto, aunque descargués nuevos archivos del repositorio.
+
+
+## V10.5 — Cobros divididos en CRC y USD
+
+Desde **Cobros → Dividir gasto** se puede crear un grupo y repartir el total pagado por partes iguales o por montos personalizados. Ejemplo: hotel por $328, Daniel paga 1 parte, Charlie asume 2 partes y Ana 1. Se crean un grupo con Charlie ($164), Ana ($82) y una parte propia informativa ($82). Cada persona tiene su propio cobro pendiente y puede registrar abonos.
+
+One Less One Móvil continúa con Gasto, Ingreso y Cobro: en Cobro se puede seleccionar CRC/USD y activar **Dividir entre varias personas**. El móvil envía un solo registro, el escritorio importa el grupo y todos los cobros, y el identificador evita duplicaciones durante reintentos. Los grupos nuevos no generan un movimiento de gasto ni ingreso adicional en Movimientos: si pagaste la reserva, registrá el gasto solo una vez en Movimientos para reflejar la salida de dinero. Los reembolsos se pueden vincular posteriormente mediante los abonos de cada cobro.
+
+La distribución se calcula en centavos y se verifica que la suma sea exacta. No se tocan historiales de Daniel o Lab, ni la versión de Gloriana. El piloto Cloudflare sigue reservado para Daniel.

@@ -1445,6 +1445,20 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-storage-guard-banner[hidden]{display:none!important}
 .one-storage-guard-banner button{border:1px solid var(--border);background:var(--panel-2,var(--panel));color:inherit;padding:8px 11px;border-radius:8px;cursor:pointer}
 @media(max-width:600px){.one-storage-guard-banner{flex-direction:column;align-items:stretch}}
+.one-split-dialog{width:min(760px,calc(100% - 30px));max-width:760px}
+.one-split-form{display:grid;gap:13px}
+.one-split-form label{display:grid;gap:5px;font-size:.77rem;color:var(--muted);font-weight:650}
+.one-split-form input,.one-split-form select{width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.9rem}
+.one-split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.one-split-people-heading{display:grid;gap:3px;margin-top:4px;font-size:.85rem}
+.one-split-people-heading small{font-weight:400;color:var(--muted)}
+.one-split-people{display:grid;gap:8px}
+.one-split-person{display:grid;grid-template-columns:minmax(0,1fr) 110px 30px;gap:8px;align-items:end}
+.one-split-person input{min-height:40px}
+.one-split-person .one-split-remove{height:40px;border:0;background:transparent;color:var(--muted);font-size:21px}
+.one-split-preview{padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);font-size:.78rem;color:var(--muted);line-height:1.55}
+.one-split-preview[data-valid="true"]{color:var(--text)}
+@media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -1454,7 +1468,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.4.0 LAB</small>
+      <small class="brand-version">v10.5.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1840,6 +1854,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
         <button class="btn secondary" id="sharedCurrentMonth" type="button">Mes actual</button>
         <button class="btn secondary" id="toggleArchivedSharedGroups" type="button">Ver archivados</button>
         <button class="btn secondary" id="addSharedGroupBtn">Agregar grupo</button>
+        <button class="btn secondary" id="oneSplitFareOpen" type="button">Dividir gasto</button>
         <button class="btn" id="addSharedChargeBtn">Agregar cobro</button>
       </div>
       <input type="hidden" id="sharedStatementMonth">
@@ -1916,7 +1931,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.4.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.5.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -1977,6 +1992,33 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelSharedGroupBtn">Cancelar</button><button type="submit" class="btn">Guardar</button></div>
     </form>
   </div>
+</dialog>
+
+
+<dialog id="oneSplitFareDialog" class="one-split-dialog">
+ <div class="dialog-body">
+  <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+  <h2>Dividir gasto entre personas</h2>
+  <p class="muted">Un grupo con un cobro por persona. Tu parte no se cobra. No crea otro gasto ni ingreso en Movimientos.</p>
+  <form id="oneSplitFareForm" class="one-split-form">
+   <label>Nombre del grupo<input id="oneSplitGroupName" maxlength="120" placeholder="Hotel con amigos" required></label>
+   <label>Concepto<input id="oneSplitDescription" maxlength="200" placeholder="Reserva de hotel"></label>
+   <div class="one-split-grid">
+    <label>Monto total<input id="oneSplitTotal" type="number" min="0.01" step="0.01" required placeholder="328.00"></label>
+    <label>Moneda<select id="oneSplitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></label>
+    <label>Fecha del pago<input id="oneSplitDate" type="date" required></label>
+    <label>Fecha esperada <small>(opcional)</small><input id="oneSplitDue" type="date"></label>
+    <label>Dividir por<select id="oneSplitMode"><option value="equal">Partes iguales</option><option value="amount">Montos personalizados</option></select></label>
+    <label id="oneSplitSelfSharesField">Tus partes pagadas<input id="oneSplitSelfShares" type="number" min="0" max="20" step="1" value="1"></label>
+    <label id="oneSplitSelfAmountField" hidden>Tu parte del gasto<input id="oneSplitSelfAmount" type="number" min="0" step="0.01" value="0"></label>
+   </div>
+   <div class="one-split-people-heading"><strong>Personas que te deben</strong><small>Podés asignarle dos partes a Charlie en una sola fila.</small></div>
+   <div id="oneSplitPeople" class="one-split-people"></div>
+   <button class="btn secondary small" type="button" id="oneSplitAddPerson">+ Persona</button>
+   <div id="oneSplitPreview" class="one-split-preview" role="status" aria-live="polite"></div>
+   <div class="dialog-actions"><button class="btn secondary" type="button" id="oneSplitCancel">Cancelar</button><button class="btn" type="submit">Crear grupo y cobros</button></div>
+  </form>
+ </div>
 </dialog>
 
 <dialog id="sharedChargeDialog">
@@ -2223,6 +2265,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </div>
 </dialog>
 
+<script src="../mobile-pilot/split-fare.js"></script>
 <script>
 const ONE_DEFAULT_PAY_DAYS={first:14,second:28};
 "use strict";
@@ -4160,6 +4203,126 @@ function openSharedCharge(c=null,preferredGroupId="",options={}){
   if(!options.inline)document.getElementById("sharedChargeDialog").showModal();
 }
 
+
+/* V10.5 · Los cobros divididos son varios derechos de cobro, no gastos adicionales. */
+function oneCreateSplitFare(raw,{sourceId=""}={}){
+ const p=globalThis.OneSplitFare.normalize(raw);
+ if(!restoreValidDate(p.date))throw Error("Fecha de gasto inválida.");
+ if(p.dueDate&&!restoreValidDate(p.dueDate))throw Error("Fecha esperada inválida.");
+ if(sourceId&&(data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===sourceId))
+  return {already:true};
+ const group={
+  id:id(),name:p.groupName,person:"",notes:"",cutDay:0,status:"active",
+  closedAt:"",closedReason:"",createdAt:new Date().toISOString(),
+  splitFare:{totalAmount:p.amount,currency:p.currency,selfAmount:p.selfAmount,
+    totalShares:p.totalShares,mode:p.splitMode,date:p.date},
+  ...(sourceId?{mobilePilotId:sourceId}:{})
+ };
+ const snapshot=currentFxSnapshot(),createdAt=new Date().toISOString();
+ const charges=p.participants.map(row=>({
+  id:id(),groupId:group.id,person:row.person,date:p.date,dueDate:p.dueDate,
+  remindBeforeDays:p.dueDate?3:0,chargeMonth:monthKey(p.date),
+  kind:"Compra compartida",description:p.description||p.groupName,
+  amount:row.amount,currency:p.currency,...snapshot,
+  status:"pending",paidAt:"",payments:[],snoozedUntil:"",notes:"",
+  sourceRecurringId:"",createdAt,splitFareShares:row.shares,
+  ...(sourceId?{mobilePilotId:sourceId}:{})
+ }));
+ data.sharedChargeGroups.push(group);
+ data.sharedCharges.push(...charges);
+ return {group,charges};
+}
+function oneSplitFareAddRow(person="",shares=1,amount=""){
+ const box=document.getElementById("oneSplitPeople");
+ if(box.children.length>=20)return;
+ const row=document.createElement("div");row.className="one-split-person";
+ row.innerHTML='<label>Persona<input class="one-split-name" placeholder="Nombre" maxlength="120" required></label>'+
+  '<label class="one-split-shares-label">Partes<input class="one-split-shares" type="number" min="1" max="20" step="1" required></label>'+
+  '<label class="one-split-amount-label" hidden>Monto<input class="one-split-amount" type="number" min="0.01" step="0.01"></label>'+
+  '<button type="button" class="one-split-remove" aria-label="Eliminar persona">×</button>';
+ row.querySelector(".one-split-name").value=person;
+ row.querySelector(".one-split-shares").value=shares;
+ if(amount!=="")row.querySelector(".one-split-amount").value=amount;
+ row.querySelector("button").addEventListener("click",()=>{row.remove();oneSplitFarePreview()});
+ row.addEventListener("input",oneSplitFarePreview);
+ box.append(row);oneSplitFareMode();
+}
+function oneSplitFareMode(){
+ const custom=document.getElementById("oneSplitMode").value==="amount";
+ document.getElementById("oneSplitSelfSharesField").hidden=custom;
+ document.getElementById("oneSplitSelfAmountField").hidden=!custom;
+ document.querySelectorAll("#oneSplitPeople .one-split-person").forEach(row=>{
+  row.querySelector(".one-split-shares-label").hidden=custom;
+  row.querySelector(".one-split-amount-label").hidden=!custom;
+  row.querySelector(".one-split-shares").disabled=custom;
+  row.querySelector(".one-split-amount").disabled=!custom;
+  row.querySelector(".one-split-shares").required=!custom;
+  row.querySelector(".one-split-amount").required=custom;
+ });
+ oneSplitFarePreview();
+}
+function oneSplitFarePayload(){
+ return globalThis.OneSplitFare.normalize({
+  groupName:document.getElementById("oneSplitGroupName").value,
+  description:document.getElementById("oneSplitDescription").value,
+  date:document.getElementById("oneSplitDate").value,
+  dueDate:document.getElementById("oneSplitDue").value,
+  amount:Number(document.getElementById("oneSplitTotal").value),
+  currency:document.getElementById("oneSplitCurrency").value,
+  splitMode:document.getElementById("oneSplitMode").value,
+  selfShares:Number(document.getElementById("oneSplitSelfShares").value),
+  selfAmount:Number(document.getElementById("oneSplitSelfAmount").value),
+  participants:[...document.querySelectorAll("#oneSplitPeople .one-split-person")].map(row=>({
+   person:row.querySelector(".one-split-name").value,
+   shares:Number(row.querySelector(".one-split-shares").value),
+   amount:Number(row.querySelector(".one-split-amount").value)
+  }))
+ });
+}
+function oneSplitFarePreview(){
+ const out=document.getElementById("oneSplitPreview");if(!out)return;
+ try{
+  const p=oneSplitFarePayload(),sym=p.currency==="USD"?"$":"₡",fmt=v=>sym+v.toFixed(2);
+  out.textContent="Tu parte: "+fmt(p.selfAmount)+
+    " · Total por cobrar: "+fmt(p.participants.reduce((sum,row)=>sum+row.amount,0))+
+    " · "+p.participants.map(row=>row.person+": "+fmt(row.amount)+(p.splitMode==="equal"?" ("+row.shares+" partes)":"")).join(" · ");
+  out.dataset.valid="true";
+ }catch(error){out.textContent=error.message;out.dataset.valid="false";}
+}
+function oneOpenSplitFare(){
+ const form=document.getElementById("oneSplitFareForm");form.reset();
+ document.getElementById("oneSplitDate").value=todayIso();
+ document.getElementById("oneSplitPeople").replaceChildren();
+ oneSplitFareAddRow("",1);oneSplitFareMode();
+ document.getElementById("oneSplitFareDialog").showModal();
+}
+function oneInitSplitFare(){
+ const d=document.getElementById("oneSplitFareDialog");
+ document.getElementById("oneSplitFareOpen")?.addEventListener("click",oneOpenSplitFare);
+ document.getElementById("oneSplitCancel")?.addEventListener("click",()=>d.close());
+ document.getElementById("oneSplitAddPerson")?.addEventListener("click",()=>oneSplitFareAddRow());
+ document.getElementById("oneSplitMode")?.addEventListener("change",oneSplitFareMode);
+ for(const name of ["oneSplitGroupName","oneSplitDescription","oneSplitTotal","oneSplitCurrency",
+  "oneSplitDate","oneSplitDue","oneSplitSelfShares","oneSplitSelfAmount"])
+   document.getElementById(name)?.addEventListener("input",oneSplitFarePreview);
+ document.getElementById("oneSplitFareForm")?.addEventListener("submit",event=>{
+  event.preventDefault();
+  const snapshot=JSON.stringify(data);
+  try{
+   const p=oneSplitFarePayload(),created=oneCreateSplitFare(p);
+   save();d.close();
+   uiState.cobrosDisplayMode="groups";saveUiState();
+   document.getElementById("sharedStatementMonth").value=p.date.slice(0,7);
+   renderSharedCharges();renderDashboard();
+   alert("Grupo creado: "+created.charges.length+" cobro(s) en "+p.currency+".");
+  }catch(error){
+   // Si la escritura falla, no conservar el reparto parcialmente creado en memoria.
+   data=JSON.parse(snapshot);
+   alert(error.message||"No se pudo crear el reparto.");
+  }
+ });
+}
+
 /* Ledger de abonos en la moneda original del cobro. Historial previo respetado. */
 function cobroPaidOriginal(c){
  const ps=Array.isArray(c.payments)?c.payments:[];
@@ -4440,7 +4603,7 @@ function renderSharedCharges(){
     const lifecycle=status==="active"?`<button class="btn secondary small" data-archive-shared-group="${safe(g.id)}">Archivar</button>`:`<button class="btn secondary small" data-reactivate-shared-group="${safe(g.id)}">Reactivar</button>`;
     const add=status==="active"?`<button class="btn small" data-add-shared-to-group="${safe(g.id)}">Agregar cobro</button>`:"";
     const archivedMeta=status==="archived"?`<span class="status-badge archived">Archivado</span>${g.closedReason?` · ${safe(g.closedReason)}`:""}${g.closedAt?` · ${dateLabel(g.closedAt)}`:""}`:"";
-    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${safe(g.name)}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${safe(g.person)}`:"Sin persona principal"}${g.notes?` · ${safe(g.notes)}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${safe(g.id)}">PDF</button><button class="btn secondary small" data-edit-shared-group="${safe(g.id)}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${safe(g.id)}">Eliminar</button></div></div><div class="receivable-group-stats"><span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${receivableRowsTable(rows,g.id,month)}</div>`;
+    return `<div class="card receivable-group"><div class="receivable-group-head"><div><div class="receivable-group-title">${safe(g.name)}</div><div class="receivable-group-meta">${g.person?`Persona principal: ${safe(g.person)}`:"Sin persona principal"}${g.notes?` · ${safe(g.notes)}`:""}${archivedMeta?`<br>${archivedMeta}`:""}</div></div><div class="actions">${add}<button class="btn secondary small" data-print-shared-group="${safe(g.id)}">PDF</button><button class="btn secondary small" data-edit-shared-group="${safe(g.id)}">Editar</button>${lifecycle}<button class="btn danger small" data-delete-shared-group="${safe(g.id)}">Eliminar</button></div></div><div class="receivable-group-stats">${g.splitFare?`<span>Reparto inicial: <strong>${originalMoney(g.splitFare.totalAmount,g.splitFare.currency)}</strong> · Tu parte: ${originalMoney(g.splitFare.selfAmount,g.splitFare.currency)}</span>`:""}<span>Pendiente total: <strong>${money(gPending)}</strong></span>${gCarry?`<span>Arrastre anterior: <strong>${money(gCarry)}</strong></span>`:""}<span>Cargos del mes: <strong>${money(gCurrent)}</strong></span><span>Pagado del mes: <strong>${money(gPaid)}</strong></span>${recCount?`<span>Recurrentes activos: <strong>${recCount}</strong></span>`:""}</div>${receivableRowsTable(rows,g.id,month)}</div>`;
   }).join("");
   if(!ungroupedCard&&!groupCards){
     const msg=view==="archived"?"No tienes grupos archivados.":"Todavía no tienes cobros ni grupos. Puedes registrar un cobro suelto o crear un grupo primero.";
@@ -6711,7 +6874,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="../mobile-pilot/desktop.js"></script>
 </body>

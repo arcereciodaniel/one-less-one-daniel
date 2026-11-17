@@ -4,8 +4,9 @@
  * POST /api/inbox: phone, GET /api/catalog: phone
  * GET /api/inbox, POST /api/ack, PUT /api/catalog: desktop
  */
+import "../public/split-fare.js";
 const BASE_HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
-const TYPES=new Set(["Gasto","Ingreso","Pago deuda","Cobro","Aporte"]);
+const TYPES=new Set(["Gasto","Ingreso","Pago deuda","Cobro","Aporte","Cobro dividido"]);
 const MAX_BODY=8192;
 function json(body,status=200,extra={}){
  return new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json; charset=utf-8",...BASE_HEADERS,...extra}});
@@ -35,8 +36,9 @@ function checkPayload(p){
  const type=clean(p.type,24),date=clean(p.date,10),amount=Number(p.amount);
  if(!TYPES.has(type)||!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||Math.abs(Math.round(amount*100)-amount*100)>1e-5)
    throw Error("Tipo, fecha o monto inválidos");
- // La prueba piloto no permite USD: la cotización del día del gasto aún no está sincronizada.
- if(p.currency!=="CRC")throw Error("Piloto disponible solo para CRC");
+ // CRC para movimientos contables; Cobros admite CRC/USD sin duplicar el pago del gasto.
+ if(p.currency!=="CRC"&&!(["Cobro","Cobro dividido"].includes(type)&&p.currency==="USD"))
+  throw Error("Solamente Cobros permite USD en este piloto.");
  const now=new Date(),today=now.toISOString().slice(0,10),earliest=new Date(now.getTime()-366*864e5).toISOString().slice(0,10);
  if(date>today||date<earliest)throw Error("Fecha fuera del período permitido");
  const categoryId=clean(p.categoryId,80),debtId=clean(p.debtId,80),reserveId=clean(p.reserveId,80);
@@ -46,8 +48,13 @@ function checkPayload(p){
  if(type==="Pago deuda"&&!debtId)throw Error("Elegí la deuda");
  if(type==="Aporte"&&!reserveId)throw Error("Elegí la meta");
  if(type==="Cobro"&&!person)throw Error("Indicá la persona");
+ if(type==="Cobro dividido"){
+  const result=globalThis.OneSplitFare.normalize(p);
+  if(result.dueDate&&!validDate(result.dueDate))throw Error("Fecha esperada inválida");
+  return result;
+ }
  if(dueDate&&!validDate(dueDate))throw Error("Fecha esperada inválida");
- return {type,date,amount,currency:"CRC",categoryId,debtId,reserveId,person,description,dueDate};
+ return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate};
 }
 async function body(request){
  const size=Number(request.headers.get("Content-Length")||0);

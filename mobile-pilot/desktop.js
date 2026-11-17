@@ -48,7 +48,8 @@
   function alreadyImported(id){
     return (data.movements||[]).some(m=>m.mobilePilotId===id)||
       (data.reserveMovements||[]).some(m=>m.mobilePilotId===id)||
-      (data.sharedCharges||[]).some(m=>m.mobilePilotId===id);
+      (data.sharedCharges||[]).some(m=>m.mobilePilotId===id)||
+      (data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===id);
   }
   function validDate(date){return restoreValidDate(date)&&date<=todayIso();}
   function apply(item){
@@ -56,9 +57,16 @@
     if(!/^[a-zA-Z0-9_-]{16,80}$/.test(id)||!p||typeof p!=="object")throw Error("Registro remoto mal formado.");
     if(alreadyImported(id))return "already";
     const amount=Number(p.amount),date=p.date;
-    if(!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||p.currency!=="CRC")
+    if(!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||
+      !["CRC","USD"].includes(p.currency)||
+      (p.currency==="USD"&&p.type!=="Cobro"&&p.type!=="Cobro dividido"))
       throw Error("Fecha, moneda o monto inválidos.");
-    const common={id,createdAt:new Date().toISOString(),date,amount,currency:"CRC",mobilePilotId:id,
+    if(p.type==="Cobro dividido"){
+      // Un envío equivale a un grupo completo. save() persiste todas las filas juntas.
+      const result=oneCreateSplitFare(p,{sourceId:id});
+      return result.already?"already":"inserted";
+    }
+    const common={id,createdAt:new Date().toISOString(),date,amount,currency:p.currency,mobilePilotId:id,
       mobilePilotSource:"iphone",description:String(p.description||"").slice(0,200),...currentFxSnapshot()};
     if(["Gasto","Ingreso","Pago deuda"].includes(p.type)){
       const period=periodForDate(date);
@@ -110,7 +118,8 @@
           // No confirmar ante el servidor hasta verificar el registro persistido.
           const persisted=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
           const found=!!persisted&&[...(persisted.movements||[]),...(persisted.reserveMovements||[]),
-             ...(persisted.sharedCharges||[])].some(x=>x.mobilePilotId===id);
+             ...(persisted.sharedCharges||[]),...(persisted.sharedChargeGroups||[])]
+             .some(x=>x.mobilePilotId===id);
           if(!found)throw Error("No se verificó el guardado local.");
           imported++;
         }else duplicates++;
