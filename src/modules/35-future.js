@@ -89,7 +89,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
   let ordinary=0,plannedSavings=0;
   const savingsCategoryIds=new Set([
-   ...oneSavingsCategories().map(c=>c.id),
+   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
   ]);
   for(const c of budgetCategories("Gasto",p)){
