@@ -4948,7 +4948,7 @@ function oneRenderGoalCards(){
     const achieved=target>.005&&balance>=target-.005;
     const dateInfo=r.targetDate?(restoreValidDate(r.targetDate)?(r.targetDate<today?"Fecha objetivo pasada · "+dateLabel(r.targetDate):
       "Objetivo: "+dateLabel(r.targetDate)):"Revisá la fecha objetivo"):"Sin fecha límite";
-    const hint=completed?"Meta cumplida. El saldo del fondo sigue apartado hasta que lo utilicés.":target<=0?"Definí un monto objetivo para ver tu avance.":
+    const hint=completed?"Meta cumplida. El saldo sigue apartado; si querés utilizarlo, reactivá la meta y registrá un Uso objetivo.":target<=0?"Definí un monto objetivo para ver tu avance.":
       remaining<=.005?"¡Monto objetivo alcanzado!":
       archived?"La meta está archivada. Conservamos su historial.":
       r.targetDate&&r.targetDate<=today?"Fecha cumplida: revisá el plazo de tu meta.":
@@ -5504,9 +5504,12 @@ function m2OpenTemplate(source=null){
   document.getElementById("movementTemplateDialog").showModal();
 }
 function m2LastRepeatable(){
-  return [...(data.movements||[])].filter(m=>["Gasto","Ingreso","Pago deuda"].includes(m.type)&&!oneIsLinkedCobroMovement(m)&&
-      categoryIsActive(categoryById(m.categoryId))&&
-      (m.type!=="Pago deuda"||activeDebts().some(d=>d.id===m.debtId)))
+  return [...(data.movements||[])].filter(m=>{
+      const cat=categoryById(m.categoryId);
+      return ["Gasto","Ingreso","Pago deuda"].includes(m.type)&&!oneIsLinkedCobroMovement(m)&&
+        !!cat&&categoryIsActive(cat)&&
+        (m.type!=="Pago deuda"||activeDebts().some(d=>d.id===m.debtId));
+    })
     .sort((a,b)=>num(b.seq)-num(a.seq)||String(b.createdAt||"").localeCompare(String(a.createdAt||"")))[0]||null;
 }
 function m2RenderTemplates(){
@@ -5858,7 +5861,7 @@ function bind(){
       if(!confirm("¿Marcar “"+r.name+"” como cumplida?\n\nEl saldo "+money(balance)+" seguirá apartado y contará en tu patrimonio hasta registrar un Uso objetivo o Retiro. No se crea ningún ingreso ni gasto."))return;
       r.status="archived";r.closedAt=todayIso();r.closedReason="Meta cumplida";
       save();refreshReserveSelect();renderCapital();renderDashboard();renderPlan();
-      oneActionSaved("Meta cumplida",r.name+"\nEl ahorro sigue disponible en su fondo, sin movimientos contables adicionales.");
+      oneActionSaved("Meta cumplida",r.name+"\nEl saldo sigue reservado. Reactivá la meta si necesitás registrar su uso, sin duplicar movimientos.");
       return;
     }
     const archiveReserve=e.target.closest("[data-archive-reserve]");
