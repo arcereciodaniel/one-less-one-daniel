@@ -40,7 +40,7 @@ test("V11.1: migración conservadora del tipo antiguo y panel de ajustes",()=>{
  assert.equal(read().debts[0].id,"legacy");
  assert.equal(read().debts[0].type,"Tarjeta");
  assert.equal(w.oneDebtTypeForDebt(read().debts[0]).shape,"card");
- assert(w.data.debtTypes.some(t=>t.shape==="installments"));
+ assert(w.eval("data.debtTypes").some(t=>t.shape==="installments"));
  assert(w.document.getElementById("oneSettingsPaydayMount").contains(w.document.getElementById("onePaydayForm")));
  assert(w.document.getElementById("oneSettingsMaintenanceMount").contains(w.document.getElementById("resetBtn")));
 });
