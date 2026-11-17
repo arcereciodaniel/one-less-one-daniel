@@ -268,6 +268,30 @@ function oneProjectOpenBucket(b=null){
  document.getElementById("oneProjectBucketBudget").value=b?.budget??"";
  document.getElementById("oneProjectBucketDialog").showModal();
 }
+function oneProjectOpenReconcile(plan){
+ const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p)||!plan||plan.projectId!==p.id)return;
+ const select=document.getElementById("oneProjectReconcileMovement");
+ const available=(data.movements||[]).filter(m=>oneProjectCanMatch(p,plan,m))
+  .sort((a,b)=>b.date.localeCompare(a.date)||num(b.seq)-num(a.seq)).slice(0,250);
+ select.replaceChildren();
+ const blank=document.createElement("option");blank.value="";
+ blank.textContent=available.length?"Elegí un movimiento":"No hay gastos disponibles";select.appendChild(blank);
+ for(const m of available){
+  const option=document.createElement("option");option.value=m.id;
+  const already=oneProjectLinkForMovement(m.id)?.projectId===p.id;
+  option.textContent=m.date+" · "+(m.description||movementCategoryName(m))+" · "+
+   originalMoney(m.amount,m.currency)+(already?" · en este proyecto":" · vincular al proyecto");
+  select.appendChild(option);
+ }
+ document.getElementById("oneProjectReconcilePlanId").value=plan.id;
+ document.getElementById("oneProjectReconcileTitle").textContent="Conciliar: "+plan.name;
+ document.getElementById("oneProjectReconcileHint").textContent=
+  "Importe previsto: "+oneProjectMoney(p,num(plan.amount))+
+  ". Podés relacionar varios gastos reales con la misma previsión, uno por vez.";
+ select.disabled=!available.length;
+ document.querySelector('#oneProjectReconcileForm button[type="submit"]').disabled=!available.length;
+ document.getElementById("oneProjectReconcileDialog").showModal();
+}
 function oneProjectOpenPlan(plan=null){
  const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
  document.getElementById("oneProjectPlanForm").reset();
@@ -303,8 +327,9 @@ function oneProjectDetailRender(p){
  document.getElementById("oneProjectProgressLabel").textContent=budget?Math.round(pct)+"%":"Sin presupuesto";
  document.getElementById("oneProjectProgressFill").style.width=Math.min(100,Math.max(0,pct))+"%";
  document.getElementById("oneProjectProgressFill").classList.toggle("over",pct>100);
- document.getElementById("oneProjectBudgetNote").textContent="Proyección incluyendo previstos pendientes: "+oneProjectMoney(p,forecastRemaining)+
-  ". Los previstos no modifican tu saldo real ni los reportes generales. Si registrás uno, marcá su previsión como resuelta.";
+ document.getElementById("oneProjectBudgetNote").textContent="Disponible considerando gastos reales y previsiones todavía pendientes: "+
+  oneProjectMoney(p,forecastRemaining)+
+  ". Cada gasto conciliado reduce el pendiente automáticamente, sin crear otro movimiento.";
  const buckets=p.buckets||[];
  const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
  const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
@@ -319,13 +344,37 @@ function oneProjectDetailRender(p){
  ' de gastos sin asignación · '+safe(oneProjectMoney(p,budget-bucketSum))+' del presupuesto sin distribuir</small></div></div>'+
  (bucketSum>budget?'<p class="one-project-caution">Los conceptos suman más que el presupuesto total del proyecto.</p>':"");
  const plans=(data.projectPlans||[]).filter(x=>x.projectId===p.id);
+ const totals=oneProjectPlanTotals(p);
+ document.getElementById("oneProjectPlanSummary").innerHTML=plans.length?
+  '<span>Previsto <strong>'+safe(oneProjectMoney(p,totals.planned))+'</strong></span>'+
+  '<span>Conciliado <strong>'+safe(oneProjectMoney(p,totals.matched))+'</strong></span>'+
+  '<span>Pendiente <strong>'+safe(oneProjectMoney(p,totals.pending))+'</strong></span>':"";
  document.getElementById("oneProjectPlans").innerHTML=plans.length?plans.map(x=>{
-  const closed=x.status==="closed";
-  return '<div class="one-project-item'+(closed?" one-project-resolved":"")+'"><div><strong>'+safe(x.name)+'</strong><small>'+
-   safe(oneProjectMoney(p,num(x.amount)))+(x.dueDate?" · "+safe(dateLabel(x.dueDate)):"")+
-   ' · '+(closed?"Resuelto":"Pendiente")+'</small></div><div class="one-project-item-actions">'+
-   '<button type="button" class="btn secondary small" data-one-edit-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)||closed?"disabled":"")+'>Editar</button>'+
-   '<button type="button" class="btn secondary small" data-one-toggle-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>'+(closed?"Reabrir":"Resolver")+'</button></div></div>';
+  const summary=oneProjectPlanSummary(p,x),closed=x.status==="closed";
+  const state=closed?(summary.rows.length?"Resuelto":"Resuelto manualmente"):
+   summary.status==="covered"?"Cubierto":summary.status==="partial"?"Parcial":"Pendiente";
+  const matched=summary.rows.map(row=>'<div class="one-project-plan-match"><span>'+
+   safe(dateLabel(row.m.date))+' · '+safe(row.m.description||movementCategoryName(row.m))+
+   ' · '+safe(oneProjectMoney(p,oneProjectExpenseValue(p,row.m)))+
+   '</span><button type="button" class="btn secondary small" data-one-unmatch-movement="'+safe(row.m.id)+
+   '" data-one-unmatch-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Quitar relación</button></div>').join("");
+  const variance=summary.rows.length&&Math.abs(summary.delta)>.005?
+   '<small class="one-project-plan-variance">'+
+   (summary.delta>0?"Sobre lo previsto: ":"Bajo lo previsto: ")+
+   safe(oneProjectMoney(p,Math.abs(summary.delta)))+'</small>':"";
+  return '<div class="one-project-plan-row'+(closed?" one-project-resolved":"")+'"><div class="one-project-plan-header">'+
+   '<div><strong>'+safe(x.name)+'</strong><small class="one-project-plan-status">'+safe(state)+
+   (x.dueDate?" · "+safe(dateLabel(x.dueDate)):"")+'</small></div>'+
+   '<div class="one-project-item-actions">'+
+   '<button type="button" class="btn secondary small" data-one-reconcile-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Conciliar gasto</button>'+
+   '<button type="button" class="btn secondary small" data-one-edit-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Editar</button>'+
+   '<button type="button" class="btn secondary small" data-one-toggle-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>'+(closed?"Reabrir":"Resolver")+'</button></div></div>'+
+   '<div class="one-project-plan-amounts"><span>Previsto <b>'+safe(oneProjectMoney(p,summary.planned))+
+   '</b></span><span>Real <b>'+safe(oneProjectMoney(p,summary.actual))+
+   '</b></span><span>Pendiente <b>'+safe(oneProjectMoney(p,summary.remaining))+'</b></span></div>'+
+   variance+
+   (matched?'<div class="one-project-plan-matches">'+matched+'</div>':"")+
+   '</div>';
  }).join(""):'<p class="muted">Todavía no tenés gastos previstos.</p>';
  const linked=oneProjectMovementRows(p);
  document.getElementById("oneProjectLinkedMovements").innerHTML=linked.length?linked.map(x=>
