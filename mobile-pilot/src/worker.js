@@ -7,7 +7,7 @@
 import "../public/split-fare.js";
 const BASE_HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 const TYPES=new Set(["Gasto","Ingreso","Pago deuda","Cobro","Aporte","Cobro dividido"]);
-const MAX_BODY=8192;
+const MAX_BODY=8192,MAX_CATALOG_BODY=16384;
 function json(body,status=200,extra={}){
  return new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json; charset=utf-8",...BASE_HEADERS,...extra}});
 }
@@ -44,6 +44,9 @@ function checkPayload(p){
  const categoryId=clean(p.categoryId,80),debtId=clean(p.debtId,80),reserveId=clean(p.reserveId,80);
  const person=clean(p.person,120),description=clean(p.description,200),groupId=clean(p.groupId,80),groupName=clean(p.groupName,120);
  const dueDate=clean(p.dueDate,10);
+ const projectId=clean(p.projectId,80),projectBucketId=clean(p.projectBucketId,80);
+ if((projectId||projectBucketId)&&type!=="Gasto")throw Error("Proyecto disponible únicamente para Gasto.");
+ if(projectBucketId&&!projectId)throw Error("Elegí primero un proyecto.");
  if((type==="Gasto"||type==="Ingreso")&&!categoryId)throw Error("Elegí una categoría");
  if(type==="Pago deuda"&&!debtId)throw Error("Elegí la deuda");
  if(type==="Aporte"&&!reserveId)throw Error("Elegí la meta");
@@ -56,13 +59,14 @@ function checkPayload(p){
   return result;
  }
  if(dueDate&&!validDate(dueDate))throw Error("Fecha esperada inválida");
- return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate,groupId,...(type==="Cobro"&&groupName?{groupName}:{})};
+ return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate,groupId,
+   ...(projectId?{projectId,projectBucketId}:{}),...(type==="Cobro"&&groupName?{groupName}:{})};
 }
-async function body(request){
+async function body(request,max=MAX_BODY){
  const size=Number(request.headers.get("Content-Length")||0);
- if(size>MAX_BODY)throw Error("Solicitud demasiado grande");
+ if(size>max)throw Error("Solicitud demasiado grande");
  const text=await request.text();
- if(text.length>MAX_BODY)throw Error("Solicitud demasiado grande");
+ if(text.length>max)throw Error("Solicitud demasiado grande");
  return JSON.parse(text);
 }
 export default {
@@ -82,7 +86,7 @@ export default {
     }
     if(path==="/api/catalog"&&request.method==="PUT"){
      if(!permitted(request,env,"desktop"))return json({error:"Acceso denegado"},401,headers);
-     const payload=await body(request);
+     const payload=await body(request,MAX_CATALOG_BODY);
      const groups=["categories","debts","goals"];
      if(!payload||groups.some(k=>!Array.isArray(payload[k])||payload[k].length>200))
        return json({error:"Catálogo inválido"},400,headers);
@@ -99,6 +103,15 @@ export default {
        id:clean(g.id,80),name:clean(g.name,120),
        people:Array.isArray(g.people)?[...new Set(g.people.slice(0,25).map(p=>clean(p,120)).filter(Boolean))]:[]
      })).filter(g=>g.id&&g.name);
+     // Solo nombres e IDs activos: jamás presupuestos, montos, notas o movimientos.
+     // Aceptar catálogos antiguos sin projects para compatibilidad del piloto.
+     if(payload.projects!==undefined&&(!Array.isArray(payload.projects)||payload.projects.length>35||
+       payload.projects.some(p=>!p||!Array.isArray(p.buckets)||p.buckets.length>12)))
+       return json({error:"Catálogo de proyectos inválido"},400,headers);
+     catalog.projects=(payload.projects||[]).map(p=>({
+       id:clean(p.id,80),name:clean(p.name,100),
+       buckets:p.buckets.map(b=>({id:clean(b.id,80),name:clean(b.name,80)})).filter(b=>b.id&&b.name)
+     })).filter(p=>p.id&&p.name);
      await env.DB.prepare("INSERT INTO pilot_catalog(id,payload,updated_at) VALUES(1,?,datetime('now')) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at").bind(JSON.stringify(catalog)).run();
      return json({ok:true},200,headers);
     }
@@ -114,6 +127,12 @@ export default {
      const type=cleanPayload.type;
      if((type==="Gasto"||type==="Ingreso")&&!catalog.categories.some(c=>c.id===cleanPayload.categoryId&&c.type===type))
        return json({error:"Categoría no disponible. Actualizá el catálogo desde Daniel"},409,headers);
+     if(cleanPayload.projectId){
+       const project=(catalog.projects||[]).find(p=>p.id===cleanPayload.projectId);
+       if(!project)return json({error:"Proyecto no disponible. Abrí Daniel, sincronizá y actualizá el catálogo del iPhone."},409,headers);
+       if(cleanPayload.projectBucketId&&!(project.buckets||[]).some(b=>b.id===cleanPayload.projectBucketId))
+         return json({error:"Concepto del proyecto no disponible. Actualizá el catálogo del iPhone."},409,headers);
+     }
      if(type==="Pago deuda"&&!catalog.debts.some(d=>d.id===cleanPayload.debtId))
        return json({error:"Deuda no disponible"},409,headers);
      if(type==="Aporte"&&!catalog.goals.some(g=>g.id===cleanPayload.reserveId))
