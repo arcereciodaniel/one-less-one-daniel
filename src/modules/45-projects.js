@@ -1,4 +1,4 @@
-/* V11.2 · Proyectos Beta 1.0. Capa de presupuesto sobre movimientos reales.
+/* V11.4 · Proyectos Beta 1.1. Capa de presupuesto sobre movimientos reales.
    No se crean movimientos contables al planificar, asociar ni archivar. */
 let oneProjectSelectedId="";
 function oneProjectById(idValue){return (data.projects||[]).find(p=>p&&p.id===idValue)||null}
@@ -7,7 +7,7 @@ function oneProjectEnabled(p){return p?.status!=="archived"}
 function oneProjectHasActivity(p){
  return (data.projectLinks||[]).some(x=>x.projectId===p.id)||
         (data.projectPlans||[]).some(x=>x.projectId===p.id)||
-        (p.buckets||[]).some(b=>num(b.budget)>0);
+        (p.buckets||[]).some(b=>num(b.budget)>0)||!!p.goalId||!!p.cobroGroupId;
 }
 function oneProjectLinkForMovement(movementId){
  return (data.projectLinks||[]).find(l=>l.movementId===movementId)||null;
@@ -111,6 +111,95 @@ function oneProjectAssignMovement(movementId,projectId,bucketId=""){
  }
  if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId});
 }
+
+/* V11.4: estas relaciones son vistas de solo lectura sobre Metas y Cobros.
+   Nunca generan ingresos, gastos, aportes ni ajustes a liquidez. */
+function oneProjectConnectionMoney(p,crc){
+ return originalMoney(p.currency==="CRC"?crc:fromCRC(crc,"USD"),p.currency);
+}
+function oneProjectLinkedGoal(p){
+ return (data.reserves||[]).find(r=>r.id===p?.goalId&&r.type==="goal")||null;
+}
+function oneProjectLinkedCobroGroup(p){
+ return (data.sharedChargeGroups||[]).find(g=>g.id===p?.cobroGroupId)||null;
+}
+function oneProjectCobroSummary(p){
+ const group=oneProjectLinkedCobroGroup(p);
+ const charges=group?(data.sharedCharges||[]).filter(c=>c.groupId===group.id):[];
+ return {
+  group,charges,
+  pendingCRC:charges.reduce((sum,c)=>sum+cobroRemainingCRC(c),0),
+  receivedCRC:charges.reduce((sum,c)=>sum+cobroReceivedCRC(c),0),
+  pendingCount:charges.filter(c=>cobroRemainingOriginal(c)>.005).length
+ };
+}
+function oneProjectConnectionChoices(select,rows,selected,placeholder){
+ select.replaceChildren();
+ const empty=document.createElement("option");empty.value="";empty.textContent=placeholder;select.appendChild(empty);
+ for(const item of rows){
+  const option=document.createElement("option");option.value=item.id;option.textContent=item.name;
+  if(item.archived)option.textContent+=" (archivado)";
+  if(item.busy){option.textContent+=" (otro proyecto)";option.disabled=true;}
+  select.appendChild(option);
+ }
+ select.value=rows.some(r=>r.id===selected)?selected:"";
+}
+function oneProjectRefreshConnections(p=null){
+ const all=(data.projects||[]).filter(x=>x.id!==p?.id);
+ const goals=(data.reserves||[]).filter(r=>r.type==="goal").map(r=>({
+  id:r.id,name:r.name,archived:reserveStatus(r)!=="active",busy:all.some(x=>x.goalId===r.id)
+ }));
+ const groups=(data.sharedChargeGroups||[]).map(g=>({
+  id:g.id,name:g.name,archived:sharedGroupStatus(g)!=="active",busy:all.some(x=>x.cobroGroupId===g.id)
+ }));
+ oneProjectConnectionChoices(document.getElementById("oneProjectGoal"),goals,p?.goalId||"","Sin meta vinculada");
+ oneProjectConnectionChoices(document.getElementById("oneProjectCobroGroup"),groups,p?.cobroGroupId||"","Sin grupo vinculado");
+}
+function oneProjectValidateConnections(existing,goalId,groupId){
+ const other=(data.projects||[]).filter(x=>x.id!==existing?.id);
+ if(goalId){
+  const goal=(data.reserves||[]).find(r=>r.id===goalId&&r.type==="goal");
+  if(!goal)return "La meta seleccionada ya no existe.";
+  if(reserveStatus(goal)!=="active"&&existing?.goalId!==goalId)return "Reactivá la meta para vincularla.";
+  if(other.some(p=>p.goalId===goalId))return "Esta meta ya está vinculada a otro proyecto.";
+ }
+ if(groupId){
+  const group=sharedGroupById(groupId);
+  if(!group)return "El grupo de Cobros seleccionado ya no existe.";
+  if(sharedGroupStatus(group)!=="active"&&existing?.cobroGroupId!==groupId)return "Reactivá el grupo de Cobros para vincularlo.";
+  if(other.some(p=>p.cobroGroupId===groupId))return "Este grupo de Cobros ya está vinculado a otro proyecto.";
+ }
+ return "";
+}
+function oneProjectConnectionsRender(p){
+ const slot=document.getElementById("oneProjectConnections");
+ if(!slot)return;
+ const goal=oneProjectLinkedGoal(p),goalMissing=!!p.goalId&&!goal;
+ const saved=goal?reserveBalanceAt(goal,todayIso()):0;
+ const target=goal?reserveTargetCRC(goal):0;
+ const percent=target>0?Math.round(Math.min(100,saved/target*100)):0;
+ const cobro=oneProjectCobroSummary(p);
+ const groupMissing=!!p.cobroGroupId&&!cobro.group;
+ const goalHtml=goal?
+  '<div class="one-project-connection-main"><strong>'+safe(goal.name)+'</strong><span>'+
+   safe(oneProjectConnectionMoney(p,saved))+' ahorrado'+
+   (target>0?' de '+safe(oneProjectConnectionMoney(p,target))+' · '+percent+'%':'')+'</span></div>'+
+   '<p class="muted">'+(reserveStatus(goal)==="archived"?"Meta archivada. ":"")+
+   'Ahorro apartado; no se cuenta como gasto ni como saldo operativo del proyecto.</p>':
+  '<p class="muted">'+(goalMissing?"La meta vinculada ya no existe. Podés editar la relación.":"Relacioná una meta existente desde Editar para ver su ahorro.")+'</p>';
+ const groupHtml=cobro.group?
+  '<div class="one-project-connection-main"><strong>'+safe(cobro.group.name)+'</strong><span>'+
+   cobro.charges.length+' cobro(s) · '+cobro.pendingCount+' pendiente(s)</span></div>'+
+   '<div class="one-project-connection-values"><span>Pendiente <strong>'+safe(oneProjectConnectionMoney(p,cobro.pendingCRC))+'</strong></span>'+
+   '<span>Recuperado <strong>'+safe(oneProjectConnectionMoney(p,cobro.receivedCRC))+'</strong></span></div>'+
+   '<p class="muted">'+(sharedGroupStatus(cobro.group)==="archived"?"Grupo archivado. ":"")+
+   'El cobro pendiente no es ingreso disponible. Los abonos se registran únicamente desde Cobros.</p>':
+  '<p class="muted">'+(groupMissing?"El grupo vinculado ya no existe. Podés editar la relación.":"Relacioná un grupo de Cobros desde Editar para seguir lo pendiente y recuperado.")+'</p>';
+ slot.innerHTML='<div class="one-project-connection"><div class="one-project-connection-head"><h3>Meta de ahorro</h3>'+
+  '<button type="button" class="btn secondary small" data-one-project-go-to="capital">Abrir Metas</button></div>'+goalHtml+'</div>'+
+  '<div class="one-project-connection"><div class="one-project-connection-head"><h3>Cobros relacionados</h3>'+
+  '<button type="button" class="btn secondary small" data-one-project-go-to="shared">Abrir Cobros</button></div>'+groupHtml+'</div>';
+}
 function oneProjectOpen(p=null){
  const form=document.getElementById("oneProjectForm");form.reset();
  document.getElementById("oneProjectDialogTitle").textContent=p?"Editar proyecto":"Nuevo proyecto";
@@ -121,6 +210,7 @@ function oneProjectOpen(p=null){
  document.getElementById("oneProjectBudget").value=p?.budget??"";
  document.getElementById("oneProjectCurrency").value=normalizeCurrency(p?.currency||displayCurrency());
  document.getElementById("oneProjectNotes").value=p?.notes||"";
+ oneProjectRefreshConnections(p);
  document.getElementById("oneProjectDialog").showModal();
 }
 function oneProjectOpenBucket(b=null){
@@ -157,6 +247,7 @@ function oneProjectDetailRender(p){
  document.getElementById("oneAddProjectPlan").disabled=!oneProjectEnabled(p);
  document.getElementById("oneProjectNewExpense").disabled=!oneProjectEnabled(p);
  const remaining=budget-paid,forecastRemaining=budget-paid-planned,pct=budget>0?paid/budget*100:0;
+ oneProjectConnectionsRender(p);
  document.getElementById("oneProjectKpis").innerHTML=[
   ["Presupuesto",oneProjectMoney(p,budget)],
   ["Gastado",oneProjectMoney(p,paid)],
@@ -261,12 +352,15 @@ function oneProjectInit(){
   const name=q("oneProjectName").value.trim(),budget=Number(q("oneProjectBudget").value);
   const startDate=q("oneProjectStart").value,endDate=q("oneProjectEnd").value;
   const currency=normalizeCurrency(q("oneProjectCurrency").value);
+  const goalId=q("oneProjectGoal").value,cobroGroupId=q("oneProjectCobroGroup").value;
+  const connectionError=oneProjectValidateConnections(existing,goalId,cobroGroupId);
+  if(connectionError)return alert(connectionError);
   if(!name||!Number.isFinite(budget)||budget<0)return alert("Ingresá un nombre y un presupuesto válido.");
   if((startDate&&!restoreValidDate(startDate))||(endDate&&!restoreValidDate(endDate))||(startDate&&endDate&&endDate<startDate))return alert("Revisá las fechas: la finalización no puede ser anterior al inicio.");
   if(existing&&existing.currency!==currency&&oneProjectHasActivity(existing))return alert("Este proyecto ya tiene importes asociados. No podés cambiar su moneda sin alterar su interpretación histórica.");
   let selectedId=existing?.id||id();
   if(!oneProjectStore(()=>{
-   const next={...(existing||{}),id:selectedId,name,budget,currency,startDate,endDate,
+   const next={...(existing||{}),id:selectedId,name,budget,currency,startDate,endDate,goalId,cobroGroupId,
      notes:q("oneProjectNotes").value.trim(),status:existing?.status||"active",
      buckets:existing?.buckets||[],createdAt:existing?.createdAt||new Date().toISOString()};
    if(existing)Object.assign(existing,next);else data.projects.push(next);
@@ -301,6 +395,12 @@ function oneProjectInit(){
   q("oneProjectPlanDialog").close();renderProjects();
  });
  q("oneProjectDetails").addEventListener("click",event=>{
+  const open=event.target.closest("[data-one-project-go-to]");
+  if(open){
+   const target=open.dataset.oneProjectGoTo;
+   if(!oneModuleEnabled(target))return alert("Activá esta herramienta desde el botón + antes de abrirla.");
+   navigate(target);return;
+  }
   const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
   const bucket=event.target.closest("[data-one-edit-bucket]");
   const plan=event.target.closest("[data-one-edit-plan]");
