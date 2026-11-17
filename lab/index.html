@@ -1683,6 +1683,34 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-scenario-disclaimer{border-top:1px solid var(--border);padding-top:13px;font-size:.73rem;margin-bottom:0}
 @media(max-width:940px){.one-scenario-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.one-scenario-controls{grid-template-columns:1fr}.one-scenario-panel>summary{align-items:flex-start;flex-direction:column;gap:8px}.one-scenario-toolbar{align-items:flex-start;flex-wrap:wrap}.one-scenario-toolbar label{flex-wrap:wrap}}
+
+
+/* V11.6 · Conciliación prevista/real; geometría consistente claro y oscuro. */
+.one-project-plan-totals{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:13px 0 8px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.one-project-plan-totals span{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:.74rem;color:var(--muted)}
+.one-project-plan-totals strong{font-size:.78rem;color:var(--text);font-variant-numeric:tabular-nums}
+.one-project-plan-row{padding:14px 0;border-bottom:1px solid var(--border);display:grid;gap:11px}
+.one-project-plan-row:last-child{border-bottom:0}
+.one-project-plan-header{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.one-project-plan-header>div:first-child{display:grid;gap:4px;min-width:0}
+.one-project-plan-header strong{font-size:.83rem;overflow-wrap:anywhere}
+.one-project-plan-header .one-project-plan-status{font-size:.73rem;color:var(--muted)}
+.one-project-plan-header .one-project-item-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:65%}
+.one-project-plan-header .one-project-item-actions button{white-space:nowrap}
+.one-project-plan-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.one-project-plan-amounts span{display:grid;gap:4px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:.7rem}
+.one-project-plan-amounts b{font-size:.79rem;color:var(--text);font-variant-numeric:tabular-nums;font-weight:700;overflow-wrap:anywhere}
+.one-project-plan-variance{display:block;color:var(--muted);font-size:.74rem}
+.one-project-plan-matches{display:grid;gap:7px;padding-top:4px}
+.one-project-plan-match{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}
+.one-project-plan-match span{font-size:.72rem;line-height:1.45;color:var(--muted);overflow-wrap:anywhere;min-width:0}
+.one-project-plan-match button{flex:none}
+@media(max-width:700px){
+ .one-project-plan-header{display:grid}
+ .one-project-plan-header .one-project-item-actions{justify-content:flex-start;max-width:100%}
+ .one-project-plan-amounts span{padding:8px}
+ .one-project-plan-match{align-items:start;flex-wrap:wrap}
+}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -1692,7 +1720,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.8.0 LAB</small>
+      <small class="brand-version">v11.9.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -2154,7 +2182,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
   <section class="view" id="view-projects">
     <div class="v7-page-head">
-      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.1</div><h1>Tus proyectos</h1>
+      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.2</div><h1>Tus proyectos</h1>
         <p class="sub">Organizá viajes y planes con un presupuesto propio, sin duplicar tus movimientos.</p></div>
       <div class="v7-page-actions"><button class="btn" type="button" id="oneCreateProjectBtn">＋ Nuevo proyecto</button></div>
     </div>
@@ -2171,7 +2199,8 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <div class="one-project-sections">
         <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Presupuesto por concepto</h3><p class="muted">Distribuí el total sin crear categorías globales.</p></div><button class="btn secondary small" id="oneAddProjectBucket" type="button">＋ Concepto</button></div>
           <div id="oneProjectBuckets"></div></div>
-        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos previstos</h3><p class="muted">Planificados; no afectan el saldo operativo.</p></div><button class="btn secondary small" id="oneAddProjectPlan" type="button">＋ Previsto</button></div>
+        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Previsto vs. real</h3><p class="muted">Relacioná gastos existentes y conocé lo que falta, sin duplicar operaciones.</p></div><button class="btn secondary small" id="oneAddProjectPlan" type="button">＋ Previsto</button></div>
+          <div id="oneProjectPlanSummary" class="one-project-plan-totals" aria-label="Previsiones, gastos conciliados y pendientes"></div>
           <div id="oneProjectPlans"></div></div>
       </div>
       <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos reales vinculados</h3><p class="muted">Los importes provienen de Movimientos. Asociarlos no vuelve a registrarlos.</p></div><button class="btn small" id="oneProjectNewExpense" type="button">＋ Registrar gasto</button></div>
@@ -2279,7 +2308,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.8.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.9.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2363,6 +2392,19 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="field wide"><label for="oneProjectPlanBucket">Concepto (opcional)</label><select id="oneProjectPlanBucket"></select></div>
   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectPlanCancel">Cancelar</button><button class="btn" type="submit">Guardar previsto</button></div>
  </form></div>
+</dialog>
+
+<dialog id="oneProjectReconcileDialog" class="one-project-dialog" aria-labelledby="oneProjectReconcileTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectReconcileTitle">Conciliar gasto previsto</h2>
+ <p class="muted" id="oneProjectReconcileHint"></p>
+ <p class="muted">Elegí un movimiento real ya registrado. Si todavía no pertenece a este proyecto, se vinculará al conciliarlo. No se creará otro gasto.</p>
+ <form id="oneProjectReconcileForm" class="form-grid">
+  <input id="oneProjectReconcilePlanId" type="hidden">
+  <div class="field wide"><label for="oneProjectReconcileMovement">Gasto real</label><select id="oneProjectReconcileMovement" required></select></div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectReconcileCancel">Cancelar</button><button class="btn" type="submit">Conciliar</button></div>
+ </form>
+ </div>
 </dialog>
 
 <dialog id="modulesDialog" class="one-modules-dialog" aria-labelledby="modulesDialogTitle">
@@ -3372,11 +3414,23 @@ function restoreValidate(raw){
     if(link.bucketId&&!(project.buckets||[]).some(b=>b.id===link.bucketId))
       throw Error("Un gasto está vinculado a un concepto de proyecto inexistente.");
   }
+  const planIds=new Set();
   for(const plan of raw.projectPlans||[]){
-    if(!plan.id||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
+    if(!plan.id||planIds.has(plan.id)||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
        !restoreValidMoney(plan.amount)||Number(plan.amount)<=0||
        (plan.dueDate&&!restoreValidDate(plan.dueDate)))
       throw Error("Hay gastos previstos inválidos.");
+    planIds.add(plan.id);
+  }
+  // V11.6: cada vínculo puede señalar una previsión del MISMO proyecto.
+  // No se permite utilizar el mismo movimiento en varias previsiones.
+  for(const link of raw.projectLinks||[]){
+    if(!link.planId)continue; // Los respaldos anteriores no necesitan migración.
+    const plan=(raw.projectPlans||[]).find(x=>x.id===link.planId);
+    if(!plan||plan.projectId!==link.projectId)
+      throw Error("Hay una conciliación de Proyecto que apunta a una previsión inexistente o ajena.");
+    if(plan.bucketId&&plan.bucketId!==link.bucketId)
+      throw Error("La conciliación usa un concepto distinto al de la previsión.");
   }
   return raw;
 }
@@ -3508,6 +3562,19 @@ function oneHealthCheck(raw){
  }
  countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
  countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
+ const plans=new Map(get("projectPlans").map(x=>[x.id,x]));
+ const projectBuckets=new Map(get("projects").map(p=>[p.id,new Set((p.buckets||[]).map(b=>b.id))]));
+ const obsoletePlannedBuckets=get("projectPlans").filter(p=>p.bucketId&&!projectBuckets.get(p.projectId)?.has(p.bucketId)).length;
+ countIssue(obsoletePlannedBuckets,"previsión(es) con conceptos de proyecto que ya no existen.");
+ let orphanReconciliations=0,wrongPlanBuckets=0;
+ for(const link of get("projectLinks")){
+  if(!link.planId)continue;
+  const plan=plans.get(link.planId);
+  if(!plan||plan.projectId!==link.projectId)orphanReconciliations++;
+  else if(plan.bucketId&&plan.bucketId!==link.bucketId)wrongPlanBuckets++;
+ }
+ countIssue(orphanReconciliations,"conciliación(es) vinculadas a previsiones inexistentes o de otro proyecto.");
+ countIssue(wrongPlanBuckets,"conciliación(es) cuyo concepto es distinto del previsto.");
  const goalIds=new Set(get("reserves").filter(r=>r.type==="goal").map(r=>r.id));
  const projectGroupIds=new Set(get("sharedChargeGroups").map(g=>g.id));
  const usedGoals=new Set(),usedProjectGroups=new Set();
@@ -5945,7 +6012,7 @@ function renderCapital(){
 }
 
 let reportActiveTab="overview";
-/* V11.4 · Proyectos Beta 1.1. Capa de presupuesto sobre movimientos reales.
+/* V11.6 · Proyectos Beta 1.2. Capa de presupuesto sobre movimientos reales.
    No se crean movimientos contables al planificar, asociar ni archivar. */
 let oneProjectSelectedId="";
 function oneProjectById(idValue){return (data.projects||[]).find(p=>p&&p.id===idValue)||null}
@@ -5976,9 +6043,30 @@ function oneProjectSpent(p,bucketId=null){
  return oneProjectMovementRows(p).filter(x=>bucketId===null||x.link.bucketId===bucketId)
   .reduce((sum,x)=>sum+oneProjectExpenseValue(p,x.m),0);
 }
+/* V11.6: una previsión puede conciliarse con uno o más gastos reales.
+   projectLinks.planId es opcional; jamás representa un segundo asiento. */
+function oneProjectPlanRows(p,plan){
+ return oneProjectMovementRows(p).filter(x=>x.link.planId===plan.id);
+}
+function oneProjectPlanSummary(p,plan){
+ const rows=oneProjectPlanRows(p,plan),planned=Math.max(0,num(plan.amount));
+ const actual=rows.reduce((sum,x)=>sum+oneProjectExpenseValue(p,x.m),0);
+ const remaining=plan.status==="closed"?0:Math.max(0,planned-actual);
+ const status=plan.status==="closed"?"closed":actual>=planned-.005?"covered":actual>.005?"partial":"pending";
+ return {planned,actual,remaining,delta:actual-planned,rows,status};
+}
 function oneProjectPending(p,bucketId=null){
- return (data.projectPlans||[]).filter(x=>x.projectId===p.id&&x.status!=="closed"&&(bucketId===null||x.bucketId===bucketId))
-  .reduce((sum,x)=>sum+Math.max(0,num(x.amount)),0);
+ return (data.projectPlans||[]).filter(x=>x.projectId===p.id&&(bucketId===null||x.bucketId===bucketId))
+  .reduce((sum,x)=>sum+oneProjectPlanSummary(p,x).remaining,0);
+}
+function oneProjectPlanTotals(p){
+ const plans=(data.projectPlans||[]).filter(x=>x.projectId===p.id);
+ const summaries=plans.map(plan=>oneProjectPlanSummary(p,plan));
+ return {planned:summaries.reduce((sum,x)=>sum+x.planned,0),
+  matched:summaries.reduce((sum,x)=>sum+x.actual,0),
+  pending:summaries.reduce((sum,x)=>sum+x.remaining,0),
+  count:plans.length,covered:summaries.filter(x=>x.status==="covered"||x.status==="closed").length,
+  partial:summaries.filter(x=>x.status==="partial").length};
 }
 function oneProjectMoney(p,amount){return originalMoney(amount,p.currency)}
 function oneProjectStore(mutator){
@@ -6053,10 +6141,35 @@ function oneProjectReadMovementSelection(type,existing){
 }
 function oneProjectAssignMovement(movementId,projectId,bucketId=""){
  const old=oneProjectLinkForMovement(movementId);
- if(old){
-  data.projectLinks=data.projectLinks.filter(x=>x.movementId!==movementId);
- }
- if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId});
+ const oldPlan=(data.projectPlans||[]).find(x=>x.id===old?.planId&&x.projectId===projectId);
+ const keepPlanId=old?.projectId===projectId&&oldPlan&&
+  (!oldPlan.bucketId||oldPlan.bucketId===bucketId)?oldPlan.id:"";
+ if(old)data.projectLinks=data.projectLinks.filter(x=>x.movementId!==movementId);
+ if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId,
+  ...(keepPlanId?{planId:keepPlanId}:{})});
+}
+function oneProjectCanMatch(p,plan,m){
+ if(!m||m.type!=="Gasto")return false;
+ const old=oneProjectLinkForMovement(m.id);
+ if(old&&(old.projectId!==p.id||old.planId))return false;
+ if(old&&plan.bucketId&&old.bucketId&&old.bucketId!==plan.bucketId)return false;
+ return true;
+}
+function oneProjectMatchMovement(p,plan,movementId){
+ if(!p||!oneProjectEnabled(p)||!plan||plan.projectId!==p.id)throw Error("La previsión no pertenece a un proyecto activo.");
+ const m=(data.movements||[]).find(x=>x.id===movementId);
+ if(!oneProjectCanMatch(p,plan,m))throw Error("El gasto ya pertenece a otra previsión, proyecto o concepto.");
+ const old=oneProjectLinkForMovement(movementId);
+ const bucketId=old?.bucketId||plan.bucketId||"";
+ if(!old||bucketId!==old.bucketId)oneProjectAssignMovement(movementId,p.id,bucketId);
+ const link=oneProjectLinkForMovement(movementId);
+ if(!link||link.planId)throw Error("El gasto no puede conciliarse con esta previsión.");
+ link.planId=plan.id;
+}
+function oneProjectUnmatchMovement(p,plan,movementId){
+ const link=oneProjectLinkForMovement(movementId);
+ if(!link||link.projectId!==p.id||link.planId!==plan.id)throw Error("No existe esta conciliación.");
+ delete link.planId; // El movimiento sigue en el proyecto y conserva su asiento contable.
 }
 
 /* V11.4: estas relaciones son vistas de solo lectura sobre Metas y Cobros.
@@ -6169,6 +6282,30 @@ function oneProjectOpenBucket(b=null){
  document.getElementById("oneProjectBucketBudget").value=b?.budget??"";
  document.getElementById("oneProjectBucketDialog").showModal();
 }
+function oneProjectOpenReconcile(plan){
+ const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p)||!plan||plan.projectId!==p.id)return;
+ const select=document.getElementById("oneProjectReconcileMovement");
+ const available=(data.movements||[]).filter(m=>oneProjectCanMatch(p,plan,m))
+  .sort((a,b)=>b.date.localeCompare(a.date)||num(b.seq)-num(a.seq)).slice(0,250);
+ select.replaceChildren();
+ const blank=document.createElement("option");blank.value="";
+ blank.textContent=available.length?"Elegí un movimiento":"No hay gastos disponibles";select.appendChild(blank);
+ for(const m of available){
+  const option=document.createElement("option");option.value=m.id;
+  const already=oneProjectLinkForMovement(m.id)?.projectId===p.id;
+  option.textContent=m.date+" · "+(m.description||movementCategoryName(m))+" · "+
+   originalMoney(m.amount,m.currency)+(already?" · en este proyecto":" · vincular al proyecto");
+  select.appendChild(option);
+ }
+ document.getElementById("oneProjectReconcilePlanId").value=plan.id;
+ document.getElementById("oneProjectReconcileTitle").textContent="Conciliar: "+plan.name;
+ document.getElementById("oneProjectReconcileHint").textContent=
+  "Importe previsto: "+oneProjectMoney(p,num(plan.amount))+
+  ". Podés relacionar varios gastos reales con la misma previsión, uno por vez.";
+ select.disabled=!available.length;
+ document.querySelector('#oneProjectReconcileForm button[type="submit"]').disabled=!available.length;
+ document.getElementById("oneProjectReconcileDialog").showModal();
+}
 function oneProjectOpenPlan(plan=null){
  const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
  document.getElementById("oneProjectPlanForm").reset();
@@ -6204,8 +6341,9 @@ function oneProjectDetailRender(p){
  document.getElementById("oneProjectProgressLabel").textContent=budget?Math.round(pct)+"%":"Sin presupuesto";
  document.getElementById("oneProjectProgressFill").style.width=Math.min(100,Math.max(0,pct))+"%";
  document.getElementById("oneProjectProgressFill").classList.toggle("over",pct>100);
- document.getElementById("oneProjectBudgetNote").textContent="Proyección incluyendo previstos pendientes: "+oneProjectMoney(p,forecastRemaining)+
-  ". Los previstos no modifican tu saldo real ni los reportes generales. Si registrás uno, marcá su previsión como resuelta.";
+ document.getElementById("oneProjectBudgetNote").textContent="Disponible considerando gastos reales y previsiones todavía pendientes: "+
+  oneProjectMoney(p,forecastRemaining)+
+  ". Cada gasto conciliado reduce el pendiente automáticamente, sin crear otro movimiento.";
  const buckets=p.buckets||[];
  const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
  const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
@@ -6220,13 +6358,37 @@ function oneProjectDetailRender(p){
  ' de gastos sin asignación · '+safe(oneProjectMoney(p,budget-bucketSum))+' del presupuesto sin distribuir</small></div></div>'+
  (bucketSum>budget?'<p class="one-project-caution">Los conceptos suman más que el presupuesto total del proyecto.</p>':"");
  const plans=(data.projectPlans||[]).filter(x=>x.projectId===p.id);
+ const totals=oneProjectPlanTotals(p);
+ document.getElementById("oneProjectPlanSummary").innerHTML=plans.length?
+  '<span>Previsto <strong>'+safe(oneProjectMoney(p,totals.planned))+'</strong></span>'+
+  '<span>Conciliado <strong>'+safe(oneProjectMoney(p,totals.matched))+'</strong></span>'+
+  '<span>Pendiente <strong>'+safe(oneProjectMoney(p,totals.pending))+'</strong></span>':"";
  document.getElementById("oneProjectPlans").innerHTML=plans.length?plans.map(x=>{
-  const closed=x.status==="closed";
-  return '<div class="one-project-item'+(closed?" one-project-resolved":"")+'"><div><strong>'+safe(x.name)+'</strong><small>'+
-   safe(oneProjectMoney(p,num(x.amount)))+(x.dueDate?" · "+safe(dateLabel(x.dueDate)):"")+
-   ' · '+(closed?"Resuelto":"Pendiente")+'</small></div><div class="one-project-item-actions">'+
-   '<button type="button" class="btn secondary small" data-one-edit-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)||closed?"disabled":"")+'>Editar</button>'+
-   '<button type="button" class="btn secondary small" data-one-toggle-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>'+(closed?"Reabrir":"Resolver")+'</button></div></div>';
+  const summary=oneProjectPlanSummary(p,x),closed=x.status==="closed";
+  const state=closed?(summary.rows.length?"Resuelto":"Resuelto manualmente"):
+   summary.status==="covered"?"Cubierto":summary.status==="partial"?"Parcial":"Pendiente";
+  const matched=summary.rows.map(row=>'<div class="one-project-plan-match"><span>'+
+   safe(dateLabel(row.m.date))+' · '+safe(row.m.description||movementCategoryName(row.m))+
+   ' · '+safe(oneProjectMoney(p,oneProjectExpenseValue(p,row.m)))+
+   '</span><button type="button" class="btn secondary small" data-one-unmatch-movement="'+safe(row.m.id)+
+   '" data-one-unmatch-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Quitar relación</button></div>').join("");
+  const variance=summary.rows.length&&Math.abs(summary.delta)>.005?
+   '<small class="one-project-plan-variance">'+
+   (summary.delta>0?"Sobre lo previsto: ":"Bajo lo previsto: ")+
+   safe(oneProjectMoney(p,Math.abs(summary.delta)))+'</small>':"";
+  return '<div class="one-project-plan-row'+(closed?" one-project-resolved":"")+'"><div class="one-project-plan-header">'+
+   '<div><strong>'+safe(x.name)+'</strong><small class="one-project-plan-status">'+safe(state)+
+   (x.dueDate?" · "+safe(dateLabel(x.dueDate)):"")+'</small></div>'+
+   '<div class="one-project-item-actions">'+
+   '<button type="button" class="btn secondary small" data-one-reconcile-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Conciliar gasto</button>'+
+   '<button type="button" class="btn secondary small" data-one-edit-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>Editar</button>'+
+   '<button type="button" class="btn secondary small" data-one-toggle-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>'+(closed?"Reabrir":"Resolver")+'</button></div></div>'+
+   '<div class="one-project-plan-amounts"><span>Previsto <b>'+safe(oneProjectMoney(p,summary.planned))+
+   '</b></span><span>Real <b>'+safe(oneProjectMoney(p,summary.actual))+
+   '</b></span><span>Pendiente <b>'+safe(oneProjectMoney(p,summary.remaining))+'</b></span></div>'+
+   variance+
+   (matched?'<div class="one-project-plan-matches">'+matched+'</div>':"")+
+   '</div>';
  }).join(""):'<p class="muted">Todavía no tenés gastos previstos.</p>';
  const linked=oneProjectMovementRows(p);
  document.getElementById("oneProjectLinkedMovements").innerHTML=linked.length?linked.map(x=>
@@ -6280,6 +6442,18 @@ function oneProjectInit(){
  q("oneProjectCancel").addEventListener("click",()=>q("oneProjectDialog").close());
  q("oneProjectBucketCancel").addEventListener("click",()=>q("oneProjectBucketDialog").close());
  q("oneProjectPlanCancel").addEventListener("click",()=>q("oneProjectPlanDialog").close());
+ q("oneProjectReconcileCancel").addEventListener("click",()=>q("oneProjectReconcileDialog").close());
+ q("oneProjectReconcileForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  const p=oneProjectCurrent();
+  const plan=(data.projectPlans||[]).find(x=>x.id===q("oneProjectReconcilePlanId").value&&x.projectId===p?.id);
+  const movementId=q("oneProjectReconcileMovement").value;
+  if(!p||!plan||!movementId)return alert("Seleccioná una previsión y un gasto válidos.");
+  if(!oneProjectCanMatch(p,plan,(data.movements||[]).find(m=>m.id===movementId)))
+   return alert("El gasto no puede asociarse a esta previsión. Revisá su proyecto o concepto.");
+  if(!oneProjectStore(()=>oneProjectMatchMovement(p,plan,movementId)))return;
+  q("oneProjectReconcileDialog").close();renderProjects();
+ });
  q("oneProjectEditBtn").addEventListener("click",()=>oneProjectOpen(oneProjectCurrent()));
  q("oneAddProjectBucket").addEventListener("click",()=>oneProjectOpenBucket());
  q("oneAddProjectPlan").addEventListener("click",()=>oneProjectOpenPlan());
@@ -6335,6 +6509,8 @@ function oneProjectInit(){
   const name=q("oneProjectPlanName").value.trim(),amount=Number(q("oneProjectPlanAmount").value),dueDate=q("oneProjectPlanDue").value,bucketId=q("oneProjectPlanBucket").value;
   if(!name||!Number.isFinite(amount)||amount<=0||dueDate&&!restoreValidDate(dueDate))return alert("Completá una descripción y un monto previsto válido.");
   if(bucketId&&!p.buckets.some(b=>b.id===bucketId))return alert("El concepto ya no existe.");
+  if(plan&&plan.bucketId!==bucketId&&oneProjectPlanRows(p,plan).some(row=>bucketId&&row.link.bucketId!==bucketId))
+   return alert("Esta previsión tiene gastos conciliados en otro concepto. Quitá sus relaciones antes de cambiar de concepto.");
   if(!oneProjectStore(()=>{
    const next={id:plan?.id||id(),projectId:p.id,name,amount,dueDate,bucketId,status:plan?.status||"pending"};
    if(plan)Object.assign(plan,next);else data.projectPlans.push(next);
@@ -6352,9 +6528,21 @@ function oneProjectInit(){
   const bucket=event.target.closest("[data-one-edit-bucket]");
   const plan=event.target.closest("[data-one-edit-plan]");
   const toggle=event.target.closest("[data-one-toggle-plan]");
+  const reconcile=event.target.closest("[data-one-reconcile-plan]");
+  const unmatch=event.target.closest("[data-one-unmatch-movement]");
   const unlink=event.target.closest("[data-one-unlink-movement]");
   if(bucket){oneProjectOpenBucket(p.buckets.find(x=>x.id===bucket.dataset.oneEditBucket));return;}
   if(plan){oneProjectOpenPlan(data.projectPlans.find(x=>x.id===plan.dataset.oneEditPlan&&x.projectId===p.id));return;}
+  if(reconcile){
+   const target=(data.projectPlans||[]).find(x=>x.id===reconcile.dataset.oneReconcilePlan&&x.projectId===p.id);
+   oneProjectOpenReconcile(target);return;
+  }
+  if(unmatch){
+   const plan=(data.projectPlans||[]).find(x=>x.id===unmatch.dataset.oneUnmatchPlan&&x.projectId===p.id);
+   if(!plan)return;
+   if(!oneProjectStore(()=>oneProjectUnmatchMovement(p,plan,unmatch.dataset.oneUnmatchMovement)))return;
+   renderProjects();return;
+  }
   if(toggle){
    const target=data.projectPlans.find(x=>x.id===toggle.dataset.oneTogglePlan&&x.projectId===p.id);if(!target)return;
    if(!oneProjectStore(()=>{target.status=target.status==="closed"?"pending":"closed"}))return;
@@ -6362,7 +6550,7 @@ function oneProjectInit(){
   }
   if(unlink){
    const idValue=unlink.dataset.oneUnlinkMovement;
-   if(!confirm("¿Desvincular este gasto? Se conservará intacto en Movimientos y Presupuesto."))return;
+   if(!confirm("¿Desvincular este gasto? Se conserva en Movimientos. Si estaba conciliado, su importe vuelve a quedar pendiente en la previsión."))return;
    if(!oneProjectStore(()=>{data.projectLinks=data.projectLinks.filter(x=>!(x.projectId===p.id&&x.movementId===idValue))}))return;
    renderProjects();return;
   }
