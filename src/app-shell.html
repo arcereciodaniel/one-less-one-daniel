@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.2.0</small>
+      <small class="brand-version">v11.3.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -29,6 +29,7 @@
       <button data-view="shared" data-optional-module="shared"><span class="nav-icon" aria-hidden="true">◷</span><span>Cobros <span class="one-beta-tag">BETA</span></span></button>
       <button data-view="capital" data-optional-module="capital"><span class="nav-icon" aria-hidden="true">◎</span><span>Metas <span class="one-beta-tag">BETA</span></span></button>
       <button data-view="projects" data-optional-module="projects"><span class="nav-icon" aria-hidden="true">◫</span><span>Proyectos <span class="one-beta-tag">BETA</span></span></button>
+      <button data-view="future" data-optional-module="future"><span class="nav-icon" aria-hidden="true">↗</span><span>Futuro <span class="one-beta-tag">BETA</span></span></button>
       <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
     </nav>
     <div class="header-actions">
@@ -510,6 +511,47 @@
     </section>
   </section>
 
+  <section class="view" id="view-future" aria-labelledby="oneFutureTitle">
+    <div class="v7-page-head">
+      <div><div class="v7-eyebrow">FUTURO · BETA 1.0</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
+        <p class="sub">Visualizá cómo podría evolucionar tu saldo operativo, sin cambiar tus registros.</p></div>
+      <div class="one-future-selector" role="group" aria-label="Horizonte de la proyección">
+        <button type="button" data-one-future-days="30" class="active" aria-pressed="true">30 días</button>
+        <button type="button" data-one-future-days="60" aria-pressed="false">60 días</button>
+        <button type="button" data-one-future-days="90" aria-pressed="false">90 días</button>
+      </div>
+    </div>
+    <p class="one-future-date" id="oneFutureAsOf"></p>
+    <div class="one-future-stats" id="oneFutureNumbers" aria-label="Resumen de la proyección"></div>
+    <section class="v7-card one-future-panel">
+      <div class="one-future-panel-head"><div><h2>Saldo operativo proyectado</h2>
+        <p class="muted">Gastos de presupuesto repartidos por día; ingresos y cuotas en sus fechas configuradas.</p></div></div>
+      <div class="one-future-chart-wrap" id="oneFutureChart"></div>
+      <p id="oneFutureMinimum" class="one-future-minimum"></p>
+      <p id="oneFutureStatus" class="one-future-status" role="status"></p>
+    </section>
+    <div class="one-future-columns">
+      <section class="v7-card one-future-panel">
+        <h2>¿Qué compone la proyección?</h2>
+        <div id="oneFutureBreakdown"></div>
+        <p class="muted one-future-explain">Los pagos mínimos se estiman según Deudas. Si el presupuesto de deuda es superior, solo se añade la diferencia. Los aportes a metas previstos en el presupuesto se tratan como salidas operativas, no como gastos reales nuevos.</p>
+      </section>
+      <section class="v7-card one-future-panel">
+        <h2>Próximos hitos</h2>
+        <p class="muted">Fechas de ingresos y vencimientos, más operaciones futuras ya registradas.</p>
+        <div id="oneFutureMilestones"></div>
+      </section>
+    </div>
+    <details class="v7-card one-future-assumptions">
+      <summary>Alcance, límites y datos pendientes</summary>
+      <p id="oneFutureCoverage"></p>
+      <ul id="oneFutureWarnings"></ul>
+      <p>Solo se anticipan ingresos con fechas configuradas. Los gastos ordinarios se distribuyen a lo largo del período y no predicen el día exacto de compra. Las cuotas pueden variar por intereses, comisiones y pagos reales.</p>
+      <p>Los cobros pendientes y los gastos previstos de Proyectos no se suman automáticamente: podrían contarse dos veces si ya están en tu presupuesto. Tampoco se crean transacciones ficticias ni se usan los ahorros protegidos como efectivo disponible.</p>
+      <p>Las conversiones CRC/USD siguen usando las tasas disponibles. El tipo de cambio y las condiciones financieras pueden cambiar. Este cálculo no sustituye un saldo bancario real ni una conciliación.</p>
+    </details>
+  </section>
+
   <section class="view" id="view-categories">
     <h1>Categorías</h1>
     <p class="sub">Personaliza cómo llamas a tus ingresos, gastos y compromisos. Los ingresos también pueden tener frecuencia, monto esperado y proyección automática conectada directamente con Presupuesto.</p>
@@ -527,7 +569,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.2.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.3.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -614,6 +656,7 @@
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.0</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.0</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
