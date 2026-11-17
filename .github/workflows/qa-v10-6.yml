@@ -1,7 +1,7 @@
-name: QA V10.10 — menos pasos y confirmaciones
+name: QA V11 — arquitectura modular y regresiones
 on:
   push:
-    branches: [qa/v10-6-shared-trips, qa/v10-7-mobile-crc-usd, qa/v10-8-mobile-trust-fx, qa/v10-9-financial-trust, qa/v10-10-less-friction-confirmations]
+    branches: [qa/v10-6-shared-trips, qa/v10-7-mobile-crc-usd, qa/v10-8-mobile-trust-fx, qa/v10-9-financial-trust, qa/v10-10-less-friction-confirmations, qa/v11-source-modules]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,6 +16,8 @@ jobs:
           node-version: "22"
       - name: Preparar pruebas
         run: npm install jsdom@26 --no-save --no-package-lock
+      - name: Fuente modular V11
+        run: node scripts/build-app.cjs --check
       - name: Lab derivado de Daniel
         run: node scripts/build-lab.cjs --check
       - name: Motor contable y funcionalidad web
@@ -29,6 +31,7 @@ jobs:
           node --test tests/mobile-trust-v10-8.test.cjs
           node --test tests/financial-trust-v10-9.test.cjs
           node --test tests/less-friction-v10-10.test.cjs
+          node --test tests/v11-source-build.test.cjs
           node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs tests/v10-4-ledger.test.cjs tests/split-fare-v10-5.test.cjs tests/shared-groups-v10-6.test.cjs tests/mobile-split-ui-v10-5.test.cjs tests/mobile-group-ui-v10-6.test.cjs
       - name: Worker, privacidad y captura móvil
         run: node --test mobile-pilot/tests/*.test.mjs

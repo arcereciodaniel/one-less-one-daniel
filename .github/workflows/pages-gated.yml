@@ -22,6 +22,8 @@ jobs:
           node-version: "22"
       - name: Instalar dependencias
         run: npm install jsdom@26 --no-save --no-package-lock
+      - name: Comprobar fuente modular V11
+        run: node scripts/build-app.cjs --check
       - name: Comprobar Lab generado desde Daniel
         run: node scripts/build-lab.cjs --check
       - name: Probar metas y presupuestos
@@ -41,6 +43,7 @@ jobs:
           node --test tests/mobile-trust-v10-8.test.cjs
           node --test tests/financial-trust-v10-9.test.cjs
           node --test tests/less-friction-v10-10.test.cjs
+          node --test tests/v11-source-build.test.cjs
           node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs
           node --test mobile-pilot/tests/*.test.mjs
       - name: Construir el sitio publico sin codigo interno

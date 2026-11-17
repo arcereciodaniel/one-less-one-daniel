@@ -4,14 +4,15 @@ const path = require("node:path");
 const assert = require("node:assert/strict");
 
 const ROOT = path.resolve(__dirname, "..");
+const {buildApp} = require("./build-app.cjs");
 const SOURCE = path.join(ROOT, "index.html");
 const OUT = path.join(ROOT, "lab", "index.html");
 const MANIFEST = path.join(ROOT, "site.webmanifest");
 const LAB_MANIFEST = path.join(ROOT, "lab", "site.webmanifest");
 
 const REPLACEMENTS = [
-  ['<small class="brand-version">v10.10.0</small>', '<small class="brand-version">v10.10.0 LAB</small>'],
-  ['<footer>One Less One · by rastro. · v10.10.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>', '<footer>One Less One · by rastro. · v10.10.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>'],
+  ['<small class="brand-version">v11.0.0</small>', '<small class="brand-version">v11.0.0 LAB</small>'],
+  ['<footer>One Less One · by rastro. · v11.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>', '<footer>One Less One · by rastro. · v11.0.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>'],
   ['const STORAGE_KEY = "daniel_finanzas_local_v1";', 'const STORAGE_KEY = "rastro_lab_v7_1_data_v1";'],
   ['const UI_STORAGE_KEY = "daniel_finanzas_ui_v1";', 'const UI_STORAGE_KEY = "rastro_lab_v7_1_ui_v1";'],
   ['const RECEIVABLE_CLEAN_START_KEY = "rastro_receivables_clean_start_v57";', 'const RECEIVABLE_CLEAN_START_KEY = "rastro_lab_v7_1_receivables_v1";'],
@@ -43,13 +44,16 @@ function labManifestFromDaniel(manifest) {
 }
 
 function main() {
-  const html = labFromDaniel(fs.readFileSync(SOURCE, "utf8"));
+  const daniel = buildApp();
+  const html = labFromDaniel(daniel);
   const manifest = labManifestFromDaniel(fs.readFileSync(MANIFEST, "utf8"));
   if (process.argv.includes("--check")) {
+    assert.equal(fs.readFileSync(SOURCE, "utf8"), daniel, "Daniel desactualizado: ejecutá node scripts/build-lab.cjs");
     assert.equal(fs.readFileSync(OUT, "utf8"), html, "Lab desactualizado: ejecutá node scripts/build-lab.cjs");
     assert.equal(fs.readFileSync(LAB_MANIFEST, "utf8"), manifest, "Manifest de Lab desactualizado");
     console.log("Lab y Daniel sincronizados, con almacenamiento independiente.");
   } else {
+    fs.writeFileSync(SOURCE, daniel);
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, html);
     fs.writeFileSync(LAB_MANIFEST, manifest);

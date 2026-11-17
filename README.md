@@ -127,3 +127,18 @@ Daniel y Lab comparten código pero no información financiera; Gloriana se mant
 **Deudas.** Los avisos muestran fecha y tiempo relativo hasta el vencimiento, cuota estimada, abonos asociados y diferencias parciales. En pagos tardíos o con cambios de mínimo se pide verificar el estado de cuenta. La agenda sigue siendo derivada y no modifica cuotas ni movimientos.
 
 **Alcance:** versión publicada únicamente en Daniel y Lab, con almacenamiento separado, sin cambios a Gloriana y sin migración de bases de datos. Cobros, Metas, Deudas y demás cálculos se mantienen como ya estaban. Pruebas en CI: confirmación posterior al guardado, no éxito antes de confirmar la recepción, cierre sin doble contabilidad, repetición no automática y ciclos de deudas en distintos meses.
+
+## V11.0 — Código fuente modular, sin cambiar la experiencia financiera
+
+La aplicación se desarrolla ahora desde fuentes separadas en `src/app-shell.html` (interfaz), `src/styles/app.css` (diseño) y diez bloques de `src/modules/` en un orden explícito: estado/modelo, persistencia y moneda, dashboard/presupuesto, deudas y cobros, metas, reportes/movimientos, formularios/eventos, vistas/filtros, agenda de deuda, acciones rápidas e inicialización.
+
+`index.html` y `lab/index.html` son **archivos generados**, no los archivos fuente a editar. No se introdujeron bibliotecas, endpoints, migraciones ni cargas adicionales en el navegador; el contenido generado es el mismo de V10.10 excepto por la etiqueta de versión. Los navegadores siguen ejecutando el JavaScript en el mismo orden y contexto.
+
+**Flujo de mantenimiento:**
+
+1. Editar el bloque correspondiente en `src/` (sin editar directamente los HTML generados).
+2. Ejecutar `node scripts/build-lab.cjs` para regenerar Daniel y Lab.
+3. Comprobar `node scripts/build-app.cjs --check` y `node scripts/build-lab.cjs --check`.
+4. Ejecutar pruebas; GitHub Actions verifica automáticamente coherencia, finanzas, privacidad y comportamiento antes de publicar.
+
+El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesarios. Los archivos de origen `src/` no se envían a GitHub Pages. Las claves de `localStorage`, los respaldos y los datos reales se conservan. Gloriana no se modifica. El formulario del iPhone y Cloudflare permanecen sin cambios.
