@@ -1528,6 +1528,71 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-debt-type-actions{display:flex;gap:5px;flex-wrap:wrap}
 .one-debt-type-actions button{font-size:.74rem}
 @media(max-width:600px){.one-settings-dialog .dialog-body{padding:17px}.one-debt-type-row{align-items:flex-start;flex-direction:column}}
+
+
+/* V11.2 · Proyectos Beta 1.0 — misma estructura para claro y oscuro. */
+.one-project-summary{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:12px 0 19px;color:var(--text)}
+.one-project-summary span{font-size:.78rem}
+.one-project-summary strong{font-size:1.22rem;margin-right:5px}
+.one-project-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px}
+.one-project-toolbar h2{font-size:1rem;margin:0}
+.one-project-toolbar label{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+.one-project-toolbar select{width:auto;min-width:130px}
+.one-project-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}
+.one-project-card{display:grid;gap:12px;text-align:left;width:100%;border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--surface);color:var(--text);min-width:0}
+.one-project-card:hover{background:var(--surface-hover)}
+.one-project-card.selected{outline:2px solid var(--muted);outline-offset:0}
+.one-project-card-top{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.one-project-card-top strong{font-size:.95rem;line-height:1.4;word-break:break-word}
+.one-project-card-top small{color:var(--muted);font-size:.71rem;white-space:nowrap}
+.one-project-card-meta{font-size:.83rem}
+.one-project-card-track,.one-project-track{display:block;background:var(--surface-hover);height:7px;border-radius:99px;overflow:hidden}
+.one-project-card-track i{display:block;height:100%;background:var(--muted);border-radius:99px}
+.one-project-card .muted{font-size:.73rem}
+.one-project-empty{grid-column:1/-1;border:1px dashed var(--border);padding:24px;border-radius:12px;color:var(--muted);font-size:.84rem}
+.one-project-detail{display:grid;gap:16px;margin-top:22px}
+.one-project-detail[hidden],.one-move-project-fields[hidden]{display:none!important}
+.one-project-detail-head{display:flex;justify-content:space-between;gap:16px;align-items:center}
+.one-project-detail-head h2{margin:0 0 4px;font-size:1.18rem}
+.one-project-detail-head p{margin:0;font-size:.76rem}
+.one-project-actions,.one-project-item-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.one-project-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.one-project-kpi{display:grid;gap:7px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:11px;min-width:0}
+.one-project-kpi span{font-size:.69rem;color:var(--muted)}
+.one-project-kpi strong{font-size:clamp(.9rem,1.7vw,1.23rem);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.one-project-progress{padding:15px 17px;background:var(--surface);border:1px solid var(--border);border-radius:11px}
+.one-project-progress-head{display:flex;justify-content:space-between;font-size:.79rem;margin-bottom:10px}
+.one-project-progress-head strong{font-variant-numeric:tabular-nums}
+.one-project-track{height:9px}
+.one-project-track span{display:block;background:var(--success);height:100%;border-radius:99px;transition:width .15s ease}
+.one-project-track span.over{background:var(--danger,#b4534b)}
+.one-project-progress p{font-size:.73rem;line-height:1.6;margin:10px 0 0}
+.one-project-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.one-project-panel{min-width:0}
+.one-project-panel-head{display:flex;align-items:start;justify-content:space-between;gap:10px;margin:0 0 14px}
+.one-project-panel-head h3{font-size:.96rem;margin:0 0 6px}
+.one-project-panel-head p{font-size:.73rem;line-height:1.5;margin:0}
+.one-project-item{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid var(--border);padding:12px 0;min-width:0}
+.one-project-item>div:first-child{min-width:0;display:grid;gap:5px}
+.one-project-item strong{font-size:.84rem;overflow-wrap:anywhere}
+.one-project-item small{display:block;font-size:.74rem;color:var(--muted);line-height:1.55}
+.one-project-item .btn{flex:0 0 auto}
+.one-project-resolved{opacity:.65}
+.one-project-caution{color:var(--danger,var(--text));font-size:.76rem;margin:12px 0 0}
+.one-project-link-form{display:grid;grid-template-columns:minmax(160px,2fr) minmax(140px,1fr) auto;align-items:end;gap:9px;margin-bottom:12px}
+.one-project-link-form label{display:grid;gap:5px;font-size:.74rem;color:var(--muted)}
+.one-project-link-form select{min-width:0;width:100%}
+.one-project-link-form button{white-space:nowrap}
+.one-project-dialog{width:min(610px,calc(100vw - 28px));max-height:89vh;overflow:auto;padding:0;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text)}
+.one-project-dialog::backdrop{background:rgba(0,0,0,.55)}
+.one-project-dialog .dialog-body{padding:23px;max-width:none}
+.one-project-dialog h2{margin:0 0 5px}
+.one-project-dialog p.muted{font-size:.8rem;line-height:1.5}
+.one-move-project-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-hover)}
+.one-move-project-fields .field{min-width:0}
+.one-move-project-fields small{grid-column:1/-1;line-height:1.5}
+@media(max-width:800px){.one-project-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.one-project-sections{grid-template-columns:1fr}}
+@media(max-width:560px){.one-project-detail-head{align-items:flex-start;flex-direction:column}.one-project-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.one-project-link-form{grid-template-columns:1fr}.one-project-link-form button{justify-self:start}.one-move-project-fields{grid-template-columns:1fr}.one-project-dialog .dialog-body{padding:17px}}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -1537,7 +1602,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.1.0 LAB</small>
+      <small class="brand-version">v11.2.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1546,6 +1611,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <button data-view="debts" data-optional-module="debts"><span class="nav-icon" aria-hidden="true">▭</span><span>Deudas</span></button>
       <button data-view="shared" data-optional-module="shared"><span class="nav-icon" aria-hidden="true">◷</span><span>Cobros <span class="one-beta-tag">BETA</span></span></button>
       <button data-view="capital" data-optional-module="capital"><span class="nav-icon" aria-hidden="true">◎</span><span>Metas <span class="one-beta-tag">BETA</span></span></button>
+      <button data-view="projects" data-optional-module="projects"><span class="nav-icon" aria-hidden="true">◫</span><span>Proyectos <span class="one-beta-tag">BETA</span></span></button>
       <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
     </nav>
     <div class="header-actions">
@@ -1834,6 +1900,11 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
           </section>
           <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
           <div class="field wide"><label for="mDescription">Descripción (opcional)</label><input id="mDescription" placeholder="¿En qué gastaste?"></div>
+          <div class="one-move-project-fields wide" id="oneMovementProjectField" hidden>
+            <div class="field"><label for="mProject">Proyecto (opcional)</label><select id="mProject"><option value="">Sin proyecto</option></select></div>
+            <div class="field"><label for="mProjectBucket">Concepto del proyecto</label><select id="mProjectBucket"><option value="">Sin concepto</option></select></div>
+            <small class="muted">Un gasto real se registra una sola vez. El proyecto solo lo muestra en su presupuesto.</small>
+          </div>
           <!-- Se conservan los valores históricos al editar, pero ya no se ofrecen como opciones de captura. -->
           <div class="one-move-legacy-fields" hidden aria-hidden="true">
             <select id="mAccount" tabindex="-1" aria-label="Cuenta histórica"></select>
@@ -1990,6 +2061,38 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
     </div>
   </section>
 
+  <section class="view" id="view-projects">
+    <div class="v7-page-head">
+      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.0</div><h1>Tus proyectos</h1>
+        <p class="sub">Organizá viajes y planes con un presupuesto propio, sin duplicar tus movimientos.</p></div>
+      <div class="v7-page-actions"><button class="btn" type="button" id="oneCreateProjectBtn">＋ Nuevo proyecto</button></div>
+    </div>
+    <div id="oneProjectsSummary" class="one-project-summary"></div>
+    <div class="one-project-toolbar"><h2>Proyectos</h2><label>Mostrar <select id="oneProjectStatusFilter" aria-label="Filtrar proyectos"><option value="active">Activos</option><option value="archived">Archivados</option><option value="all">Todos</option></select></label></div>
+    <div id="oneProjectsList" class="one-project-grid"></div>
+    <section id="oneProjectDetails" class="one-project-detail" hidden aria-label="Detalle del proyecto">
+      <div class="one-project-detail-head"><div><h2 id="oneProjectDetailTitle"></h2><p class="muted" id="oneProjectDetailMeta"></p></div>
+        <div class="one-project-actions"><button type="button" class="btn secondary small" id="oneProjectEditBtn">Editar</button><button type="button" class="btn secondary small" id="oneProjectArchiveBtn">Archivar</button></div>
+      </div>
+      <div id="oneProjectKpis" class="one-project-kpis"></div>
+      <div class="one-project-progress"><div class="one-project-progress-head"><span>Presupuesto utilizado</span><strong id="oneProjectProgressLabel">0%</strong></div><div class="one-project-track"><span id="oneProjectProgressFill"></span></div><p id="oneProjectBudgetNote" class="muted"></p></div>
+      <div class="one-project-sections">
+        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Presupuesto por concepto</h3><p class="muted">Distribuí el total sin crear categorías globales.</p></div><button class="btn secondary small" id="oneAddProjectBucket" type="button">＋ Concepto</button></div>
+          <div id="oneProjectBuckets"></div></div>
+        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos previstos</h3><p class="muted">Planificados; no afectan el saldo operativo.</p></div><button class="btn secondary small" id="oneAddProjectPlan" type="button">＋ Previsto</button></div>
+          <div id="oneProjectPlans"></div></div>
+      </div>
+      <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos reales vinculados</h3><p class="muted">Los importes provienen de Movimientos. Asociarlos no vuelve a registrarlos.</p></div><button class="btn small" id="oneProjectNewExpense" type="button">＋ Registrar gasto</button></div>
+        <form id="oneProjectLinkForm" class="one-project-link-form">
+          <label>Gasto existente<select id="oneProjectMovementSelect" required></select></label>
+          <label>Concepto<select id="oneProjectLinkBucket"></select></label>
+          <button type="submit" class="btn secondary small">Vincular</button>
+        </form>
+        <div id="oneProjectLinkedMovements"></div>
+      </div>
+    </section>
+  </section>
+
   <section class="view" id="view-categories">
     <h1>Categorías</h1>
     <p class="sub">Personaliza cómo llamas a tus ingresos, gastos y compromisos. Los ingresos también pueden tener frecuencia, monto esperado y proyección automática conectada directamente con Presupuesto.</p>
@@ -2007,7 +2110,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.1.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.2.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2050,12 +2153,50 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="m2-helper" id="movementAccountsList"></div>
  </div>
 </dialog>
+<dialog id="oneProjectDialog" class="one-project-dialog" aria-labelledby="oneProjectDialogTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectDialogTitle">Nuevo proyecto</h2><p class="muted">El presupuesto es un objetivo, no una transacción financiera.</p>
+ <form id="oneProjectForm" class="form-grid">
+   <input type="hidden" id="oneProjectId">
+   <div class="field wide"><label for="oneProjectName">Nombre</label><input id="oneProjectName" maxlength="90" required placeholder="Ej. Viaje a Japón 2026"></div>
+   <div class="field"><label for="oneProjectStart">Inicio (opcional)</label><input id="oneProjectStart" type="date"></div>
+   <div class="field"><label for="oneProjectEnd">Finalización (opcional)</label><input id="oneProjectEnd" type="date"></div>
+   <div class="field"><label for="oneProjectBudget">Presupuesto total</label><input id="oneProjectBudget" type="number" min="0" step=".01" required></div>
+   <div class="field"><label for="oneProjectCurrency">Moneda de presupuesto</label><select id="oneProjectCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+   <div class="field wide"><label for="oneProjectNotes">Notas (opcional)</label><textarea id="oneProjectNotes" maxlength="500"></textarea></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectCancel">Cancelar</button><button class="btn" type="submit">Guardar proyecto</button></div>
+ </form></div>
+</dialog>
+<dialog id="oneProjectBucketDialog" class="one-project-dialog" aria-labelledby="oneProjectBucketTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectBucketTitle">Nuevo concepto</h2><p class="muted">Una categoría interna de presupuesto, sin modificar tus categorías financieras.</p>
+ <form id="oneProjectBucketForm" class="form-grid">
+  <input type="hidden" id="oneProjectBucketId">
+  <div class="field wide"><label for="oneProjectBucketName">Concepto</label><input id="oneProjectBucketName" maxlength="70" required placeholder="Ej. Hospedaje"></div>
+  <div class="field wide"><label for="oneProjectBucketBudget">Presupuesto asignado</label><input id="oneProjectBucketBudget" type="number" min="0" step=".01" required></div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectBucketCancel">Cancelar</button><button class="btn" type="submit">Guardar concepto</button></div>
+ </form></div>
+</dialog>
+<dialog id="oneProjectPlanDialog" class="one-project-dialog" aria-labelledby="oneProjectPlanTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectPlanTitle">Gasto previsto</h2><p class="muted">Es una previsión; no registra gasto ni resta dinero real.</p>
+ <form id="oneProjectPlanForm" class="form-grid">
+  <input type="hidden" id="oneProjectPlanId">
+  <div class="field wide"><label for="oneProjectPlanName">Descripción</label><input id="oneProjectPlanName" maxlength="120" required placeholder="Ej. Hotel pendiente"></div>
+  <div class="field"><label for="oneProjectPlanAmount">Importe previsto</label><input id="oneProjectPlanAmount" type="number" min=".01" step=".01" required></div>
+  <div class="field"><label for="oneProjectPlanDue">Fecha estimada</label><input id="oneProjectPlanDue" type="date"></div>
+  <div class="field wide"><label for="oneProjectPlanBucket">Concepto (opcional)</label><select id="oneProjectPlanBucket"></select></div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectPlanCancel">Cancelar</button><button class="btn" type="submit">Guardar previsto</button></div>
+ </form></div>
+</dialog>
+
 <dialog id="modulesDialog" class="one-modules-dialog" aria-labelledby="modulesDialogTitle">
   <div style="padding:20px 22px;border-bottom:1px solid var(--border)"><h2 id="modulesDialogTitle">Herramientas adicionales</h2><p>Activá las herramientas que querés utilizar. Podés ocultarlas cuando no las necesités sin perder sus datos.</p></div>
   <div class="one-module-fixed"><strong>Siempre visibles:</strong> Inicio · Presupuesto · Movimientos</div>
   <label class="one-module-item"><input type="checkbox" id="moduleDebtsToggle"><span><strong>Deudas</strong><small>Préstamos, tarjetas y pagos pendientes.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.0</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
@@ -2419,12 +2560,13 @@ function saveUiState(){
   try{localStorage.setItem(UI_STORAGE_KEY,JSON.stringify(uiState))}catch{}
 }
 const ONE_DEFAULT_SHOW_COBROS=false;
-const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital"]);
+const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital","projects"]);
 function oneModuleEnabled(name){
   if(!ONE_OPTIONAL_MODULES.has(name))return true;
   if(typeof uiState.modules?.[name]==="boolean")return uiState.modules[name];
   if(name==="debts")return !!((data.debts||[]).length||(data.movements||[]).some(m=>m.type==="Pago deuda"));
   if(name==="capital")return !!((data.reserves||[]).length||(data.reserveMovements||[]).length);
+  if(name==="projects")return !!((data.projects||[]).length);
   return ONE_DEFAULT_SHOW_COBROS||!!((data.sharedCharges||[]).length||(data.sharedChargeGroups||[]).length||(data.receivableRecurring||[]).length);
 }
 function oneRefreshModuleVisibility(){
@@ -2440,6 +2582,8 @@ function oneRefreshModuleVisibility(){
   if(cobrosInput)cobrosInput.checked=oneModuleEnabled("shared");
   const goalsInput=document.getElementById("moduleGoalsToggle");
   if(goalsInput)goalsInput.checked=oneModuleEnabled("capital");
+  const projectsInput=document.getElementById("moduleProjectsToggle");
+  if(projectsInput)projectsInput.checked=oneModuleEnabled("projects");
   const current=document.querySelector(".view.active")?.id?.replace("view-","");
   if(ONE_OPTIONAL_MODULES.has(current)&&!oneModuleEnabled(current))navigate("dashboard");
 }
@@ -2462,6 +2606,7 @@ function initModulesBeta(){
   document.getElementById("moduleDebtsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("debts",e.target.checked));
   document.getElementById("moduleCollectionsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("shared",e.target.checked));
   document.getElementById("moduleGoalsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("capital",e.target.checked));
+  document.getElementById("moduleProjectsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("projects",e.target.checked));
   document.getElementById("closeModulesBtn")?.addEventListener("click",()=>document.getElementById("modulesDialog")?.close());
   document.getElementById("openCollectionsFromHome")?.addEventListener("click",()=>navigate("shared"));
 }
@@ -2611,7 +2756,8 @@ const initialData = {
   movementAudit:[],
   accounts:[...ACCOUNTS],
   debts:[],
-  debtTypes:clone(ONE_DEBT_TYPE_PRESETS)
+  debtTypes:clone(ONE_DEBT_TYPE_PRESETS),
+  projects:[],projectLinks:[],projectPlans:[]
 };
 
 /* Calendario de salario configurable: la siguiente fecha de pago cierra el ciclo anterior. */
@@ -2710,6 +2856,17 @@ function migrateData(raw){
   raw.reconciliations=Array.isArray(raw.reconciliations)?raw.reconciliations:[];
   raw.debts=Array.isArray(raw.debts)?raw.debts:[];
   raw.debtTypes=oneNormalizeDebtTypes(raw.debtTypes);
+  // Proyectos V11.2: solo referencias a movimientos; no se migran ni duplican gastos.
+  raw.projects=Array.isArray(raw.projects)?raw.projects:[];
+  raw.projectLinks=Array.isArray(raw.projectLinks)?raw.projectLinks:[];
+  raw.projectPlans=Array.isArray(raw.projectPlans)?raw.projectPlans:[];
+  raw.projects.forEach(p=>{
+    if(!p||typeof p!=="object")return;
+    p.status=p.status==="archived"?"archived":"active";
+    p.currency=normalizeCurrency(p.currency||"CRC");
+    p.buckets=Array.isArray(p.buckets)?p.buckets:[];
+    p.budget=Number.isFinite(Number(p.budget))?Math.max(0,Number(p.budget)):0;
+  });
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
   raw.reserveMovements=Array.isArray(raw.reserveMovements)?raw.reserveMovements:[];
   raw.sharedChargeGroups=Array.isArray(raw.sharedChargeGroups)?raw.sharedChargeGroups:[];
@@ -2941,7 +3098,7 @@ function restoreValidate(raw){
   }
   if(!raw.periods.length)throw Error("El respaldo no contiene períodos financieros.");
   const optional=["reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups",
-    "receivableRecurring","categories","movementTemplates","movementAudit"];
+    "receivableRecurring","categories","movementTemplates","movementAudit","projects","projectLinks","projectPlans"];
   for(const key of optional){
     if(raw[key]!==undefined&&(!Array.isArray(raw[key])||!raw[key].every(restoreIsRecord)))
       throw Error("La lista "+key+" no tiene el formato esperado.");
@@ -3007,16 +3164,44 @@ function restoreValidate(raw){
     if(typeof cat.name!=="string"||!cat.name.trim()||typeof cat.type!=="string"||!cat.type.trim())
       throw Error("Hay categorías incompletas.");
   }
+  const projectIds=new Set();
+  for(const p of raw.projects||[]){
+    if(typeof p.id!=="string"||!p.id.trim()||projectIds.has(p.id)||
+      typeof p.name!=="string"||!p.name.trim()||!restoreValidMoney(p.budget)||Number(p.budget)<0||
+      !["CRC","USD"].includes(p.currency))
+      throw Error("Hay proyectos con datos incompletos o identificadores duplicados.");
+    if((p.startDate&&!restoreValidDate(p.startDate))||(p.endDate&&!restoreValidDate(p.endDate))||
+      (p.startDate&&p.endDate&&p.endDate<p.startDate))throw Error("Hay fechas de proyecto inválidas.");
+    if(p.buckets!==undefined&&(!Array.isArray(p.buckets)||p.buckets.some(b=>!restoreIsRecord(b)||
+       !b.id||typeof b.name!=="string"||!b.name.trim()||!restoreValidMoney(b.budget)||Number(b.budget)<0)))
+      throw Error("Hay conceptos de presupuesto de proyecto inválidos.");
+    projectIds.add(p.id);
+  }
+  const linkedMoves=new Set(),realMoves=new Set(raw.movements.filter(m=>m.type==="Gasto").map(m=>m.id));
+  for(const link of raw.projectLinks||[]){
+    if(!link.id||!projectIds.has(link.projectId)||!realMoves.has(link.movementId)||linkedMoves.has(link.movementId))
+      throw Error("Hay vínculos duplicados o inexistentes entre proyectos y gastos.");
+    linkedMoves.add(link.movementId);
+    const project=raw.projects.find(p=>p.id===link.projectId);
+    if(link.bucketId&&!(project.buckets||[]).some(b=>b.id===link.bucketId))
+      throw Error("Un gasto está vinculado a un concepto de proyecto inexistente.");
+  }
+  for(const plan of raw.projectPlans||[]){
+    if(!plan.id||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
+       !restoreValidMoney(plan.amount)||Number(plan.amount)<=0||
+       (plan.dueDate&&!restoreValidDate(plan.dueDate)))
+      throw Error("Hay gastos previstos inválidos.");
+  }
   return raw;
 }
 function restoreDetailsHtml(raw,file){
  const safeFile=String(file||"respaldo.json").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
- const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
+ const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
  return '<p><strong>Archivo:</strong> '+safeFile+'</p><div class="one-restore-counts">'+groups.map(([n,v])=>'<div><span>'+n+'</span><strong>'+v+'</strong></div>').join("")+'</div>';
 }
 function restorePrepare(raw){
  const valid=restoreValidate(raw),migrated=migrateData(clone(valid));
- for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring"]){
+ for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans"]){
   if(Array.isArray(valid[field])&&migrated[field].length!==valid[field].length)
     throw Error("La conversión no conservó todos los registros de "+field+".");
  }
@@ -3091,7 +3276,7 @@ function oneStorageGuardInit(){
 function oneHealthCheck(raw){
  const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
  const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
- for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations"]){
+ for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans"]){
   const seen=new Set();let duplicate=0;
   for(const item of get(kind)){
    const recordId=kind==="periods"?(item.key||""):item.id;
@@ -3128,6 +3313,15 @@ function oneHealthCheck(raw){
  countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
  countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
  countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ const projectIds=new Set(get("projects").map(p=>p.id)),movementIds=new Set(get("movements").map(m=>m.id));
+ const linkedIds=new Set();let badProjectLinks=0,duplicateProjectLinks=0;
+ for(const link of get("projectLinks")){
+  if(linkedIds.has(link.movementId))duplicateProjectLinks++;
+  linkedIds.add(link.movementId);
+  if(!projectIds.has(link.projectId)||!movementIds.has(link.movementId))badProjectLinks++;
+ }
+ countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
+ countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
  return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
 }
 function oneRenderDataHealth(){
@@ -3828,7 +4022,7 @@ function syncQuarterSelectors(){
 }
 function navigate(view){
   if(ONE_OPTIONAL_MODULES.has(view)&&!oneModuleEnabled(view))view="dashboard";
-  if(!["dashboard","plan","movements","debts","shared","capital"].includes(view))view="dashboard";
+  if(!["dashboard","plan","movements","debts","shared","capital","projects"].includes(view))view="dashboard";
   uiState.activeView=view;
   saveUiState();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===`view-${view}`));
@@ -3839,6 +4033,7 @@ function navigate(view){
   if(view==="debts")renderDebts();
   if(view==="shared")renderSharedCharges();
   if(view==="capital")renderCapital();
+  if(view==="projects")renderProjects();
   if(view==="reports")return navigate("dashboard");
   if(view==="categories")renderCategories();
 }
@@ -5132,6 +5327,352 @@ function renderCapital(){
 }
 
 let reportActiveTab="overview";
+/* V11.2 · Proyectos Beta 1.0. Capa de presupuesto sobre movimientos reales.
+   No se crean movimientos contables al planificar, asociar ni archivar. */
+let oneProjectSelectedId="";
+function oneProjectById(idValue){return (data.projects||[]).find(p=>p&&p.id===idValue)||null}
+function oneProjectCurrent(){return oneProjectById(oneProjectSelectedId)}
+function oneProjectEnabled(p){return p?.status!=="archived"}
+function oneProjectHasActivity(p){
+ return (data.projectLinks||[]).some(x=>x.projectId===p.id)||
+        (data.projectPlans||[]).some(x=>x.projectId===p.id)||
+        (p.buckets||[]).some(b=>num(b.budget)>0);
+}
+function oneProjectLinkForMovement(movementId){
+ return (data.projectLinks||[]).find(l=>l.movementId===movementId)||null;
+}
+function oneProjectMovementRows(p){
+ const ids=new Map((data.movements||[]).map(m=>[m.id,m]));
+ return (data.projectLinks||[]).filter(l=>l.projectId===p.id).map(link=>({link,m:ids.get(link.movementId)}))
+  .filter(x=>x.m&&x.m.type==="Gasto")
+  .sort((a,b)=>b.m.date.localeCompare(a.m.date)||num(b.m.seq)-num(a.m.seq));
+}
+function oneProjectExpenseValue(p,m){
+ const currency=normalizeCurrency(m.currency||"CRC");
+ if(currency===p.currency)return num(m.amount);
+ if(p.currency==="CRC")return recordToCRC(m,"pay");
+ const sell=num(m.fxSell)||currentRates().sell;
+ return sell>0?num(m.amount)/sell:0;
+}
+function oneProjectSpent(p,bucketId=null){
+ return oneProjectMovementRows(p).filter(x=>bucketId===null||x.link.bucketId===bucketId)
+  .reduce((sum,x)=>sum+oneProjectExpenseValue(p,x.m),0);
+}
+function oneProjectPending(p,bucketId=null){
+ return (data.projectPlans||[]).filter(x=>x.projectId===p.id&&x.status!=="closed"&&(bucketId===null||x.bucketId===bucketId))
+  .reduce((sum,x)=>sum+Math.max(0,num(x.amount)),0);
+}
+function oneProjectMoney(p,amount){return originalMoney(amount,p.currency)}
+function oneProjectStore(mutator){
+ const old={projects:clone(data.projects||[]),projectLinks:clone(data.projectLinks||[]),projectPlans:clone(data.projectPlans||[])};
+ try{mutator();save();return true}
+ catch(error){
+  data.projects=old.projects;data.projectLinks=old.projectLinks;data.projectPlans=old.projectPlans;
+  alert("No se pudo guardar Proyectos: "+String(error?.message||"Revisá el almacenamiento."));
+  return false;
+ }
+}
+function oneProjectSelect(projectId){
+ oneProjectSelectedId=projectId||"";
+ renderProjects();
+}
+function oneProjectBucketOptions(select,p,selected=""){
+ if(!select)return;
+ select.replaceChildren();
+ const blank=document.createElement("option");blank.value="";blank.textContent="Sin concepto";select.appendChild(blank);
+ for(const b of p?.buckets||[]){
+  const opt=document.createElement("option");opt.value=b.id;opt.textContent=b.name;select.appendChild(opt);
+ }
+ select.value=(p?.buckets||[]).some(b=>b.id===selected)?selected:"";
+}
+function oneProjectMovementOptionList(){
+ const sel=document.getElementById("mProject"),bucket=document.getElementById("mProjectBucket");
+ if(!sel||!bucket)return;
+ const editId=document.getElementById("mEditId")?.value||"";
+ const old=oneProjectLinkForMovement(editId);
+ const selected=sel.value||old?.projectId||"";
+ sel.replaceChildren();
+ const none=document.createElement("option");none.value="";none.textContent="Sin proyecto";sel.appendChild(none);
+ for(const p of data.projects||[]){
+  if(!oneProjectEnabled(p)&&p.id!==old?.projectId)continue;
+  const op=document.createElement("option");op.value=p.id;
+  op.textContent=p.name+(oneProjectEnabled(p)?"":" (archivado)");sel.appendChild(op);
+ }
+ const found=(data.projects||[]).some(p=>p.id===selected);
+ sel.value=found&&[...sel.options].some(o=>o.value===selected)?selected:"";
+ oneProjectBucketOptions(bucket,oneProjectById(sel.value),old?.projectId===sel.value?old?.bucketId:bucket.value);
+}
+function oneProjectSyncComposer(m=null){
+ const field=document.getElementById("oneMovementProjectField");
+ if(!field)return;
+ const type=document.getElementById("mType")?.value;
+ const old=oneProjectLinkForMovement(m?.id||document.getElementById("mEditId")?.value);
+ field.hidden=type!=="Gasto"||(!oneModuleEnabled("projects")&&!old);
+ if(field.hidden)return;
+ const sel=document.getElementById("mProject"),bucket=document.getElementById("mProjectBucket");
+ const desired=m?old?.projectId||"":sel.value;
+ const desiredBucket=m?old?.bucketId||"":bucket.value;
+ oneProjectMovementOptionList();
+ if(desired&&[...sel.options].some(o=>o.value===desired))sel.value=desired;
+ oneProjectBucketOptions(bucket,oneProjectById(sel.value),desiredBucket);
+ bucket.disabled=!sel.value;
+}
+function oneProjectReadMovementSelection(type,existing){
+ const current=oneProjectLinkForMovement(existing?.id);
+ if(type!=="Gasto"){
+  if(current)return {ok:false,error:"Este movimiento pertenece a un proyecto. Desvinculalo antes de cambiar su tipo."};
+  return {ok:true,projectId:"",bucketId:""};
+ }
+ if(!oneModuleEnabled("projects"))return {ok:true,projectId:current?.projectId||"",bucketId:current?.bucketId||""};
+ const pid=document.getElementById("mProject")?.value||"";
+ const bid=document.getElementById("mProjectBucket")?.value||"";
+ if(!pid)return {ok:true,projectId:"",bucketId:""};
+ const p=oneProjectById(pid);
+ if(!p)return {ok:false,error:"El proyecto ya no existe."};
+ if(!oneProjectEnabled(p)&&current?.projectId!==p.id)return {ok:false,error:"El proyecto está archivado; reactiválo para vincular gastos."};
+ if(bid&&!(p.buckets||[]).some(b=>b.id===bid))return {ok:false,error:"El concepto del proyecto no existe."};
+ return {ok:true,projectId:pid,bucketId:bid};
+}
+function oneProjectAssignMovement(movementId,projectId,bucketId=""){
+ const old=oneProjectLinkForMovement(movementId);
+ if(old){
+  data.projectLinks=data.projectLinks.filter(x=>x.movementId!==movementId);
+ }
+ if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId});
+}
+function oneProjectOpen(p=null){
+ const form=document.getElementById("oneProjectForm");form.reset();
+ document.getElementById("oneProjectDialogTitle").textContent=p?"Editar proyecto":"Nuevo proyecto";
+ document.getElementById("oneProjectId").value=p?.id||"";
+ document.getElementById("oneProjectName").value=p?.name||"";
+ document.getElementById("oneProjectStart").value=p?.startDate||"";
+ document.getElementById("oneProjectEnd").value=p?.endDate||"";
+ document.getElementById("oneProjectBudget").value=p?.budget??"";
+ document.getElementById("oneProjectCurrency").value=normalizeCurrency(p?.currency||displayCurrency());
+ document.getElementById("oneProjectNotes").value=p?.notes||"";
+ document.getElementById("oneProjectDialog").showModal();
+}
+function oneProjectOpenBucket(b=null){
+ const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+ document.getElementById("oneProjectBucketForm").reset();
+ document.getElementById("oneProjectBucketTitle").textContent=b?"Editar concepto":"Nuevo concepto";
+ document.getElementById("oneProjectBucketId").value=b?.id||"";
+ document.getElementById("oneProjectBucketName").value=b?.name||"";
+ document.getElementById("oneProjectBucketBudget").value=b?.budget??"";
+ document.getElementById("oneProjectBucketDialog").showModal();
+}
+function oneProjectOpenPlan(plan=null){
+ const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+ document.getElementById("oneProjectPlanForm").reset();
+ document.getElementById("oneProjectPlanTitle").textContent=plan?"Editar gasto previsto":"Gasto previsto";
+ document.getElementById("oneProjectPlanId").value=plan?.id||"";
+ document.getElementById("oneProjectPlanName").value=plan?.name||"";
+ document.getElementById("oneProjectPlanAmount").value=plan?.amount??"";
+ document.getElementById("oneProjectPlanDue").value=plan?.dueDate||"";
+ oneProjectBucketOptions(document.getElementById("oneProjectPlanBucket"),p,plan?.bucketId||"");
+ document.getElementById("oneProjectPlanDialog").showModal();
+}
+function oneProjectDetailRender(p){
+ const section=document.getElementById("oneProjectDetails");section.hidden=false;
+ const paid=oneProjectSpent(p),planned=oneProjectPending(p),budget=num(p.budget);
+ document.getElementById("oneProjectDetailTitle").textContent=p.name;
+ document.getElementById("oneProjectDetailMeta").textContent=[
+  p.startDate?"Desde "+dateLabel(p.startDate):"",
+  p.endDate?"Hasta "+dateLabel(p.endDate):"",
+  p.currency,p.status==="archived"?"Archivado":"Activo"
+ ].filter(Boolean).join(" · ");
+ document.getElementById("oneProjectArchiveBtn").textContent=oneProjectEnabled(p)?"Archivar":"Reactivar";
+ document.getElementById("oneAddProjectBucket").disabled=!oneProjectEnabled(p);
+ document.getElementById("oneAddProjectPlan").disabled=!oneProjectEnabled(p);
+ document.getElementById("oneProjectNewExpense").disabled=!oneProjectEnabled(p);
+ const remaining=budget-paid,forecastRemaining=budget-paid-planned,pct=budget>0?paid/budget*100:0;
+ document.getElementById("oneProjectKpis").innerHTML=[
+  ["Presupuesto",oneProjectMoney(p,budget)],
+  ["Gastado",oneProjectMoney(p,paid)],
+  ["Disponible",oneProjectMoney(p,remaining)],
+  ["Previsto pendiente",oneProjectMoney(p,planned)]
+ ].map(row=>'<div class="one-project-kpi"><span>'+row[0]+'</span><strong>'+safe(row[1])+'</strong></div>').join("");
+ document.getElementById("oneProjectProgressLabel").textContent=budget?Math.round(pct)+"%":"Sin presupuesto";
+ document.getElementById("oneProjectProgressFill").style.width=Math.min(100,Math.max(0,pct))+"%";
+ document.getElementById("oneProjectProgressFill").classList.toggle("over",pct>100);
+ document.getElementById("oneProjectBudgetNote").textContent="Proyección incluyendo previstos pendientes: "+oneProjectMoney(p,forecastRemaining)+
+  ". Los previstos no modifican tu saldo real ni los reportes generales. Si registrás uno, marcá su previsión como resuelta.";
+ const buckets=p.buckets||[];
+ const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
+ const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
+ const unassigned=paid-assignedSpend;
+ document.getElementById("oneProjectBuckets").innerHTML=buckets.map(b=>{
+  const spent=oneProjectSpent(p,b.id),pending=oneProjectPending(p,b.id),limit=num(b.budget);
+  return '<div class="one-project-item"><div><strong>'+safe(b.name)+'</strong><small>'+
+   safe(oneProjectMoney(p,spent))+' gastado · '+safe(oneProjectMoney(p,pending))+' previsto / '+safe(oneProjectMoney(p,limit))+' asignado</small></div>'+
+   '<button type="button" class="btn secondary small" data-one-edit-bucket="'+safe(b.id)+'" '+(oneProjectEnabled(p)?"":"disabled")+'>Editar</button></div>';
+ }).join("")+
+ '<div class="one-project-item"><div><strong>Sin concepto</strong><small>'+safe(oneProjectMoney(p,unassigned))+
+ ' de gastos sin asignación · '+safe(oneProjectMoney(p,budget-bucketSum))+' del presupuesto sin distribuir</small></div></div>'+
+ (bucketSum>budget?'<p class="one-project-caution">Los conceptos suman más que el presupuesto total del proyecto.</p>':"");
+ const plans=(data.projectPlans||[]).filter(x=>x.projectId===p.id);
+ document.getElementById("oneProjectPlans").innerHTML=plans.length?plans.map(x=>{
+  const closed=x.status==="closed";
+  return '<div class="one-project-item'+(closed?" one-project-resolved":"")+'"><div><strong>'+safe(x.name)+'</strong><small>'+
+   safe(oneProjectMoney(p,num(x.amount)))+(x.dueDate?" · "+safe(dateLabel(x.dueDate)):"")+
+   ' · '+(closed?"Resuelto":"Pendiente")+'</small></div><div class="one-project-item-actions">'+
+   '<button type="button" class="btn secondary small" data-one-edit-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)||closed?"disabled":"")+'>Editar</button>'+
+   '<button type="button" class="btn secondary small" data-one-toggle-plan="'+safe(x.id)+'" '+(!oneProjectEnabled(p)?"disabled":"")+'>'+(closed?"Reabrir":"Resolver")+'</button></div></div>';
+ }).join(""):'<p class="muted">Todavía no tenés gastos previstos.</p>';
+ const linked=oneProjectMovementRows(p);
+ document.getElementById("oneProjectLinkedMovements").innerHTML=linked.length?linked.map(x=>
+  '<div class="one-project-item"><div><strong>'+safe(x.m.description||movementCategoryName(x.m))+'</strong><small>'+
+  safe(dateLabel(x.m.date))+' · '+safe(originalMoney(x.m.amount,x.m.currency))+
+  ' · '+safe(oneProjectMoney(p,oneProjectExpenseValue(p,x.m)))+
+  ((p.buckets||[]).find(b=>b.id===x.link.bucketId)?' · '+safe(p.buckets.find(b=>b.id===x.link.bucketId).name):'')+
+  '</small></div><button type="button" class="btn secondary small" data-one-unlink-movement="'+safe(x.m.id)+'" '+(oneProjectEnabled(p)?"":"disabled")+'>Desvincular</button></div>'
+ ).join(""):'<p class="muted">Ningún gasto vinculado todavía.</p>';
+ const available=(data.movements||[]).filter(m=>m.type==="Gasto"&&!oneProjectLinkForMovement(m.id))
+  .sort((a,b)=>b.date.localeCompare(a.date)||num(b.seq)-num(a.seq)).slice(0,200);
+ const movementSelect=document.getElementById("oneProjectMovementSelect");
+ movementSelect.replaceChildren();
+ const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent=available.length?"Seleccioná un gasto sin proyecto":"No hay gastos disponibles";movementSelect.appendChild(placeholder);
+ for(const m of available){
+  const opt=document.createElement("option");opt.value=m.id;
+  opt.textContent=m.date+" · "+(m.description||movementCategoryName(m))+" · "+originalMoney(m.amount,m.currency);
+  movementSelect.appendChild(opt);
+ }
+ oneProjectBucketOptions(document.getElementById("oneProjectLinkBucket"),p);
+ const form=document.getElementById("oneProjectLinkForm");
+ form.querySelector('button[type="submit"]').disabled=!oneProjectEnabled(p)||!available.length;
+ movementSelect.disabled=!oneProjectEnabled(p)||!available.length;
+ document.getElementById("oneProjectLinkBucket").disabled=!oneProjectEnabled(p);
+}
+function renderProjects(){
+ const list=document.getElementById("oneProjectsList");if(!list)return;
+ const projects=(data.projects||[]).filter(p=>p&&p.id);
+ const active=projects.filter(oneProjectEnabled);
+ document.getElementById("oneProjectsSummary").innerHTML=
+  '<span><strong>'+active.length+'</strong> activo(s)</span><span><strong>'+projects.length+'</strong> total</span>'+
+  '<span class="muted">Un vínculo solo agrega seguimiento; nunca otro gasto.</span>';
+ const filter=document.getElementById("oneProjectStatusFilter").value;
+ const visible=projects.filter(p=>filter==="all"||(filter==="active"?oneProjectEnabled(p):!oneProjectEnabled(p)));
+ if(!visible.some(p=>p.id===oneProjectSelectedId))oneProjectSelectedId=visible[0]?.id||"";
+ list.innerHTML=visible.length?visible.map(p=>{
+  const spent=oneProjectSpent(p),budget=num(p.budget),pct=budget?Math.round(100*spent/budget):0;
+  return '<button type="button" class="one-project-card'+(oneProjectSelectedId===p.id?' selected':'')+
+  '" data-one-select-project="'+safe(p.id)+'"><span class="one-project-card-top"><strong>'+safe(p.name)+'</strong><small>'+
+  (oneProjectEnabled(p)?"Activo":"Archivado")+'</small></span><span class="one-project-card-meta">'+
+  safe(oneProjectMoney(p,spent))+' de '+safe(oneProjectMoney(p,budget))+'</span><span class="one-project-card-track"><i style="width:'+Math.min(100,Math.max(0,pct))+'%"></i></span><span class="muted">'+pct+'% gastado</span></button>';
+ }).join(""):'<div class="one-project-empty">No hay proyectos en esta vista. Creá uno para empezar a planificar.</div>';
+ const selected=oneProjectCurrent();
+ if(selected&&visible.some(p=>p.id===selected.id))oneProjectDetailRender(selected);
+ else document.getElementById("oneProjectDetails").hidden=true;
+}
+function oneProjectInit(){
+ const q=id=>document.getElementById(id);
+ q("oneProjectStatusFilter").addEventListener("change",renderProjects);
+ q("oneCreateProjectBtn").addEventListener("click",()=>oneProjectOpen());
+ q("oneProjectCancel").addEventListener("click",()=>q("oneProjectDialog").close());
+ q("oneProjectBucketCancel").addEventListener("click",()=>q("oneProjectBucketDialog").close());
+ q("oneProjectPlanCancel").addEventListener("click",()=>q("oneProjectPlanDialog").close());
+ q("oneProjectEditBtn").addEventListener("click",()=>oneProjectOpen(oneProjectCurrent()));
+ q("oneAddProjectBucket").addEventListener("click",()=>oneProjectOpenBucket());
+ q("oneAddProjectPlan").addEventListener("click",()=>oneProjectOpenPlan());
+ q("oneProjectsList").addEventListener("click",event=>{
+  const target=event.target.closest("[data-one-select-project]");
+  if(target)oneProjectSelect(target.dataset.oneSelectProject);
+ });
+ q("oneProjectArchiveBtn").addEventListener("click",()=>{
+  const p=oneProjectCurrent();if(!p)return;
+  if(oneProjectEnabled(p)&&!confirm("¿Archivar este proyecto? Se conservarán sus presupuestos, previsiones y vínculos históricos."))return;
+  if(!oneProjectStore(()=>{p.status=oneProjectEnabled(p)?"archived":"active";p.closedAt=p.status==="archived"?todayIso():"";}))return;
+  renderProjects();
+ });
+ q("oneProjectForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  const projectId=q("oneProjectId").value,existing=oneProjectById(projectId);
+  const name=q("oneProjectName").value.trim(),budget=Number(q("oneProjectBudget").value);
+  const startDate=q("oneProjectStart").value,endDate=q("oneProjectEnd").value;
+  const currency=normalizeCurrency(q("oneProjectCurrency").value);
+  if(!name||!Number.isFinite(budget)||budget<0)return alert("Ingresá un nombre y un presupuesto válido.");
+  if((startDate&&!restoreValidDate(startDate))||(endDate&&!restoreValidDate(endDate))||(startDate&&endDate&&endDate<startDate))return alert("Revisá las fechas: la finalización no puede ser anterior al inicio.");
+  if(existing&&existing.currency!==currency&&oneProjectHasActivity(existing))return alert("Este proyecto ya tiene importes asociados. No podés cambiar su moneda sin alterar su interpretación histórica.");
+  let selectedId=existing?.id||id();
+  if(!oneProjectStore(()=>{
+   const next={...(existing||{}),id:selectedId,name,budget,currency,startDate,endDate,
+     notes:q("oneProjectNotes").value.trim(),status:existing?.status||"active",
+     buckets:existing?.buckets||[],createdAt:existing?.createdAt||new Date().toISOString()};
+   if(existing)Object.assign(existing,next);else data.projects.push(next);
+  }))return;
+  q("oneProjectDialog").close();
+  q("oneProjectStatusFilter").value=existing&&!oneProjectEnabled(existing)?"archived":"active";
+  oneProjectSelectedId=selectedId;renderProjects();
+  oneActionSaved(existing?"Proyecto actualizado":"Proyecto creado",name+" · presupuesto "+oneProjectMoney(oneProjectById(selectedId),budget));
+ });
+ q("oneProjectBucketForm").addEventListener("submit",event=>{
+  event.preventDefault();const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+  const bucketId=q("oneProjectBucketId").value,old=p.buckets.find(b=>b.id===bucketId);
+  const name=q("oneProjectBucketName").value.trim(),budget=Number(q("oneProjectBucketBudget").value);
+  if(!name||!Number.isFinite(budget)||budget<0)return alert("Completá el concepto y su presupuesto.");
+  if(p.buckets.some(b=>b.id!==bucketId&&b.name.trim().toLocaleLowerCase("es")===name.toLocaleLowerCase("es")))return alert("Ya existe un concepto con ese nombre.");
+  if(!oneProjectStore(()=>{
+    if(old){old.name=name;old.budget=budget}
+    else p.buckets.push({id:id(),name,budget});
+  }))return;
+  q("oneProjectBucketDialog").close();renderProjects();
+ });
+ q("oneProjectPlanForm").addEventListener("submit",event=>{
+  event.preventDefault();const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+  const planId=q("oneProjectPlanId").value,plan=(data.projectPlans||[]).find(x=>x.id===planId&&x.projectId===p.id);
+  const name=q("oneProjectPlanName").value.trim(),amount=Number(q("oneProjectPlanAmount").value),dueDate=q("oneProjectPlanDue").value,bucketId=q("oneProjectPlanBucket").value;
+  if(!name||!Number.isFinite(amount)||amount<=0||dueDate&&!restoreValidDate(dueDate))return alert("Completá una descripción y un monto previsto válido.");
+  if(bucketId&&!p.buckets.some(b=>b.id===bucketId))return alert("El concepto ya no existe.");
+  if(!oneProjectStore(()=>{
+   const next={id:plan?.id||id(),projectId:p.id,name,amount,dueDate,bucketId,status:plan?.status||"pending"};
+   if(plan)Object.assign(plan,next);else data.projectPlans.push(next);
+  }))return;
+  q("oneProjectPlanDialog").close();renderProjects();
+ });
+ q("oneProjectDetails").addEventListener("click",event=>{
+  const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+  const bucket=event.target.closest("[data-one-edit-bucket]");
+  const plan=event.target.closest("[data-one-edit-plan]");
+  const toggle=event.target.closest("[data-one-toggle-plan]");
+  const unlink=event.target.closest("[data-one-unlink-movement]");
+  if(bucket){oneProjectOpenBucket(p.buckets.find(x=>x.id===bucket.dataset.oneEditBucket));return;}
+  if(plan){oneProjectOpenPlan(data.projectPlans.find(x=>x.id===plan.dataset.oneEditPlan&&x.projectId===p.id));return;}
+  if(toggle){
+   const target=data.projectPlans.find(x=>x.id===toggle.dataset.oneTogglePlan&&x.projectId===p.id);if(!target)return;
+   if(!oneProjectStore(()=>{target.status=target.status==="closed"?"pending":"closed"}))return;
+   renderProjects();return;
+  }
+  if(unlink){
+   const idValue=unlink.dataset.oneUnlinkMovement;
+   if(!confirm("¿Desvincular este gasto? Se conservará intacto en Movimientos y Presupuesto."))return;
+   if(!oneProjectStore(()=>{data.projectLinks=data.projectLinks.filter(x=>!(x.projectId===p.id&&x.movementId===idValue))}))return;
+   renderProjects();return;
+  }
+ });
+ q("oneProjectLinkForm").addEventListener("submit",event=>{
+  event.preventDefault();const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+  const movementId=q("oneProjectMovementSelect").value,bucketId=q("oneProjectLinkBucket").value;
+  const movement=data.movements.find(m=>m.id===movementId);
+  if(!movement||movement.type!=="Gasto")return alert("Seleccioná un gasto real de Movimientos.");
+  if(oneProjectLinkForMovement(movementId))return alert("El gasto ya está vinculado a otro proyecto.");
+  if(bucketId&&!p.buckets.some(b=>b.id===bucketId))return alert("El concepto del proyecto no existe.");
+  if(!oneProjectStore(()=>oneProjectAssignMovement(movementId,p.id,bucketId)))return;
+  renderProjects();
+ });
+ q("oneProjectNewExpense").addEventListener("click",()=>{
+  const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
+  m2OpenComposer();
+  oneProjectSyncComposer();
+  const select=q("mProject"),bucket=q("mProjectBucket");
+  if([...select.options].some(op=>op.value===p.id)){
+   select.value=p.id;oneProjectBucketOptions(bucket,p);bucket.disabled=false;
+  }
+ });
+ q("mProject").addEventListener("change",()=>{
+  oneProjectBucketOptions(q("mProjectBucket"),oneProjectById(q("mProject").value));
+  q("mProjectBucket").disabled=!q("mProject").value;
+ });
+}
 function reportPct(v,digits=0){return Number.isFinite(Number(v))?`${(Number(v)*100).toFixed(digits)}%`:"—"}
 function reportShortMonth(month){if(!month)return "";const [y,m]=month.split("-").map(Number);return new Intl.DateTimeFormat("es-CR",{month:"short",year:"2-digit",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,1))).replace(".","")}
 function reportDaysBetween(a,b){const A=new Date(a+"T00:00:00Z"),B=new Date(b+"T00:00:00Z");return Math.round((B-A)/86400000)}
@@ -5514,6 +6055,7 @@ function m2ResetComposer(close=true){
   document.getElementById("mCurrency").value=displayCurrency();
   refreshMovementCategorySelect();refreshDebtSelect();m2RefreshAccounts("");updateMovementFields();m2RefreshQuickTypes();
   oneCentralRestoreMovementForm();
+  oneProjectSyncComposer();
   document.getElementById("oneCentralGoalForm").reset();
   if(close){const dialog=document.getElementById("movementComposerDialog");if(dialog?.open)dialog.close();document.getElementById("movementComposer").hidden=true;}
 }
@@ -5547,7 +6089,7 @@ function m2OpenComposer(m=null,{repeat=false,scheduledId=""}={}){
       m2SetSplitMode(true,{createRows:false});
     }
   }
-  updateMovementFields();m2RefreshQuickTypes();
+  updateMovementFields();m2RefreshQuickTypes();oneProjectSyncComposer(original?m:null);
   document.getElementById("movementComposer").hidden=false;
   const dialog=document.getElementById("movementComposerDialog");if(dialog&&!dialog.open)dialog.showModal();
   document.getElementById("mAmount").focus({preventScroll:true});
@@ -5677,6 +6219,7 @@ function updateMovementFields(){
   if(debtSelect)debtSelect.required=payment;
   const description=document.getElementById("mDescription");
   if(description)description.placeholder=payment?"¿Querés agregar un detalle?":type==="Ingreso"?"¿De dónde recibiste el dinero?":"¿En qué gastaste?";
+  oneProjectSyncComposer();
   if(payment){
     const d=(data.debts||[]).find(x=>x.id===debtSelect?.value);
     const suggested=suggestDebtCategoryId(d);
@@ -5951,6 +6494,15 @@ function bind(){
       if(!splitCategory||splitCategory.type!=="Gasto"||(!categoryIsActive(splitCategory)&&!historicalCategories.has(line.categoryId)))
         return alert("Una categoría de la división ya no está disponible. Elegí una categoría activa.");
     }
+    const projectChoice=oneProjectReadMovementSelection(type,existing);
+    if(!projectChoice.ok)return alert(projectChoice.error);
+    const scheduledId=!existing?document.getElementById("mScheduledId").value:"";
+    const scheduledTemplate=scheduledId?data.movementTemplates.find(t=>t.id===scheduledId):null;
+    if(scheduledId){
+      if(!scheduledTemplate?.active)return alert("Esta programación ya no está activa.");
+      if(data.movements.some(m=>m.scheduleTemplateId===scheduledId&&m.scheduledFor===scheduledTemplate.nextDate))
+        return alert("Esta fecha programada ya fue registrada. Revisá el historial antes de continuar.");
+    }
     const obj={...existing,id:existing?.id||id(),seq:existing?.seq||data.movementSeq+1,
       createdAt:existing?.createdAt||new Date().toISOString(),date,type,categoryId,
       category:category.name,
@@ -5962,29 +6514,35 @@ function bind(){
       period:periodKey(p),quarter:budgetQuarter(p)};
     const dup=data.movements.find(m=>m.id!==obj.id&&m2SameMovement(m,obj));
     if(dup&&!confirm(`Ya existe un ${type.toLowerCase()} de ${originalMoney(amount,currency)} el ${date} con la misma cuenta y categoría. ¿Registrar igualmente?`))return;
+    if(existing&&!confirm("¿Guardar los cambios de este movimiento? Se actualizarán los indicadores y se conservará el registro del cambio."))return;
+    const rollback={movements:data.movements.slice(),movementSeq:data.movementSeq,
+      movementAudit:clone(data.movementAudit||[]),movementTemplates:clone(data.movementTemplates||[]),
+      projectLinks:clone(data.projectLinks||[])};
     if(existing){
-      if(!confirm("¿Guardar los cambios de este movimiento? Se actualizarán los indicadores y se conservará el registro del cambio."))return;
       m2Audit("edit",obj,existing);
       const index=data.movements.findIndex(m=>m.id===existing.id);
       data.movements[index]=obj;
     }else{
       data.movementSeq++;
       obj.seq=data.movementSeq;
-      const templateId=document.getElementById("mScheduledId").value;
-      if(templateId){
-        const template=data.movementTemplates.find(t=>t.id===templateId);
-        if(!template?.active)return alert("Esta programación ya no está activa.");
-        if(data.movements.some(m=>m.scheduleTemplateId===templateId&&m.scheduledFor===template.nextDate))
-          return alert("Esta fecha programada ya fue registrada. Revisá el historial antes de continuar.");
-        obj.scheduleTemplateId=templateId;obj.scheduledFor=template.nextDate;
-        template.lastPostedFor=template.nextDate;
-        template.nextDate=m2NextScheduledDate(template.nextDate,template.frequency,template.anchorDay);
+      if(scheduledTemplate){
+        obj.scheduleTemplateId=scheduledId;obj.scheduledFor=scheduledTemplate.nextDate;
+        scheduledTemplate.lastPostedFor=scheduledTemplate.nextDate;
+        scheduledTemplate.nextDate=m2NextScheduledDate(scheduledTemplate.nextDate,scheduledTemplate.frequency,scheduledTemplate.anchorDay);
       }
       data.movements.push(obj);m2Audit("create",obj);
     }
-    save();m2ResetComposer();
+    oneProjectAssignMovement(obj.id,projectChoice.projectId,projectChoice.bucketId);
+    try{save()}catch(error){
+      data.movements=rollback.movements;data.movementSeq=rollback.movementSeq;
+      data.movementAudit=rollback.movementAudit;data.movementTemplates=rollback.movementTemplates;
+      data.projectLinks=rollback.projectLinks;
+      return alert("No se pudo guardar el movimiento ni su vínculo al proyecto. Revisá el almacenamiento.");
+    }
+    m2ResetComposer();
     refreshV7MovementCategoryFilter();m2RefreshAccounts();
     renderMovements();renderDashboard();renderPlan();renderReports();m2RenderTemplates();
+    if(oneModuleEnabled("projects"))renderProjects();
     oneActionSaved(existing?"Movimiento actualizado":
       type==="Ingreso"?"Ingreso registrado":type==="Gasto"?"Gasto registrado":"Pago de deuda registrado",
       originalMoney(amount,currency)+(obj.description?" · "+obj.description:"")+
@@ -6001,9 +6559,17 @@ function bind(){
       const movement=data.movements.find(m=>m.id===del.dataset.deleteMovement);
       if(oneIsLinkedCobroMovement(movement))return alert("Este movimiento está vinculado a un cobro. Editá o revertí el abono desde Cobros.");
       if(movement&&confirm("¿Eliminar este movimiento? Se actualizarán tus saldos, presupuesto e indicadores.")){
+        const previousMovements=data.movements,previousLinks=data.projectLinks,previousAudit=clone(data.movementAudit||[]);
         m2Audit("delete",movement,movement);
         data.movements=data.movements.filter(m=>m.id!==movement.id);
-        save();renderMovements();renderDashboard();renderPlan();renderReports();m2RenderAccountSummary(selectedMovements(document.getElementById("movementLevel").value,document.getElementById("movementPeriod").value));
+        data.projectLinks=(data.projectLinks||[]).filter(l=>l.movementId!==movement.id);
+        try{save()}catch(error){
+          data.movements=previousMovements;data.projectLinks=previousLinks;data.movementAudit=previousAudit;
+          return alert("No se pudo eliminar el movimiento. El historial sigue sin cambios.");
+        }
+        renderMovements();renderDashboard();renderPlan();renderReports();
+        if(oneModuleEnabled("projects"))renderProjects();
+        m2RenderAccountSummary(selectedMovements(document.getElementById("movementLevel").value,document.getElementById("movementPeriod").value));
       }
       return;
     }
@@ -7386,7 +7952,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();oneProjectInit();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="../mobile-pilot/desktop.js"></script>
 </body>
