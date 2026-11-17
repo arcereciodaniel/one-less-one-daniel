@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.3.0</small>
+      <small class="brand-version">v11.4.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -493,6 +493,7 @@
         <div class="one-project-actions"><button type="button" class="btn secondary small" id="oneProjectEditBtn">Editar</button><button type="button" class="btn secondary small" id="oneProjectArchiveBtn">Archivar</button></div>
       </div>
       <div id="oneProjectKpis" class="one-project-kpis"></div>
+      <div id="oneProjectConnections" class="one-project-connections" aria-label="Metas y cobros relacionados"></div>
       <div class="one-project-progress"><div class="one-project-progress-head"><span>Presupuesto utilizado</span><strong id="oneProjectProgressLabel">0%</strong></div><div class="one-project-track"><span id="oneProjectProgressFill"></span></div><p id="oneProjectBudgetNote" class="muted"></p></div>
       <div class="one-project-sections">
         <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Presupuesto por concepto</h3><p class="muted">Distribuí el total sin crear categorías globales.</p></div><button class="btn secondary small" id="oneAddProjectBucket" type="button">＋ Concepto</button></div>
@@ -569,7 +570,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.3.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -622,6 +623,12 @@
    <div class="field"><label for="oneProjectEnd">Finalización (opcional)</label><input id="oneProjectEnd" type="date"></div>
    <div class="field"><label for="oneProjectBudget">Presupuesto total</label><input id="oneProjectBudget" type="number" min="0" step=".01" required></div>
    <div class="field"><label for="oneProjectCurrency">Moneda de presupuesto</label><select id="oneProjectCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+   <div class="field wide"><label for="oneProjectGoal">Meta de ahorro relacionada (opcional)</label>
+     <select id="oneProjectGoal"><option value="">Sin meta vinculada</option></select>
+     <small class="muted">El saldo de una meta se muestra aparte: no reduce el gasto del proyecto ni crea un aporte nuevo.</small></div>
+   <div class="field wide"><label for="oneProjectCobroGroup">Grupo de Cobros relacionado (opcional)</label>
+     <select id="oneProjectCobroGroup"><option value="">Sin grupo vinculado</option></select>
+     <small class="muted">Solo muestra lo pendiente y recuperado de ese grupo. No lo suma al presupuesto disponible.</small></div>
    <div class="field wide"><label for="oneProjectNotes">Notas (opcional)</label><textarea id="oneProjectNotes" maxlength="500"></textarea></div>
    <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectCancel">Cancelar</button><button class="btn" type="submit">Guardar proyecto</button></div>
  </form></div>
