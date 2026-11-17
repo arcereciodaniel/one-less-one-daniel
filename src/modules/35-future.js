@@ -87,16 +87,25 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // Gastos ordinarios: lo que falta para completar el presupuesto del período,
   // después de descontar gastos efectivos (incluidos futuros ya registrados)
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
-  let ordinary=0;
+  let ordinary=0,plannedSavings=0;
+  const savingsCategoryIds=new Set([
+   ...oneSavingsCategories().map(c=>c.id),
+   ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
   for(const c of budgetCategories("Gasto",p)){
    const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
    const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
    const goals=oneBudgetSavingsActual(p,c.id,end);
-   ordinary+=Math.max(0,amount-paid-goals);
+   const remaining=Math.max(0,amount-paid-goals);
+   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
    for(const date of wholeDates)add(date,daily,"budget","Gastos presupuestados","Presupuesto distribuido");
+  }
+  if(plannedSavings>.005){
+   const daily=-plannedSavings/count;
+   for(const date of wholeDates)add(date,daily,"budget-savings","Ahorro presupuestado","Presupuesto distribuido");
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
@@ -133,7 +142,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   points,items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
   coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,
   recurringIncome:byKind("income"),scheduledDebt:byKind("debt"),
-  budgetExpense:byKind("budget")+byKind("budget-debt")};
+  budgetExpense:byKind("budget")+byKind("budget-savings")+byKind("budget-debt")};
 }
 function oneFutureChart(points){
  const width=760,height=245,pad={left:110,right:18,top:20,bottom:40};
@@ -197,6 +206,7 @@ function renderFuture(){
   const li=document.createElement("li");li.textContent=message;warnings.appendChild(li);
  }
  q("oneFutureCoverage").textContent=forecast.coverageDays+" de "+horizon+" días tienen períodos de presupuesto.";
+ oneScenarioRender(forecast);
 }
 function oneFutureInit(){
  document.querySelectorAll("[data-one-future-days]").forEach(button=>button.addEventListener("click",()=>{
