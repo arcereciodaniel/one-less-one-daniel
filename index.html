@@ -3746,6 +3746,7 @@ function renderDashboard(){
   document.getElementById("kpiGrid").innerHTML=cards.map(([l,v,c])=>`<div class="card kpi ${c}"><div class="label">${l}</div><div class="value">${money(v)}</div></div>`).join("");
   document.getElementById("dashboardCategories").innerHTML=categoryTable(cat);
   renderReconciliationStatus();
+  if(document.getElementById("oneDataHealthDetails")?.open)oneRenderDataHealth();
   const labels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
   drawBarChart(document.getElementById("expenseChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.expenses):[0],labels.length?rows.map(r=>r.actualExpenses):[0]);
   drawLineChart(document.getElementById("cashChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.ending):[0],labels.length?rows.map(r=>r.actualBalance):[0]);
@@ -3754,14 +3755,14 @@ function renderReconciliationStatus(){
   const box=document.getElementById("reconcileStatus");if(!box)return;
   const today=todayIso(), latest=latestReconciliation(today), current=actualBalanceAt(today);
   if(!latest){
-    box.innerHTML=`<div class="reconcile-row"><div><strong>Conciliación de saldo</strong><div class="muted">Todavía no has fijado un saldo real. Cuando el registro se desordene, usa “Actualizar saldo real” y el flujo futuro se recalculará desde ese punto.</div></div><span class="pill">Saldo operativo calculado hoy: ${money(current)}</span></div>`;
+    box.innerHTML=`<div class="reconcile-row"><div><strong>Saldo calculado, todavía no confirmado</strong><div class="muted">Se estima con los movimientos registrados. Si no coincide con tu dinero disponible, usá «Actualizar saldo real» para establecer una referencia sin generar otro ingreso o gasto.</div></div><span class="pill">Calculado hoy: ${money(current)}</span></div>`;
     return;
   }
   const latestCRC=reconciliationAmountCRC(latest),diff=latest.calculatedBefore===null?null:latestCRC-num(latest.calculatedBefore);
   const recent=[...(data.reconciliations||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,3);
   box.innerHTML=`<div class="reconcile-row">
-    <div><strong>Último saldo operativo conciliado: ${money(latestCRC)}</strong><div class="muted">${dateLabel(latest.date)}${latest.note?` · ${safe(latest.note)}`:""} · saldo actual después de movimientos posteriores: ${money(current)}</div></div>
-    ${diff===null?"":`<div class="delta ${diff>=0?"positive":"negative"}">Ajuste ${diff>=0?"+":""}${money(diff)}</div>`}
+    <div><strong>Saldo confirmado en ${dateLabel(latest.date)}: ${money(latestCRC)}</strong><div class="muted">Saldo calculado hoy: ${money(current)} (incluye movimientos posteriores)${latest.note?` · ${safe(latest.note)}`:""}. Confirmar saldo no agrega un ingreso ni un gasto.</div></div>
+    ${diff===null?"":`<div class="delta ${diff>=0?"positive":"negative"}">Corrección del saldo: ${diff>=0?"+":""}${money(diff)}</div>`}
   </div>
   <div class="table-wrap" style="margin-top:10px"><table style="min-width:650px"><thead><tr><th>Fecha</th><th>Saldo real</th><th>Ajuste</th><th>Nota</th><th></th></tr></thead><tbody>
   ${recent.map(r=>`<tr><td>${dateLabel(r.date)}</td><td class="num">${money(reconciliationAmountCRC(r))}${originalHint(r.amount,r.currency)}</td><td class="num">${r.calculatedBefore===null?"—":money(reconciliationAmountCRC(r)-num(r.calculatedBefore))}</td><td>${safe(r.note||"")}</td><td><button class="btn danger small" data-delete-reconcile="${safe(r.id)}">Eliminar</button></td></tr>`).join("")}
@@ -6471,14 +6472,15 @@ renderDashboard=function(){
     deltaEl.className="v7-hero-delta";
   }else if(previous>0){
     const pct=Math.abs(delta/previous)*100;
-    deltaEl.textContent=`${delta>=0?"↑":"↓"} ${pct.toFixed(0)}% respecto a hace 30 días`;
-    deltaEl.className=`v7-hero-delta ${delta>=0?"good":"bad"}`;
+    deltaEl.textContent=`Saldo operativo: ${delta>=0?"↑":"↓"} ${pct.toFixed(0)}% vs. hace 30 días`;
+    deltaEl.className="v7-hero-delta";
   }else{
     // Con una base cero o negativa, el cambio porcentual no representa
     // apropiadamente la mejora o caída del saldo disponible.
-    deltaEl.textContent=`Hace 30 días: ${money(previous)} · ${delta>=0?"↑":"↓"} ${money(Math.abs(delta))} de cambio`;
-    deltaEl.className=`v7-hero-delta ${delta>=0?"good":"bad"}`;
+    deltaEl.textContent=`Saldo operativo hace 30 días: ${money(previous)} · variación ${delta>=0?"+":"−"}${money(Math.abs(delta))}`;
+    deltaEl.className="v7-hero-delta";
   }
+  deltaEl.title="Comparación del saldo operativo, no del gasto. Incluye ingresos, egresos, aportes a metas y ajustes de conciliación.";
   oneRenderEstimatedAvailable(todayIso());
 
   document.getElementById("kpiGrid").innerHTML=[
@@ -6515,7 +6517,7 @@ renderDashboard=function(){
   if(usage===null){
     insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
   }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del periodo seleccionado.</p><span class="v7-status-pill">✓ Todo se ve bien</span>`;
+    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
   }else if(usage<=1){
     insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
   }else{
