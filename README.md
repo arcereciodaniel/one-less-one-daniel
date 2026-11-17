@@ -191,3 +191,19 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - El motor usa `oneFutureForecast` (V11.3) como fuente de una sola verdad y aplica cambios en memoria exclusivamente; no invoca `save`, ni escribe en localStorage, no actualiza Movimientos, Deudas, Cobros, Metas, Proyectos ni el piloto móvil. Los controles se restablecen tras recargar; jamás se exportan como transacciones.
 - El cambio de CRC/USD para los controles conserva montos canónicos en CRC y utiliza el TC actual de venta únicamente para estimación visual. Los saldos del escenario se expresan según la moneda de visualización de OLO.
 - Pruebas automatizadas de cálculo, rangos, doble conteo, ausencia de deudas, cambio de moneda y conservación exacta del respaldo original. Daniel y Lab conservan la separación de datos. Gloriana permanece sin cambios; no se añadieron servicios de pago.
+
+## V11.8 — Captura móvil de gastos con Proyectos (piloto Daniel)
+
+**Nuevo orden de la hoja de ruta solicitado:** V11.8 → V11.6 → V11.7.
+
+- El iPhone ofrece **Proyecto** y, si corresponde, **Concepto del proyecto** exclusivamente al registrar **Gasto**. Ambos son opcionales. Los gastos comunes, ingresos, cobros y repartos existentes mantienen su flujo sin proyectos.
+- El catálogo sincronizado del escritorio contiene solo nombres e identificadores de proyectos activos y conceptos. **Nunca** publica presupuestos, gastos, saldos, metas, notas, detalles ni registros históricos en D1.
+- El Worker valida que proyecto y concepto pertenezcan al catálogo vigente. Daniel vuelve a verificarlos al importar contra el almacenamiento local; si el proyecto fue archivado o el concepto eliminado, el gasto **queda pendiente de revisión y sin confirmación**, y se ofrece acceso a Proyectos.
+- Un registro móvil aceptado genera **exactamente un movimiento Gasto** y una referencia en `projectLinks`. No crea un segundo movimiento, no altera `projectPlans` y no cierra automáticamente gastos previstos (esto corresponde a V11.6).
+- El importador comprueba persistencia **tanto del movimiento como de su enlace** antes de confirmar la recepción en D1. Los reintentos no duplican gastos ni vínculos.
+- El formulario conserva identificadores en borradores no confirmados y elimina borradores solo al recibir confirmación del Worker.
+- Compatible con catalogaciones antiguas sin proyectos: `projects` es opcional en la API. No requiere migración de D1 ni nuevos servicios.
+- Despliegue móvil condicionado a los secretos Cloudflare existentes de GitHub Actions; si faltan, la automatización no modifica el Worker publicado. No se instala en Gloriana ni habilita el importador de Lab.
+- Protección del coste esperado de $0, claves de almacenamiento local sin cambios y respaldo financiero intacto. Pruebas: `tests/v11-8-mobile-projects.test.cjs` y nuevas pruebas de interfaz/Worker en `mobile-pilot/tests`.
+
+**Prueba manual:** creá un proyecto activo con concepto en Daniel, abrí Movimientos y sincronizá el piloto. En Safari del iPhone pulsá Actualizar, registrá un Gasto asignándolo al proyecto y concepto, y sincronizá en Daniel. Abrí Proyectos para confirmar el gasto real enlazado.
