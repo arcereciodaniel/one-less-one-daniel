@@ -18,7 +18,7 @@ const REPLACEMENTS = [
   ['const ONE_DEFAULT_SHOW_COBROS=true;', 'const ONE_DEFAULT_SHOW_COBROS=false;'],
   ['const UI_PREFS_KEY="rastro-ui-v6";', 'const UI_PREFS_KEY="rastro_lab_v7_1_prefs_v1";'],
   ['href="mobile-pilot/desktop.css"', 'href="../mobile-pilot/desktop.css"'],
-  ['src="mobile-pilot/split-fare.js"', 'src="../mobile-pilot/split-fare.js"'],
+  ['src="mobile-pilot/public/split-fare.js"', 'src="../mobile-pilot/public/split-fare.js"'],
   ['src="mobile-pilot/desktop.js"', 'src="../mobile-pilot/desktop.js"']
 ];
 

@@ -5,6 +5,7 @@ const {JSDOM,VirtualConsole}=require("jsdom");
 const html=fs.readFileSync("index.html","utf8");
 const script=html.match(/<script>\s*([\s\S]*?)<\/script>/)?.[1];
 const pilot=fs.readFileSync("mobile-pilot/desktop.js","utf8");
+const split=fs.readFileSync("mobile-pilot/public/split-fare.js","utf8");
 assert(html.includes('mobile-pilot/desktop.js'),"Debe cargar el piloto opcional");
 const today=new Date().toISOString().slice(0,10);
 const month=today.slice(0,7),quarter=month.slice(0,4)+"-T"+(Math.floor((Number(month.slice(5,7))-1)/3)+1);
@@ -43,6 +44,10 @@ const rows=[
  create("mobile-entry-deuda-0000000003",{type:"Pago deuda",date:today,currency:"CRC",amount:1000,debtId:"debt-1"}),
  create("mobile-entry-cobro-0000000004",{type:"Cobro",date:today,currency:"CRC",amount:15000,person:"Ana",description:"Compra compartida"}),
  create("mobile-entry-ahorro-000000005",{type:"Aporte",date:today,currency:"CRC",amount:5000,reserveId:"goal-1"}),
+ create("mobile-entry-cobro-usd-000008",{type:"Cobro",date:today,currency:"USD",amount:72.5,person:"Luis",description:"Pasaje"}),
+ create("mobile-entry-split-hotel-000009",{type:"Cobro dividido",date:today,currency:"USD",amount:328,
+   groupName:"Hotel con amigos",description:"Reserva",splitMode:"equal",selfShares:1,selfAmount:82,totalShares:4,
+   dueDate:"",participants:[{person:"Charlie",shares:2,amount:164},{person:"Ana",shares:1,amount:82}]}),
  create("mobile-entry-invalido-000006",{type:"Gasto",date:today,currency:"CRC",amount:4200,categoryId:"categoria-archivada"})
 ];
 let catalog=null,fetchCalls=0;
@@ -60,18 +65,27 @@ w.fetch=async(url,opts={})=>{
  }
  throw Error("Unexpected fetch "+url);
 };
-w.eval(script+"\n"+pilot);
+w.eval(split+"\n"+script+"\n"+pilot);
 assert(w.document.getElementById("oneMobilePilot"),"Se muestra conexión en Movimientos, sin nuevo módulo");
 (async()=>{
  await new Promise(resolve=>setTimeout(resolve,650));
  let saved=JSON.parse(w.localStorage.getItem(key));
  assert.equal(saved.movements.length,3);
  assert.equal(saved.reserveMovements.length,1);
- assert.equal(saved.sharedCharges.length,1);
+ assert.equal(saved.sharedCharges.length,4);
  assert.equal(saved.movementSeq,3);
  assert.equal(saved.movements.find(m=>m.type==="Gasto").amount,18500);
  assert.equal(saved.movements.find(m=>m.type==="Ingreso").amount,12500);
  assert.equal(saved.movements.find(m=>m.type==="Pago deuda").debtId,"debt-1");
+ assert.equal(saved.sharedChargeGroups.length,1);
+ assert.equal(saved.sharedChargeGroups[0].name,"Hotel con amigos");
+ assert.equal(saved.sharedChargeGroups[0].splitFare.totalAmount,328);
+ const shares=saved.sharedCharges.filter(c=>c.mobilePilotId==="mobile-entry-split-hotel-000009");
+ assert.equal(shares.length,2);
+ assert.equal(shares.find(c=>c.person==="Charlie").amount,164);
+ assert.equal(shares.find(c=>c.person==="Ana").amount,82);
+ assert.equal(shares.every(c=>c.groupId===saved.sharedChargeGroups[0].id),true);
+ assert.equal(saved.sharedCharges.find(c=>c.person==="Luis").currency,"USD");
  assert.equal(saved.sharedCharges[0].person,"Ana");
  assert.equal(saved.sharedCharges[0].status,"pending");
  assert.equal(saved.reserveMovements[0].type,"Aporte");
@@ -87,7 +101,8 @@ assert(w.document.getElementById("oneMobilePilot"),"Se muestra conexión en Movi
  saved=JSON.parse(w.localStorage.getItem(key));
  assert.equal(saved.movements.length,3);
  assert.equal(saved.reserveMovements.length,1);
- assert.equal(saved.sharedCharges.length,1);
+ assert.equal(saved.sharedCharges.length,4);
+ assert.equal(saved.sharedChargeGroups.length,1);
  assert.equal(saved.movementAudit.filter(x=>x.action==="create").length,3);
  assert(fetchCalls>=4);
  assert.deepEqual(messages,[]);
