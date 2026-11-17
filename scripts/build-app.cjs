@@ -35,7 +35,7 @@ function buildApp() {
   const withStyles = replaceExactlyOnce(template, CSS_TOKEN, "<style>" + css + "</style>");
   const generated = replaceExactlyOnce(withStyles, SCRIPT_TOKEN, "<script>" + js + "</script>");
   assert(generated.includes('const STORAGE_KEY = "daniel_finanzas_local_v1";'), "No se encuentra la clave de datos Daniel");
-  assert(generated.includes('<small class="brand-version">v11.0.0</small>'), "La versión principal es incorrecta");
+  assert(generated.includes('<small class="brand-version">v11.1.0</small>'), "La versión principal es incorrecta");
   return generated;
 }
 
