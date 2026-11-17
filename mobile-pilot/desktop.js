@@ -16,6 +16,7 @@
     '<button id="oneMobileSync" class="btn secondary small" type="button">Sincronizar ahora</button>'+
     '<button id="oneMobileForget" class="btn secondary small" type="button">Desvincular</button></div>'+
     '<p id="oneMobileStatus" role="status" aria-live="polite">La bandeja móvil es opcional. Tus datos siguen guardados en este navegador.</p>'+
+    '<details class="one-mobile-issues" id="oneMobileIssues" hidden><summary id="oneMobileIssuesTitle">Registros por revisar</summary><ul id="oneMobileIssuesList"></ul><p>Los registros siguen pendientes en la bandeja; sincronizá de nuevo después de resolverlos.</p></details>'+
     '<p class="one-mobile-caution">La clave queda en este navegador, separada del respaldo JSON. Usá únicamente tu dispositivo personal.</p></div></details>';
   const view=$("view-movements"),head=view?.querySelector(".v7-page-head");
   if(!view||!head)return;
@@ -23,6 +24,47 @@
   const config=prefs();$("oneMobileUrl").value=config.url||"";$("oneMobileKey").value=config.key||"";
   if(validConfig(config))status("Conectado · los movimientos del teléfono se importan cuando abrís One Less One.");
   let busy=null;
+  function issueAction(reason){
+    if(/tipo de cambio/i.test(reason))return {label:"Revisar tipo de cambio",action:"fx"};
+    if(/período|presupuestario|trimestre/i.test(reason))return {label:"Revisar presupuesto",action:"plan"};
+    if(/categoría/i.test(reason))return {label:"Revisar categorías",action:"categories"};
+    if(/grupo/i.test(reason))return {label:"Revisar cobros",action:"shared"};
+    return null;
+  }
+  function showIssues(issues){
+    const panel=$("oneMobileIssues"),list=$("oneMobileIssuesList");
+    if(!panel||!list)return;
+    list.replaceChildren();
+    panel.hidden=!issues.length;
+    $("oneMobileIssuesTitle").textContent=issues.length===1?"1 registro pendiente de revisión":issues.length+" registros pendientes de revisión";
+    if(!issues.length){panel.open=false;return}
+    for(const issue of issues){
+      const li=document.createElement("li");
+      const context=document.createElement("strong");
+      context.textContent=issue.type+" · "+issue.date+(issue.description?" · "+issue.description:"");
+      li.append(context);
+      const reason=document.createElement("span");reason.textContent=issue.reason;li.append(reason);
+      const fix=issueAction(issue.reason);
+      if(fix){
+        const button=document.createElement("button");button.type="button";
+        button.className="btn secondary small";button.textContent=fix.label;
+        button.dataset.mobileFix=fix.action;
+        button.addEventListener("click",()=>{
+          if(fix.action==="fx"){
+            openFxDialog(false);
+            return;
+          }
+          if(fix.action==="categories"){
+            document.querySelector("[data-manage-categories]")?.click();
+            return;
+          }
+          navigate(fix.action);
+        });
+        li.append(button);
+      }
+      list.append(li);
+    }
+  }
   async function api(path,method="GET",payload=null,c=null){
     const cfg=c||prefs();
     if(!validConfig(cfg))throw Error("Configurá primero la URL y la clave de sincronización.");
@@ -68,6 +110,26 @@
       (data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===id);
   }
   function validDate(date){return restoreValidDate(date)&&date<=todayIso();}
+  // Solo tasas verificadas de la fecha del registro o de los siete días previos
+  // (para fines de semana/feriados). Nunca usar una cotización posterior.
+  function fxForMobileDate(date,currency){
+    if(currency!=="USD")return currentFxSnapshot();
+    const saved=data.settings||{},byDate=new Map();
+    const add=row=>{
+      const d=String(row?.date||""),buy=Number(row?.buy),sell=Number(row?.sell);
+      if(restoreValidDate(d)&&d<=date&&Number.isFinite(buy)&&Number.isFinite(sell)&&
+         buy>0&&sell>=buy)byDate.set(d,{date:d,buy,sell});
+    };
+    for(const row of saved.fxHistory||[])add(row);
+    if(Number(saved.fxBuy)>0&&Number(saved.fxSell)>=Number(saved.fxBuy))
+      add({date:saved.fxDate,buy:saved.fxBuy,sell:saved.fxSell});
+    const eligible=[...byDate.values()]
+      .filter(row=>(Date.parse(date+"T00:00:00Z")-Date.parse(row.date+"T00:00:00Z"))/86400000<=7)
+      .sort((a,b)=>b.date.localeCompare(a.date));
+    const rate=eligible[0];
+    if(!rate)throw Error("Sin tipo de cambio histórico para "+date+" ni en los 7 días anteriores. Revisá las tasas verificables en Tipo de cambio; este registro sigue pendiente.");
+    return {fxBuy:rate.buy,fxSell:rate.sell,fxRef:(rate.buy+rate.sell)/2,fxDate:rate.date};
+  }
   const createMobileGroupId=()=>id();
   function apply(item){
     const id=String(item?.id||""),p=item?.movement;
@@ -78,15 +140,14 @@
       !["CRC","USD"].includes(p.currency)||
       (p.currency==="USD"&&!["Gasto","Ingreso","Cobro","Cobro dividido"].includes(p.type)))
       throw Error("Fecha, moneda o monto inválidos.");
-    if(p.currency==="USD"&&(!num(data.settings?.fxBuy)||!num(data.settings?.fxSell)||!data.settings?.fxDate))
-      throw Error("Confirmá el tipo de cambio en Daniel antes de importar dólares.");
+    const fxSnapshot=fxForMobileDate(date,p.currency);
     if(p.type==="Cobro dividido"){
       // Un envío equivale a un grupo completo. save() persiste todas las filas juntas.
-      const result=oneCreateSplitFare(p,{sourceId:id});
+      const result=oneCreateSplitFare(p,{sourceId:id,fxSnapshot});
       return result.already?"already":"inserted";
     }
     const common={id,createdAt:new Date().toISOString(),date,amount,currency:p.currency,mobilePilotId:id,
-      mobilePilotSource:"iphone",description:String(p.description||"").slice(0,200),...currentFxSnapshot()};
+      mobilePilotSource:"iphone",description:String(p.description||"").slice(0,200),...fxSnapshot};
     if(["Gasto","Ingreso","Pago deuda"].includes(p.type)){
       const period=periodForDate(date);
       if(!period||date>periodEndDate(period))throw Error("Este día no tiene período presupuestario. Configurá el trimestre primero.");
@@ -138,7 +199,8 @@
     await api("/api/catalog","PUT",catalog(),config);
     const response=await api("/api/inbox","GET",null,config);
     if(!Array.isArray(response.items))throw Error("No se recibió una bandeja válida.");
-    let imported=0,duplicates=0,issues=0,confirmed=0;
+    let imported=0,duplicates=0,confirmed=0,priorFx=0;
+    const issues=[];
     for(const item of response.items){
       const snapshot=JSON.stringify(data),id=item.id;
       try{
@@ -152,10 +214,20 @@
              ...(persisted.sharedCharges||[]),...(persisted.sharedChargeGroups||[])]
              .some(x=>x.mobilePilotId===id);
           if(!found)throw Error("No se verificó el guardado local.");
+          const importedRow=[...(persisted.movements||[]),...(persisted.reserveMovements||[]),
+            ...(persisted.sharedCharges||[])].find(x=>x.mobilePilotId===id);
+          if(item.movement?.currency==="USD"&&importedRow?.fxDate&&importedRow.fxDate<item.movement.date)priorFx++;
           imported++;
         }else duplicates++;
       }catch(error){
-        data=JSON.parse(snapshot);issues++;continue;
+        data=JSON.parse(snapshot);
+        const p=item?.movement||{};
+        issues.push({
+          type:String(p.type||"Registro"),date:String(p.date||"Sin fecha"),
+          description:String(p.description||p.groupName||p.person||"").slice(0,120),
+          reason:String(error?.message||"Error al importar").slice(0,400)
+        });
+        continue;
       }
       try{await api("/api/ack","POST",{id},config);confirmed++;}catch{}
     }
@@ -163,10 +235,13 @@
       refreshV7MovementCategoryFilter();renderMovements();renderDashboard();renderPlan();renderDebts();
       renderCapital();renderSharedCharges();renderReports();
     }
-    const note=imported+" importado(s), "+duplicates+" repetido(s), "+issues+" por revisar."+
-      (confirmed<imported+duplicates?" Algunas confirmaciones están pendientes; se reintentará.":"");
-    status(note,issues?"warning":"ok");
-    return {imported,duplicates,issues,confirmed};
+    showIssues(issues);
+    const note=imported+" importado(s), "+duplicates+" repetido(s), "+issues.length+" por revisar."+
+      (priorFx?" "+priorFx+" registro(s) USD usaron una tasa anterior a su fecha; revisá la fecha del TC guardado.":"")+
+      (confirmed<imported+duplicates?" Algunas confirmaciones están pendientes; se reintentará.":"")+
+      (issues.length?" Abrí el detalle de registros por revisar en Movimientos.":"");
+    status(note,issues.length?"warning":"ok");
+    return {imported,duplicates,issues:issues.length,confirmed,priorFx};
   }
   function sync(force=false){
     if(busy)return busy;
