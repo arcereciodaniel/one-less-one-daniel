@@ -182,3 +182,8 @@ Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente,
 - En **Movimientos → Registro desde iPhone** aparece un detalle de incidencias con fecha, concepto, causa y acceso a TC, presupuesto, categorías o cobros según el error. Tras resolverlo, pulsar **Sincronizar ahora**.
 - El iPhone muestra una explicación únicamente al elegir USD y actualiza el máximo de fecha al volver desde otra aplicación, sin cambiar la fecha seleccionada.
 - La bandeja sigue siendo temporal e idempotente. Los registros por revisar no reciben confirmación ni se purgan como importados. La lógica de sincronización permanece exclusiva de Daniel.
+
+
+## V10.10 — Confirmación de recepción desde el iPhone
+
+Al registrar Gasto, Ingreso o Cobro desde Safari aparece una ventana pequeña **solo después** de recibir respuesta válida de la API: «Registro recibido». Se muestran importe original, moneda y descripción y se explica que el dato está pendiente de sincronización con One Less One Daniel. No se declara que fue contabilizado, convertido ni agregado a saldos. Si falla la conexión, la ventana no aparece: el envío conserva el mismo identificador en el borrador local para un reintento seguro. El acceso directo de Atajos de iPhone no cambia.
