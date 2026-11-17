@@ -101,3 +101,14 @@ La configuración **Movimientos → Registro desde iPhone** muestra las incidenc
 **Inicio:** la variación de 30 días se identifica explícitamente como variación del *saldo operativo*, no del gasto, y ya no colorea automáticamente una subida/bajada como buena o mala; el indicador de consumo de presupuesto aclara que no compara el tiempo transcurrido.
 
 **Alcance y límites:** misma arquitectura localStorage y mismos registros/IDs; ningún nuevo módulo ni servidor. Lab mantiene almacenamiento aislado y Gloriana no se modifica. Las pruebas de V10.9 se ejecutan también antes de publicar GitHub Pages. El diagnóstico no sustituye un respaldo externo comprobado ni una conciliación con saldos reales.
+
+## V10.10 — Menos pasos y confirmaciones de acciones
+
+- **Confirmaciones posteriores a la persistencia:** ventana pequeña y accesible al registrar gastos, ingresos, pagos de deuda, cobros, abonos, aportes a metas, movimientos desde formularios históricos y programaciones. Muestra tipo, importe y contexto; nunca debe abrirse antes de que `save()` termine. Se cierra con «Continuar», Escape o tocando fuera. Se mantienen las preguntas de confirmación previas para acciones destructivas, sin duplicarlas.
+- **Piloto iPhone:** la ventana de éxito solo se abre tras la respuesta de recepción del Worker. Indica explícitamente «registro recibido para sincronizar», no «contabilizado en Daniel». En fallos de red se conserva el mismo identificador del borrador para reintentar; no hay confirmación falsa.
+- **Metas cumplidas:** botón «Marcar cumplida» si el saldo actual es igual o superior al objetivo. Guarda el estado archivado y razón «Meta cumplida», conserva aportes, historial y saldos, y **no crea movimientos financieros**. El dinero reservado sigue en el fondo; para utilizarlo, la persona puede reactivar la meta y registrar un Uso objetivo. El filtro Archivadas distingue la etiqueta «Cumplida».
+- **Movimientos frecuentes:** acceso «Repetir último» cuando existe un movimiento elegible; precarga datos y fecha actual sin registrar hasta pulsar Guardar. Las programaciones muestran «Revisar y registrar» cuando están pendientes, o «Preparar» para futuras. Nunca se ejecutan automáticamente y conservan protección idempotente para la misma fecha programada.
+- **Deudas:** las próximas cuotas muestran fecha absoluta, tiempo restante o vencido, importes parciales asociados y una explicación de que los ciclos son estimaciones: pagos tardíos y cambios de mínimos deben verificarse contra el banco. Los cálculos y movimientos originales no se alteran.
+
+Daniel y Lab comparten código pero no información financiera; Gloriana se mantiene en V9, sin cambios. No se añade servidor, base de datos ni módulo. QA comprueba que una acción no exitosa no muestra confirmación, que las metas no duplican asientos, que las programaciones no contabilizan movimientos y que el iPhone distingue recepción de importación.
+
