@@ -4504,7 +4504,8 @@ function oneInitSplitFare(){
    uiState.cobrosDisplayMode="groups";saveUiState();
    document.getElementById("sharedStatementMonth").value=p.date.slice(0,7);
    renderSharedCharges();renderDashboard();
-   alert((created.reused?"Gasto agregado al grupo: ":"Grupo creado: ")+created.charges.length+" cobro(s) en "+p.currency+".");
+   oneActionSaved(created.reused?"Cobros agregados al grupo":"Grupo y cobros creados",
+     created.charges.length+" cobro(s) · "+p.currency+"\nNo se registró un gasto ni ingreso adicional.");
   }catch(error){
    data=JSON.parse(snapshot);
    alert(error.message||"No se pudo registrar el gasto compartido.");
@@ -5540,6 +5541,8 @@ function m2SaveTemplate(){
   const index=data.movementTemplates.findIndex(t=>t.id===obj.id);
   if(index<0)data.movementTemplates.push(obj);else data.movementTemplates[index]=obj;
   save();document.getElementById("movementTemplateDialog").close();m2RenderTemplates();
+  oneActionSaved(old?"Programación actualizada":"Movimiento frecuente guardado",
+    obj.name+" · "+originalMoney(obj.amount,obj.currency)+"\nSe registrará únicamente cuando lo confirmés.");
 }
 
 function m2RefreshQuickTypes(){
@@ -5792,6 +5795,10 @@ function bind(){
     save();m2ResetComposer();
     refreshV7MovementCategoryFilter();m2RefreshAccounts();
     renderMovements();renderDashboard();renderPlan();renderReports();m2RenderTemplates();
+    oneActionSaved(existing?"Movimiento actualizado":
+      type==="Ingreso"?"Ingreso registrado":type==="Gasto"?"Gasto registrado":"Pago de deuda registrado",
+      originalMoney(amount,currency)+(obj.description?" · "+obj.description:"")+
+      (obj.scheduleTemplateId?"\nProgramación confirmada; próximo registro pendiente de aprobación.":""));
   });
 
   document.addEventListener("click",e=>{
@@ -5940,6 +5947,9 @@ function bind(){
     document.getElementById("cobroPaymentDialog").close();
     oneRefreshCobroViews();
     if(paymentId)openCobroPaymentHistory(c);
+    oneActionSaved(paymentId?"Abono actualizado":"Abono registrado",
+      originalMoney(result.payment.amount,c.currency)+" · "+(c.person||"Cobro")+
+      (document.getElementById("cpSyncMovement").checked?"\nMovimiento vinculado en tu saldo operativo.":"\nSin movimiento adicional en el saldo operativo."));
   });
   document.getElementById("addSharedGroupBtn").addEventListener("click",()=>openSharedGroup());
   document.getElementById("addSharedChargeBtn").addEventListener("click",()=>openSharedCharge());
@@ -5997,9 +6007,10 @@ function bind(){
     if(fromMovements){
       m2ResetComposer();
       if(!oneModuleEnabled("shared"))oneSetModuleEnabled("shared",true);
-      oneCentralNotify("Cobro de "+originalMoney(obj.amount,obj.currency)+" registrado para "+(obj.person||"la persona indicada")+". No se registró como ingreso; los pagos se controlan desde Cobros.");
       renderMovements();
     }
+    oneActionSaved(cid?"Cobro actualizado":"Cobro pendiente registrado",
+      originalMoney(obj.amount,obj.currency)+" · "+(obj.person||"Persona sin nombre")+"\nEste cobro no crea un ingreso hasta registrar su pago.");
   });
 
   document.getElementById("addReserveBtn").addEventListener("click",()=>openReserve());
@@ -6016,6 +6027,7 @@ function bind(){
     if(!eligibility.ok)return alert(eligibility.error);
     const i=data.reserves.findIndex(r=>r.id===rid);i>=0?data.reserves[i]={...data.reserves[i],...obj}:data.reserves.push(obj);
     save();document.getElementById("reserveDialog").close();refreshReserveSelect();renderCapital();renderDashboard();renderPlan();
+    oneActionSaved(rid?"Meta actualizada":"Meta creada",obj.name);
   });
   document.getElementById("reserveTxnForm").addEventListener("submit",e=>{
     e.preventDefault();const reserveId=document.getElementById("rtReserve").value;if(!reserveId)return alert("Selecciona un fondo.");
@@ -6025,6 +6037,8 @@ function bind(){
     if(!permission.ok)return alert(permission.error);
     data.reserveMovements.push(candidate);
     save();e.target.reset();document.getElementById("rtDate").value=todayIso();document.getElementById("rtCurrency").value=displayCurrency();refreshReserveSelect(reserveId);renderCapital();renderDashboard();renderPlan();
+    oneActionSaved(candidate.type==="Aporte"?"Ahorro registrado":"Movimiento de meta registrado",
+      originalMoney(candidate.amount,candidate.currency)+" · "+fund.name);
   });
   document.getElementById("addDebtBtn").addEventListener("click",()=>openDebt());
   document.getElementById("cancelDebtBtn").addEventListener("click",()=>document.getElementById("debtDialog").close());
@@ -6036,7 +6050,8 @@ function bind(){
     if(status==="archived"){obj.closedAt=old?.closedAt||todayIso();obj.closedReason=old?.closedReason||"Pagada / finalizada"}else{obj.closedAt="";obj.closedReason=""}
     i>=0?data.debts[i]=obj:data.debts.push(obj);
     if(i>=0&&oldName!==obj.name)data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)).forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
-    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital()
+    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
+    oneActionSaved(did?"Deuda actualizada":"Deuda registrada",obj.name);
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
