@@ -103,6 +103,9 @@ function oneHealthCheck(raw){
  countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
  countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
  const plans=new Map(get("projectPlans").map(x=>[x.id,x]));
+ const projectBuckets=new Map(get("projects").map(p=>[p.id,new Set((p.buckets||[]).map(b=>b.id))]));
+ const obsoletePlannedBuckets=get("projectPlans").filter(p=>p.bucketId&&!projectBuckets.get(p.projectId)?.has(p.bucketId)).length;
+ countIssue(obsoletePlannedBuckets,"previsión(es) con conceptos de proyecto que ya no existen.");
  let orphanReconciliations=0,wrongPlanBuckets=0;
  for(const link of get("projectLinks")){
   if(!link.planId)continue;
