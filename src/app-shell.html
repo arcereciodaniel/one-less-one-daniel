@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.1.0</small>
+      <small class="brand-version">v11.2.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -28,6 +28,7 @@
       <button data-view="debts" data-optional-module="debts"><span class="nav-icon" aria-hidden="true">▭</span><span>Deudas</span></button>
       <button data-view="shared" data-optional-module="shared"><span class="nav-icon" aria-hidden="true">◷</span><span>Cobros <span class="one-beta-tag">BETA</span></span></button>
       <button data-view="capital" data-optional-module="capital"><span class="nav-icon" aria-hidden="true">◎</span><span>Metas <span class="one-beta-tag">BETA</span></span></button>
+      <button data-view="projects" data-optional-module="projects"><span class="nav-icon" aria-hidden="true">◫</span><span>Proyectos <span class="one-beta-tag">BETA</span></span></button>
       <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
     </nav>
     <div class="header-actions">
@@ -316,6 +317,11 @@
           </section>
           <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
           <div class="field wide"><label for="mDescription">Descripción (opcional)</label><input id="mDescription" placeholder="¿En qué gastaste?"></div>
+          <div class="one-move-project-fields wide" id="oneMovementProjectField" hidden>
+            <div class="field"><label for="mProject">Proyecto (opcional)</label><select id="mProject"><option value="">Sin proyecto</option></select></div>
+            <div class="field"><label for="mProjectBucket">Concepto del proyecto</label><select id="mProjectBucket"><option value="">Sin concepto</option></select></div>
+            <small class="muted">Un gasto real se registra una sola vez. El proyecto solo lo muestra en su presupuesto.</small>
+          </div>
           <!-- Se conservan los valores históricos al editar, pero ya no se ofrecen como opciones de captura. -->
           <div class="one-move-legacy-fields" hidden aria-hidden="true">
             <select id="mAccount" tabindex="-1" aria-label="Cuenta histórica"></select>
@@ -472,6 +478,38 @@
     </div>
   </section>
 
+  <section class="view" id="view-projects">
+    <div class="v7-page-head">
+      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.0</div><h1>Tus proyectos</h1>
+        <p class="sub">Organizá viajes y planes con un presupuesto propio, sin duplicar tus movimientos.</p></div>
+      <div class="v7-page-actions"><button class="btn" type="button" id="oneCreateProjectBtn">＋ Nuevo proyecto</button></div>
+    </div>
+    <div id="oneProjectsSummary" class="one-project-summary"></div>
+    <div class="one-project-toolbar"><h2>Proyectos</h2><label>Mostrar <select id="oneProjectStatusFilter" aria-label="Filtrar proyectos"><option value="active">Activos</option><option value="archived">Archivados</option><option value="all">Todos</option></select></label></div>
+    <div id="oneProjectsList" class="one-project-grid"></div>
+    <section id="oneProjectDetails" class="one-project-detail" hidden aria-label="Detalle del proyecto">
+      <div class="one-project-detail-head"><div><h2 id="oneProjectDetailTitle"></h2><p class="muted" id="oneProjectDetailMeta"></p></div>
+        <div class="one-project-actions"><button type="button" class="btn secondary small" id="oneProjectEditBtn">Editar</button><button type="button" class="btn secondary small" id="oneProjectArchiveBtn">Archivar</button></div>
+      </div>
+      <div id="oneProjectKpis" class="one-project-kpis"></div>
+      <div class="one-project-progress"><div class="one-project-progress-head"><span>Presupuesto utilizado</span><strong id="oneProjectProgressLabel">0%</strong></div><div class="one-project-track"><span id="oneProjectProgressFill"></span></div><p id="oneProjectBudgetNote" class="muted"></p></div>
+      <div class="one-project-sections">
+        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Presupuesto por concepto</h3><p class="muted">Distribuí el total sin crear categorías globales.</p></div><button class="btn secondary small" id="oneAddProjectBucket" type="button">＋ Concepto</button></div>
+          <div id="oneProjectBuckets"></div></div>
+        <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos previstos</h3><p class="muted">Planificados; no afectan el saldo operativo.</p></div><button class="btn secondary small" id="oneAddProjectPlan" type="button">＋ Previsto</button></div>
+          <div id="oneProjectPlans"></div></div>
+      </div>
+      <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Gastos reales vinculados</h3><p class="muted">Los importes provienen de Movimientos. Asociarlos no vuelve a registrarlos.</p></div><button class="btn small" id="oneProjectNewExpense" type="button">＋ Registrar gasto</button></div>
+        <form id="oneProjectLinkForm" class="one-project-link-form">
+          <label>Gasto existente<select id="oneProjectMovementSelect" required></select></label>
+          <label>Concepto<select id="oneProjectLinkBucket"></select></label>
+          <button type="submit" class="btn secondary small">Vincular</button>
+        </form>
+        <div id="oneProjectLinkedMovements"></div>
+      </div>
+    </section>
+  </section>
+
   <section class="view" id="view-categories">
     <h1>Categorías</h1>
     <p class="sub">Personaliza cómo llamas a tus ingresos, gastos y compromisos. Los ingresos también pueden tener frecuencia, monto esperado y proyección automática conectada directamente con Presupuesto.</p>
@@ -489,7 +527,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.1.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.2.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -532,12 +570,50 @@
   <div class="m2-helper" id="movementAccountsList"></div>
  </div>
 </dialog>
+<dialog id="oneProjectDialog" class="one-project-dialog" aria-labelledby="oneProjectDialogTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectDialogTitle">Nuevo proyecto</h2><p class="muted">El presupuesto es un objetivo, no una transacción financiera.</p>
+ <form id="oneProjectForm" class="form-grid">
+   <input type="hidden" id="oneProjectId">
+   <div class="field wide"><label for="oneProjectName">Nombre</label><input id="oneProjectName" maxlength="90" required placeholder="Ej. Viaje a Japón 2026"></div>
+   <div class="field"><label for="oneProjectStart">Inicio (opcional)</label><input id="oneProjectStart" type="date"></div>
+   <div class="field"><label for="oneProjectEnd">Finalización (opcional)</label><input id="oneProjectEnd" type="date"></div>
+   <div class="field"><label for="oneProjectBudget">Presupuesto total</label><input id="oneProjectBudget" type="number" min="0" step=".01" required></div>
+   <div class="field"><label for="oneProjectCurrency">Moneda de presupuesto</label><select id="oneProjectCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+   <div class="field wide"><label for="oneProjectNotes">Notas (opcional)</label><textarea id="oneProjectNotes" maxlength="500"></textarea></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectCancel">Cancelar</button><button class="btn" type="submit">Guardar proyecto</button></div>
+ </form></div>
+</dialog>
+<dialog id="oneProjectBucketDialog" class="one-project-dialog" aria-labelledby="oneProjectBucketTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectBucketTitle">Nuevo concepto</h2><p class="muted">Una categoría interna de presupuesto, sin modificar tus categorías financieras.</p>
+ <form id="oneProjectBucketForm" class="form-grid">
+  <input type="hidden" id="oneProjectBucketId">
+  <div class="field wide"><label for="oneProjectBucketName">Concepto</label><input id="oneProjectBucketName" maxlength="70" required placeholder="Ej. Hospedaje"></div>
+  <div class="field wide"><label for="oneProjectBucketBudget">Presupuesto asignado</label><input id="oneProjectBucketBudget" type="number" min="0" step=".01" required></div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectBucketCancel">Cancelar</button><button class="btn" type="submit">Guardar concepto</button></div>
+ </form></div>
+</dialog>
+<dialog id="oneProjectPlanDialog" class="one-project-dialog" aria-labelledby="oneProjectPlanTitle">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+ <h2 id="oneProjectPlanTitle">Gasto previsto</h2><p class="muted">Es una previsión; no registra gasto ni resta dinero real.</p>
+ <form id="oneProjectPlanForm" class="form-grid">
+  <input type="hidden" id="oneProjectPlanId">
+  <div class="field wide"><label for="oneProjectPlanName">Descripción</label><input id="oneProjectPlanName" maxlength="120" required placeholder="Ej. Hotel pendiente"></div>
+  <div class="field"><label for="oneProjectPlanAmount">Importe previsto</label><input id="oneProjectPlanAmount" type="number" min=".01" step=".01" required></div>
+  <div class="field"><label for="oneProjectPlanDue">Fecha estimada</label><input id="oneProjectPlanDue" type="date"></div>
+  <div class="field wide"><label for="oneProjectPlanBucket">Concepto (opcional)</label><select id="oneProjectPlanBucket"></select></div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectPlanCancel">Cancelar</button><button class="btn" type="submit">Guardar previsto</button></div>
+ </form></div>
+</dialog>
+
 <dialog id="modulesDialog" class="one-modules-dialog" aria-labelledby="modulesDialogTitle">
   <div style="padding:20px 22px;border-bottom:1px solid var(--border)"><h2 id="modulesDialogTitle">Herramientas adicionales</h2><p>Activá las herramientas que querés utilizar. Podés ocultarlas cuando no las necesités sin perder sus datos.</p></div>
   <div class="one-module-fixed"><strong>Siempre visibles:</strong> Inicio · Presupuesto · Movimientos</div>
   <label class="one-module-item"><input type="checkbox" id="moduleDebtsToggle"><span><strong>Deudas</strong><small>Préstamos, tarjetas y pagos pendientes.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.0</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
