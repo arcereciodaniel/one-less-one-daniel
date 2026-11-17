@@ -20,13 +20,14 @@ function saveUiState(){
   try{localStorage.setItem(UI_STORAGE_KEY,JSON.stringify(uiState))}catch{}
 }
 const ONE_DEFAULT_SHOW_COBROS=true;
-const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital","projects"]);
+const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital","projects","future"]);
 function oneModuleEnabled(name){
   if(!ONE_OPTIONAL_MODULES.has(name))return true;
   if(typeof uiState.modules?.[name]==="boolean")return uiState.modules[name];
   if(name==="debts")return !!((data.debts||[]).length||(data.movements||[]).some(m=>m.type==="Pago deuda"));
   if(name==="capital")return !!((data.reserves||[]).length||(data.reserveMovements||[]).length);
   if(name==="projects")return !!((data.projects||[]).length);
+  if(name==="future")return false;
   return ONE_DEFAULT_SHOW_COBROS||!!((data.sharedCharges||[]).length||(data.sharedChargeGroups||[]).length||(data.receivableRecurring||[]).length);
 }
 function oneRefreshModuleVisibility(){
@@ -44,6 +45,8 @@ function oneRefreshModuleVisibility(){
   if(goalsInput)goalsInput.checked=oneModuleEnabled("capital");
   const projectsInput=document.getElementById("moduleProjectsToggle");
   if(projectsInput)projectsInput.checked=oneModuleEnabled("projects");
+  const futureInput=document.getElementById("moduleFutureToggle");
+  if(futureInput)futureInput.checked=oneModuleEnabled("future");
   const current=document.querySelector(".view.active")?.id?.replace("view-","");
   if(ONE_OPTIONAL_MODULES.has(current)&&!oneModuleEnabled(current))navigate("dashboard");
 }
@@ -67,6 +70,7 @@ function initModulesBeta(){
   document.getElementById("moduleCollectionsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("shared",e.target.checked));
   document.getElementById("moduleGoalsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("capital",e.target.checked));
   document.getElementById("moduleProjectsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("projects",e.target.checked));
+  document.getElementById("moduleFutureToggle")?.addEventListener("change",e=>oneSetModuleEnabled("future",e.target.checked));
   document.getElementById("closeModulesBtn")?.addEventListener("click",()=>document.getElementById("modulesDialog")?.close());
   document.getElementById("openCollectionsFromHome")?.addEventListener("click",()=>navigate("shared"));
 }
