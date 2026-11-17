@@ -1486,6 +1486,16 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-reconcile-explainer{font-size:.77rem;line-height:1.55;margin:0}
 .one-backup-notice{display:block;width:100%;max-width:320px;font-size:.69rem;color:var(--muted);line-height:1.3}
 .one-backup-notice[hidden]{display:none!important}
+/* V10.10: misma confirmación pequeña para registros realmente persistidos. */
+.one-action-success-dialog{width:min(350px,calc(100% - 32px));max-width:350px;padding:0;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);box-shadow:0 20px 50px #0003}
+.one-action-success-dialog::backdrop{background:#0005}
+.one-action-success-content{padding:26px 23px 22px;display:grid;justify-items:center;gap:11px;text-align:center}
+.one-action-success-icon{width:44px;height:44px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);display:grid;place-items:center;font-size:1.3rem;font-weight:700}
+.one-action-success-content h2{font-size:1.08rem;line-height:1.3;margin:2px 0 0}
+.one-action-success-content p{font-size:.8rem;line-height:1.55;color:var(--muted);margin:0;overflow-wrap:anywhere;white-space:pre-line}
+.one-action-success-content button{min-width:136px;margin-top:4px}
+.one-goal-state.completed{background:var(--surface-2);color:var(--text)}
+
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
@@ -1497,7 +1507,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.9.0</small>
+      <small class="brand-version">v10.10.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1966,10 +1976,18 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.9.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.10.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
+<dialog id="oneActionSuccessDialog" class="one-action-success-dialog" aria-labelledby="oneActionSuccessTitle" aria-describedby="oneActionSuccessDescription">
+  <div class="one-action-success-content">
+    <div class="one-action-success-icon" aria-hidden="true">✓</div>
+    <h2 id="oneActionSuccessTitle">Registro guardado</h2>
+    <p id="oneActionSuccessDescription"></p>
+    <button type="button" class="btn" id="oneActionSuccessClose">Continuar</button>
+  </div>
+</dialog>
 <dialog id="movementTemplateDialog">
  <div class="dialog-body"><button class="dialog-close" type="button" aria-label="Cerrar">×</button>
   <h2 id="movementTemplateTitle">Programar movimiento</h2>
@@ -6802,6 +6820,19 @@ function refreshV7MovementCategoryFilter(){
 
 /* Acciones desde Movimientos reutilizan Cobros y reserveMovements; sin ingresos/gastos ficticios. */
 let oneCentralCobroFromMovements=false;
+function oneActionSaved(title,detail=""){
+  // No altera data: invocarlo exclusivamente DESPUÉS de save()/persistencia verificada.
+  const dialog=document.getElementById("oneActionSuccessDialog");
+  if(!dialog)return;
+  document.getElementById("oneActionSuccessTitle").textContent=String(title||"Acción completada");
+  document.getElementById("oneActionSuccessDescription").textContent=String(detail||"Se guardó correctamente.");
+  if(typeof dialog.showModal==="function"&&!dialog.open)dialog.showModal();
+}
+function oneActionSuccessInit(){
+  const dialog=document.getElementById("oneActionSuccessDialog");
+  document.getElementById("oneActionSuccessClose")?.addEventListener("click",()=>dialog?.close());
+  dialog?.addEventListener("click",event=>{if(event.target===dialog)dialog.close()});
+}
 function oneCentralNotify(message){
   const note=document.getElementById("oneCentralFeedback");
   if(!note)return;
@@ -7095,7 +7126,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="mobile-pilot/desktop.js"></script>
 </body>
