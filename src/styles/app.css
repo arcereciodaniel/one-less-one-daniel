@@ -1671,3 +1671,31 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-scenario-disclaimer{border-top:1px solid var(--border);padding-top:13px;font-size:.73rem;margin-bottom:0}
 @media(max-width:940px){.one-scenario-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.one-scenario-controls{grid-template-columns:1fr}.one-scenario-panel>summary{align-items:flex-start;flex-direction:column;gap:8px}.one-scenario-toolbar{align-items:flex-start;flex-wrap:wrap}.one-scenario-toolbar label{flex-wrap:wrap}}
+
+
+/* V11.6 · Conciliación prevista/real; geometría consistente claro y oscuro. */
+.one-project-plan-totals{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:13px 0 8px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.one-project-plan-totals span{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:.74rem;color:var(--muted)}
+.one-project-plan-totals strong{font-size:.78rem;color:var(--text);font-variant-numeric:tabular-nums}
+.one-project-plan-row{padding:14px 0;border-bottom:1px solid var(--border);display:grid;gap:11px}
+.one-project-plan-row:last-child{border-bottom:0}
+.one-project-plan-header{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.one-project-plan-header>div:first-child{display:grid;gap:4px;min-width:0}
+.one-project-plan-header strong{font-size:.83rem;overflow-wrap:anywhere}
+.one-project-plan-header .one-project-plan-status{font-size:.73rem;color:var(--muted)}
+.one-project-plan-header .one-project-item-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:65%}
+.one-project-plan-header .one-project-item-actions button{white-space:nowrap}
+.one-project-plan-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.one-project-plan-amounts span{display:grid;gap:4px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:.7rem}
+.one-project-plan-amounts b{font-size:.79rem;color:var(--text);font-variant-numeric:tabular-nums;font-weight:700;overflow-wrap:anywhere}
+.one-project-plan-variance{display:block;color:var(--muted);font-size:.74rem}
+.one-project-plan-matches{display:grid;gap:7px;padding-top:4px}
+.one-project-plan-match{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}
+.one-project-plan-match span{font-size:.72rem;line-height:1.45;color:var(--muted);overflow-wrap:anywhere;min-width:0}
+.one-project-plan-match button{flex:none}
+@media(max-width:700px){
+ .one-project-plan-header{display:grid}
+ .one-project-plan-header .one-project-item-actions{justify-content:flex-start;max-width:100%}
+ .one-project-plan-amounts span{padding:8px}
+ .one-project-plan-match{align-items:start;flex-wrap:wrap}
+}
