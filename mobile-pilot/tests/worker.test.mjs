@@ -203,3 +203,67 @@ test("V10.7: un cobro simple crea grupo nuevo en un envío idempotente",async()=
   {id:"cobro-grupo-doble-abcdefgh12",movement:{...entry.movement,groupId:"group-123456"}});
  assert.equal(invalid.response.status,400);
 });
+
+
+test("V11.8: catálogo publica nombres de proyectos y conceptos, jamás montos ni notas",async()=>{
+ const {env,req}=fixture();
+ const projectId="project-santateresa-2026",bucketId="hotel-2026-nov";
+ const sent={categories:[{id:"cat-g",name:"Comida",type:"Gasto"}],debts:[],goals:[],
+  projects:[{id:projectId,name:"Viaje Santa Teresa",currency:"USD",budget:10000,privateNotes:"No publicar",
+   buckets:[{id:bucketId,name:"Hotel",budget:5000,spent:3000,notes:"Interno"}]}]};
+ const result=await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,sent);
+ assert.equal(result.response.status,200);
+ const row=(await req("/api/catalog","GET",env.MOBILE_WRITE_KEY)).json.catalog;
+ assert.equal(row.projects[0].name,"Viaje Santa Teresa");
+ assert.deepEqual(row.projects[0].buckets,[{id:bucketId,name:"Hotel"}]);
+ const serialized=JSON.stringify(row);
+ for(const forbidden of ["10000","5000","3000","privateNotes","No publicar","Interno","currency","spent"])
+  assert(!serialized.includes(forbidden),"Catálogo contiene "+forbidden);
+});
+test("V11.8: gasto con proyecto y concepto validado conserva vínculo en D1, reintentos idempotentes",async()=>{
+ const {env,req,rows}=fixture(),today=new Date().toISOString().slice(0,10);
+ const projectId="project-viaje-1234567890",bucketId="bucket-hotel-1234567";
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{
+  categories:[{id:"gasto-hotel",name:"Hotel",type:"Gasto"}],debts:[],goals:[],
+  projects:[{id:projectId,name:"Vacaciones",buckets:[{id:bucketId,name:"Hospedaje"}]}]
+ });
+ const m={type:"Gasto",date:today,amount:300,currency:"USD",categoryId:"gasto-hotel",
+  description:"Una noche",projectId,projectBucketId:bucketId};
+ const id="project-mobile-expense-0123456";
+ for(let i=0;i<2;i++){
+  const result=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{id,movement:m});
+  assert.equal(result.response.status,200,JSON.stringify(result.json));
+ }
+ assert.equal(rows.size,1);
+ const found=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items[0].movement;
+ assert.equal(found.projectId,projectId);
+ assert.equal(found.projectBucketId,bucketId);
+ assert.equal(found.amount,300);assert.equal(found.currency,"USD");
+});
+test("V11.8: catálogo obsoleto, concepto desconocido y uso fuera de Gasto quedan rechazados",async()=>{
+ const {env,req,rows}=fixture(),date=new Date().toISOString().slice(0,10);
+ const projectId="project-viaje-1234567890",bucketId="bucket-hotel-1234567";
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{
+  categories:[{id:"g1",name:"Compras",type:"Gasto"},{id:"i1",name:"Ingresos",type:"Ingreso"}],
+  debts:[],goals:[],projects:[{id:projectId,name:"Viaje",buckets:[{id:bucketId,name:"Hotel"}]}]
+ });
+ const movement={type:"Gasto",date,amount:9000,currency:"CRC",categoryId:"g1"};
+ async function post(id,m){
+  return req("/api/inbox","POST",env.MOBILE_WRITE_KEY,{id,movement:m});
+ }
+ assert.equal((await post("project-unlinked-00000000001",{...movement,projectBucketId:bucketId})).response.status,400);
+ assert.equal((await post("project-wrong-type-00000001",{...movement,type:"Ingreso",categoryId:"i1",projectId})).response.status,400);
+ assert.equal((await post("project-archived-id-0000001",{...movement,projectId:"archivado-abc1234567"})).response.status,409);
+ assert.equal((await post("project-wrong-bucket-000001",{...movement,projectId,projectBucketId:"unknown-bucket-1234"})).response.status,409);
+ assert.equal(rows.size,0);
+ const classic=await post("project-legacy-000000000001",movement);
+ assert.equal(classic.response.status,200,"Un gasto normal sin proyecto debe funcionar como antes");
+ assert.equal(rows.size,1);
+});
+test("V11.8: no permite más de 35 proyectos ni exponer presupuestos del catálogo",async()=>{
+ const {env,req}=fixture();
+ const result=await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{
+  categories:[],debts:[],goals:[],projects:Array.from({length:36},(_,i)=>({id:"proyecto-"+i,name:"P"+i,buckets:[]}))
+ });
+ assert.equal(result.response.status,400);
+});
