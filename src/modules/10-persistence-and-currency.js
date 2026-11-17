@@ -102,6 +102,16 @@ function oneHealthCheck(raw){
  }
  countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
  countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
+ const plans=new Map(get("projectPlans").map(x=>[x.id,x]));
+ let orphanReconciliations=0,wrongPlanBuckets=0;
+ for(const link of get("projectLinks")){
+  if(!link.planId)continue;
+  const plan=plans.get(link.planId);
+  if(!plan||plan.projectId!==link.projectId)orphanReconciliations++;
+  else if(plan.bucketId&&plan.bucketId!==link.bucketId)wrongPlanBuckets++;
+ }
+ countIssue(orphanReconciliations,"conciliación(es) vinculadas a previsiones inexistentes o de otro proyecto.");
+ countIssue(wrongPlanBuckets,"conciliación(es) cuyo concepto es distinto del previsto.");
  const goalIds=new Set(get("reserves").filter(r=>r.type==="goal").map(r=>r.id));
  const projectGroupIds=new Set(get("sharedChargeGroups").map(g=>g.id));
  const usedGoals=new Set(),usedProjectGroups=new Set();
