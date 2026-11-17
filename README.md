@@ -149,3 +149,14 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - Los tipos de deuda son un catálogo **local**, con nombre y estructura (`card`, `loan`, `installments`, `family`, `other`). Se pueden crear, editar, archivar y reactivar; no se permite cambiar la estructura si tiene deudas vinculadas ni archivar tipos en uso. El campo histórico `debt.type` permanece para clasificación y cálculos, y los registros nuevos pueden guardar `typeId`.
 - El formulario de Deudas presenta campos específicos según la estructura (corte y límite para tarjetas, entidad/plazo para préstamos, número de cuotas en compras a plazos). No crea pagos, ingresos ni gastos adicionales; los saldos, pagos y conciliaciones existentes se conservan.
 - Daniel y Lab comparten el código y mantienen datos locales separados. Gloriana y el Worker del iPhone no se modificaron. Proyectos y Futuro quedan para las próximas betas.
+
+## V11.2 — Proyectos Beta 1.0
+
+- Herramienta opcional en `+` → **Proyectos** para administrar viajes, eventos y planes financieros sin crear un segundo libro contable. Disponible en Daniel y Lab, con datos locales separados; Gloriana permanece sin cambios.
+- Proyecto con nombre, inicio/fin opcionales, moneda CRC/USD, presupuesto total y conceptos internos con presupuesto individual. La suma de conceptos puede diferir del total, con advertencia explícita.
+- **Gastos reales:** referencias en `projectLinks` que apuntan a IDs de `movements` existentes de tipo `Gasto`. Un movimiento puede aparecer en un único proyecto. Desde Movimientos se puede asignar durante el registro o edición, y desde Proyectos vincular un gasto ya existente. Desvincular NO borra el movimiento; eliminar el gasto desde Movimientos retira su referencia.
+- **Gastos previstos:** `projectPlans` son anotaciones independientes sin efecto en liquidez, metas, presupuesto general ni movimientos. Se pueden resolver/reabrir manualmente para evitar que una previsión se sume a un gasto ya realizado.
+- Conversiones dentro del proyecto respetan importe original y tasa histórica guardada en el movimiento. Si falta tasa, se usa referencia actual únicamente como estimación de visualización. No se recalculan los asientos históricos.
+- Los proyectos archivados conservan presupuestos, previsiones y gastos vinculados; pueden reactivarse sin migración.
+- Respaldos y restauraciones incluyen `projects`, `projectLinks` y `projectPlans`, con validación de referencias, monedas y duplicados. Diagnóstico no destructivo añadido para vínculos huérfanos o duplicados.
+- Sin base de datos nueva, endpoints, cargas del teléfono ni cambios en Cloudflare. **V11.3 — Futuro** queda como siguiente beta.
