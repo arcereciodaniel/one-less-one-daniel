@@ -133,3 +133,54 @@ test("V10.7: Ingreso y Gasto envían USD sin convertir",async()=>{
   assert.equal(x.errors.length,0);
  }finally{x.close()}
 });
+
+
+test("V10.8: interfaz USD presenta explicación sin agregar campos y conserva fecha Safari",async()=>{
+ const x=boot();try{
+  const {w,doc}=x;await new Promise(r=>setTimeout(r,20));
+  const hint=doc.getElementById("currencyHint");
+  assert.equal(hint.hidden,true);
+  doc.getElementById("currency").value="USD";
+  doc.getElementById("currency").dispatchEvent(new w.Event("change",{bubbles:true}));
+  assert.equal(hint.hidden,false);
+  assert.match(hint.textContent,/tipo de cambio histórico/i);
+  assert.equal(doc.getElementById("moneySymbol").textContent,"$");
+  const date=doc.getElementById("date");
+  assert.equal(date.type,"date");
+  const prior=date.value;
+  doc.dispatchEvent(new w.Event("visibilitychange"));
+  assert.equal(date.value,prior,"Volver a Safari no modifica la fecha introducida");
+  assert.match(date.max,/^\\d{4}-\\d{2}-\\d{2}$/);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
+test("V10.8: tras falla de conexión, reintentar conserva mismo ID y no pierde el borrador",async()=>{
+ const x=boot();try{
+  const {w,doc,submitted}=x;await new Promise(r=>setTimeout(r,20));
+  let attempts=0;
+  w.fetch=async (path,opts={})=>{
+   if(path==="/api/inbox"&&opts.method==="POST"){
+    attempts++;
+    if(attempts===1)throw Error("Sin conexión");
+    const payload=JSON.parse(opts.body);submitted.push(payload);
+    return {ok:true,json:async()=>({received:true,id:payload.id})};
+   }
+   throw Error("Ruta inesperada "+path);
+  };
+  doc.getElementById("categoryId").value="cat-g";
+  doc.getElementById("amount").value="7500";
+  doc.getElementById("description").value="Compra sin red";
+  const submit=()=>doc.getElementById("entryForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+  submit();await new Promise(r=>setTimeout(r,35));
+  const draft=w.localStorage.getItem("one_one_mobile_v1_draft");
+  assert(draft,"El borrador debe mantenerse después de un error");
+  const draftId=JSON.parse(draft).id;
+  assert.match(doc.getElementById("status").textContent,/No confirmado/);
+  submit();await new Promise(r=>setTimeout(r,35));
+  assert.equal(attempts,2);
+  assert.equal(submitted.length,1);
+  assert.equal(submitted[0].id,draftId);
+  assert.equal(w.localStorage.getItem("one_one_mobile_v1_draft"),null);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
