@@ -5394,6 +5394,13 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  // Un vencimiento es un estimado; pago mínimo actual, sin simular nuevos intereses.
  // Pagos de deuda ya registrados con fecha futura se incluyen arriba como reales
  // y reducen la cuota a proyectar en ese ciclo.
+ // También mirar el cierre del último período que cruza el horizonte.
+ // Una cuota del día 25 puede quedar fuera de una vista de 30 días, pero
+ // dentro de la quincena iniciada: debe reducir el presupuesto de deuda
+ // para que 30, 60 y 90 días coincidan en las fechas compartidas.
+ const coveringEnds=(data.periods||[]).filter(p=>p?.date&&p.date<=until)
+  .map(p=>periodEndDate(p)).filter(end=>end>=asOf).sort();
+ const debtPlanningUntil=coveringEnds.at(-1)||until;
  const dueDates=[];
  let undatedDebts=0,overdueDebts=0;
  for(const d of activeDebts()){
@@ -5402,7 +5409,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   let due=first.date,remainingBalance=Math.max(0,debtOutstanding(d)),cycle=0;
   while(due&&cycle<5&&remainingBalance>.005){
    const debitDate=due<=asOf?tomorrow:due;
-   if(debitDate>until)break;
+   if(debitDate>debtPlanningUntil)break;
    if(due<=asOf)overdueDebts++;
    const prior=oneDebtMonthlyDueIso(d,oneDebtShiftMonth(due.slice(0,7),-1));
    const known=(data.movements||[]).filter(m=>m.type==="Pago deuda"&&m.date>asOf&&m.date>prior&&m.date<=due&&
