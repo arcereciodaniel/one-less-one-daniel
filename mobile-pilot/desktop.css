@@ -7,3 +7,13 @@
 .one-mobile-actions{display:flex;gap:7px;flex-wrap:wrap}.one-mobile-caution{font-size:.69rem!important}
 #oneMobileStatus[data-tone=warning]{color:var(--danger)}#oneMobileStatus[data-tone=ok]{color:var(--success)}
 @media(max-width:620px){.one-mobile-fields{grid-template-columns:1fr}}
+/* V10.8 — Los registros pendientes se explican dentro de la configuración existente. */
+.one-mobile-issues{border:1px solid var(--border);border-radius:9px;padding:11px 13px;margin-top:12px;background:var(--surface-2)}
+.one-mobile-issues>summary{cursor:pointer;font-size:.77rem;font-weight:750;color:var(--text)}
+.one-mobile-issues ul{list-style:none;margin:12px 0 6px;padding:0;display:grid;gap:11px}
+.one-mobile-issues li{display:grid;justify-items:start;gap:5px;padding:0 0 10px;border-bottom:1px solid var(--border)}
+.one-mobile-issues li:last-child{border-bottom:0;padding-bottom:0}
+.one-mobile-issues li strong{font-size:.73rem;font-weight:700;overflow-wrap:anywhere}
+.one-mobile-issues li span{font-size:.72rem;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.one-mobile-issues li button{margin-top:3px}
+.one-mobile-issues p{font-size:.69rem!important}
