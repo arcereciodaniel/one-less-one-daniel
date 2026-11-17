@@ -167,3 +167,10 @@ La pestaña **Grupos** incluye un resumen **por persona** con cobros de todos lo
 Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente, seleccionar participantes habituales y registrar el reparto o un cobro individual. Solo se sincronizan el ID/nombre del grupo y nombres de personas; no se envían balances, importes anteriores, notas ni respaldos. Se requiere haber sincronizado Daniel para actualizar el catálogo antes de reutilizar grupos en el teléfono.
 
 **Integridad:** una cena nueva no sobrescribe el hotel ni recrea el grupo; los reintentos móviles no duplican cargos. Ningún reparto agrega otro gasto o ingreso en Movimientos. Los abonos posteriores se registran individualmente como antes. Gloriana queda sin cambios.
+
+## V10.7 — Captura rápida en CRC/USD y grupos individuales
+- Gasto, Ingreso y Cobro admiten monto CRC o USD con un control compacto junto al monto.
+- El iPhone envía el monto original. Al importar, One Less One Daniel lo registra en su moneda de origen y captura el tipo de cambio confirmado: **compra para ingreso**, **venta para gasto**. Sin TC confirmado, el registro en USD queda pendiente.
+- En Cobro se distingue entre **Sin grupo**, **Crear grupo nuevo** y grupos existentes. El grupo nuevo se crea junto al primer cobro individual, sin tener que dividirlo. Solo si se activa «Dividir gasto» aparecen los participantes y las reglas de reparto.
+- El Worker no recibe saldos, gastos antiguos ni respaldos; solo nuevos registros enviados y catálogos mínimos. Los cobros pendientes no crean gastos ni ingresos en Movimientos.
+- Antes de probar los cambios en Safari, verificar que el Worker Cloudflare se haya desplegado efectivamente. Una actualización de GitHub sin el despliegue móvil no modifica el formulario alojado en Workers.
