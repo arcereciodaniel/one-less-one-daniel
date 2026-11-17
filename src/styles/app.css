@@ -1488,3 +1488,31 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
+
+/* V11.1 · Configuración y formularios adaptativos */
+.one-settings-dialog{width:min(610px,calc(100vw - 28px));max-height:90vh;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0}
+.one-settings-dialog::backdrop{background:rgba(0,0,0,.55)}
+.one-settings-dialog .dialog-body{padding:23px;max-width:none}
+.one-settings-dialog h2{margin:0 0 6px}
+.one-settings-dialog h3{font-size:.86rem;margin:0 0 10px}
+.one-settings-dialog .muted{font-size:.8rem;line-height:1.55}
+.one-settings-group{border-top:1px solid var(--border);margin-top:18px;padding-top:17px}
+.one-settings-action{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:12px;margin:7px 0}
+.one-settings-action:hover{background:var(--surface-hover)}
+.one-settings-action span:first-child{display:grid;gap:4px}
+.one-settings-action small,.one-debt-type-row small{color:var(--muted);font-size:.72rem}
+.one-settings-action>span:last-child{font-size:1.3rem;color:var(--muted)}
+.one-settings-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.one-settings-dialog .one-payday-panel{margin:10px 0 0}
+.one-settings-dialog .one-payday-panel form{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.one-settings-dialog .one-payday-panel form>div{flex:1 1 100%}
+.one-settings-dialog .one-payday-panel form label{flex:1 1 90px}
+.one-settings-dialog .one-payday-panel form input{max-width:100%}
+.one-debt-field[hidden]{display:none!important}
+.one-debt-type-list{display:grid;gap:8px;margin-top:18px}
+.one-debt-type-row{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.one-debt-type-row>div:first-child{display:grid;gap:3px;min-width:0}
+.one-debt-type-row.is-archived{opacity:.65}
+.one-debt-type-actions{display:flex;gap:5px;flex-wrap:wrap}
+.one-debt-type-actions button{font-size:.74rem}
+@media(max-width:600px){.one-settings-dialog .dialog-body{padding:17px}.one-debt-type-row{align-items:flex-start;flex-direction:column}}
