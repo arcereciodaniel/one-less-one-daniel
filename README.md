@@ -142,3 +142,10 @@ La aplicación se desarrolla ahora desde fuentes separadas en `src/app-shell.htm
 4. Ejecutar pruebas; GitHub Actions verifica automáticamente coherencia, finanzas, privacidad y comportamiento antes de publicar.
 
 El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesarios. Los archivos de origen `src/` no se envían a GitHub Pages. Las claves de `localStorage`, los respaldos y los datos reales se conservan. Gloriana no se modifica. El formulario del iPhone y Cloudflare permanecen sin cambios.
+
+## V11.1 — Configuración y tipos de deuda
+
+- Se agregó **Configuración** desde el encabezado para acceder a categorías, tipos de deuda, tipo de cambio, calendario salarial, respaldo/restauración y mantenimiento local. Los días salariales reutilizan su formulario y reglas existentes.
+- Los tipos de deuda son un catálogo **local**, con nombre y estructura (`card`, `loan`, `installments`, `family`, `other`). Se pueden crear, editar, archivar y reactivar; no se permite cambiar la estructura si tiene deudas vinculadas ni archivar tipos en uso. El campo histórico `debt.type` permanece para clasificación y cálculos, y los registros nuevos pueden guardar `typeId`.
+- El formulario de Deudas presenta campos específicos según la estructura (corte y límite para tarjetas, entidad/plazo para préstamos, número de cuotas en compras a plazos). No crea pagos, ingresos ni gastos adicionales; los saldos, pagos y conciliaciones existentes se conservan.
+- Daniel y Lab comparten el código y mantienen datos locales separados. Gloriana y el Worker del iPhone no se modificaron. Proyectos y Futuro quedan para las próximas betas.
