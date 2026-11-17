@@ -102,6 +102,26 @@ function oneHealthCheck(raw){
  }
  countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
  countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
+ const goalIds=new Set(get("reserves").filter(r=>r.type==="goal").map(r=>r.id));
+ const projectGroupIds=new Set(get("sharedChargeGroups").map(g=>g.id));
+ const usedGoals=new Set(),usedProjectGroups=new Set();
+ let orphanProjectGoals=0,orphanProjectGroups=0,repeatedProjectGoals=0,repeatedProjectGroups=0;
+ for(const project of get("projects")){
+  if(project.goalId){
+   if(!goalIds.has(project.goalId))orphanProjectGoals++;
+   if(usedGoals.has(project.goalId))repeatedProjectGoals++;
+   usedGoals.add(project.goalId);
+  }
+  if(project.cobroGroupId){
+   if(!projectGroupIds.has(project.cobroGroupId))orphanProjectGroups++;
+   if(usedProjectGroups.has(project.cobroGroupId))repeatedProjectGroups++;
+   usedProjectGroups.add(project.cobroGroupId);
+  }
+ }
+ countIssue(orphanProjectGoals,"referencia(s) de Proyecto a Metas inexistentes.");
+ countIssue(orphanProjectGroups,"referencia(s) de Proyecto a grupos de Cobros inexistentes.");
+ countIssue(repeatedProjectGoals,"Meta(s) vinculadas a más de un Proyecto.");
+ countIssue(repeatedProjectGroups,"grupo(s) de Cobros vinculados a más de un Proyecto.");
  return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
 }
 function oneRenderDataHealth(){
