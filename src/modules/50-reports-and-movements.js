@@ -647,6 +647,7 @@ function openDebt(d=null){
  });
  document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
  document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
+ document.getElementById("dFullPaymentCurrency").value=normalizeCurrency(d?.fullPaymentCurrency||"CRC");
  oneRefreshDebtTypeSelect(d);oneDebtFormUpdate();
  const rates=currentRates();document.getElementById("dFxPreview").value="Venta actual: ₡"+rates.sell.toFixed(2);
  dialog.showModal();
