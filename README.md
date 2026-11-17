@@ -88,3 +88,16 @@ El registro de **Gasto, Ingreso y Cobro** del iPhone conserva CRC/USD originales
 La configuración **Movimientos → Registro desde iPhone** muestra las incidencias por operación en un detalle desplegable: fecha, tipo, descripción y error con acceso a la pantalla pertinente. No se modifican respaldos, historial ni saldos del teléfono y se mantiene la importación idempotente. El formulario móvil añade una breve explicación solo al seleccionar USD y conserva la fecha cuando vuelve a estar visible en Safari.
 
 **Despliegue:** V10.8 aplica a Daniel y Lab con almacenamiento independiente. Gloriana permanece sin cambios. Las pruebas automáticas verifican TC exacto/anterior, cobros compartidos, falta de histórico, corrección de incidencias y reintentos tras fallos de confirmación. No sustituye la comprobación manual en el iPhone de pantalla bloqueada, Safari, teclado y Atajos.
+
+
+## V10.9 — Protección y claridad financiera (Daniel + Lab)
+
+**Estado de tus datos y respaldos:** dentro de Inicio → Conciliación de saldo, ahora existe un detalle pequeño, optativo y 100 % local con diagnóstico no destructivo de IDs duplicados, referencias huérfanas entre categorías/deudas/metas/cobros, fechas y montos inválidos y movimientos USD antiguos sin tipo de cambio histórico. No reescribe registros, ni envía información, ni garantiza haber detectado todos los problemas. Las advertencias sirven para orientar una revisión manual y conservar un JSON antes de cualquier reparación.
+
+**Respaldar:** el botón ahora diferencia claramente *solicitar descarga* de *confirmar archivo*. Se indica que el usuario debe comprobar el JSON en Descargas y guardarlo fuera del navegador; la fecha local es solo «última descarga solicitada». Se impide descargar inadvertidamente una copia de la pestaña desactualizada ante conflictos detectados; se mantienen las protecciones de V10.3 para escritura y restauración. El recordatorio es discreto dentro de Estado de datos (ninguna copia se sube a un servidor).
+
+**Conciliación:** se distinguen saldos calculados y confirmados. Antes de guardar, la vista indica si el ajuste aumenta o reduce el saldo y recuerda que conciliar no crea ingreso, gasto ni pago de deuda. No permite fechas futuras o fuera del período al confirmar.
+
+**Inicio:** la variación de 30 días se identifica explícitamente como variación del *saldo operativo*, no del gasto, y ya no colorea automáticamente una subida/bajada como buena o mala; el indicador de consumo de presupuesto aclara que no compara el tiempo transcurrido.
+
+**Alcance y límites:** misma arquitectura localStorage y mismos registros/IDs; ningún nuevo módulo ni servidor. Lab mantiene almacenamiento aislado y Gloriana no se modifica. Las pruebas de V10.9 se ejecutan también antes de publicar GitHub Pages. El diagnóstico no sustituye un respaldo externo comprobado ni una conciliación con saldos reales.
