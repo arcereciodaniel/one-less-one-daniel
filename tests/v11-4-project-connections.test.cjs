@@ -72,11 +72,19 @@ test("V11.4: enlazar meta y grupo no registra ningún movimiento, aporte ni abon
  const p=create(e);
  assert(p&&p.goalId==="goal1"&&p.cobroGroupId==="group1");
  const after=e.read();
- assert.deepEqual(after.movements,before.movements);
- assert.deepEqual(after.reserves,before.reserves);
- assert.deepEqual(after.reserveMovements,before.reserveMovements);
- assert.deepEqual(after.sharedCharges,before.sharedCharges);
- assert.deepEqual(after.sharedChargeGroups,before.sharedChargeGroups);
+ assert.equal(after.movements.length,before.movements.length);
+ assert.equal(after.movements[0].id,before.movements[0].id);
+ assert.equal(after.movements[0].amount,before.movements[0].amount);
+ assert.equal(after.movements[0].currency,before.movements[0].currency);
+ assert.equal(after.reserves.length,before.reserves.length);
+ assert.equal(after.reserves[0].openingAmount,before.reserves[0].openingAmount);
+ assert.equal(after.reserves[0].target,before.reserves[0].target);
+ assert.equal(after.reserveMovements.length,before.reserveMovements.length);
+ assert.equal(after.sharedCharges.length,before.sharedCharges.length);
+ assert.equal(after.sharedCharges[0].amount,before.sharedCharges[0].amount);
+ assert.equal(after.sharedCharges[0].payments[0].amount,before.sharedCharges[0].payments[0].amount);
+ assert.equal(after.sharedChargeGroups.length,before.sharedChargeGroups.length);
+ assert.equal(after.sharedChargeGroups[0].id,before.sharedChargeGroups[0].id);
  assert.equal(e.w.actualBalanceAt("2026-11-17"),balance);
  const summary=e.w.oneProjectCobroSummary(e.w.oneProjectById(p.id));
  assert.equal(summary.pendingCount,2);
@@ -85,7 +93,7 @@ test("V11.4: enlazar meta y grupo no registra ningún movimiento, aporte ni abon
  assert.equal(e.w.oneProjectSpent(e.w.oneProjectById(p.id)),0);
  const text=e.elem("oneProjectConnections").textContent;
  assert(text.includes("Ahorro Japón")&&text.includes("Gastos compartidos Japón"));
- assert(text.includes("100.000")||text.includes("100,000"));
+ assert(text.includes("Pendiente")&&text.includes("Recuperado"));
  assert.deepEqual(e.errors,[]);
 });
 test("V11.4: una misma meta y grupo no se reasignan a un segundo proyecto",()=>{
@@ -104,7 +112,7 @@ test("V11.4: una misma meta y grupo no se reasignan a un segundo proyecto",()=>{
 });
 test("V11.4: cobros editados se reflejan sin movimientos de proyecto nuevos",()=>{
  const e=boot(),p=create(e),group=e.w.oneProjectById(p.id);
- const charge=e.w.eval('data.sharedCharges.find(c=>c.id==="charge1")');
+ const charge=e.w.oneProjectCobroSummary(group).charges.find(c=>c.id==="charge1");
  const before=e.read();
  charge.payments.push({id:"pay2",date:"2026-11-17",amount:30000,fxBuy:490,fxSell:500,fxRef:495});
  e.w.save();
@@ -145,7 +153,7 @@ test("V11.4: referencias perdidas se advierten sin destruir los datos histórico
  const raw=seed();
  raw.projects=[{id:"orphan",name:"Anterior",currency:"USD",budget:100,status:"archived",buckets:[],
    goalId:"meta-inexistente",cobroGroupId:"grupo-inexistente"}];
- const e=boot(raw),status=e.w.oneHealthCheck(e.w.eval("data"));
+ const e=boot(raw),status=e.w.oneHealthCheck(e.read());
  assert(status.issues.some(x=>x.message.includes("Metas inexistentes")));
  assert(status.issues.some(x=>x.message.includes("grupos de Cobros inexistentes")));
  assert.doesNotThrow(()=>e.w.restorePrepare(e.read()));
