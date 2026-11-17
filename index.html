@@ -1632,6 +1632,21 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-future-assumptions ul{padding-left:20px}
 @media(max-width:950px){.one-future-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.one-future-columns{grid-template-columns:1fr}}
 @media(max-width:540px){#view-future>.v7-page-head{align-items:flex-start;gap:12px}.one-future-selector{width:100%;justify-content:stretch}.one-future-selector button{flex:1}.one-future-stats{gap:8px}.one-future-stat{padding:12px}.one-future-milestone,.one-future-breakdown-row{align-items:flex-start}.one-future-milestone>strong{white-space:normal;text-align:right}}
+
+
+/* V11.4 · Proyectos + Metas + Cobros: referencias, no transacciones. */
+.one-project-connections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.one-project-connection{padding:15px 17px;background:var(--surface);border:1px solid var(--border);border-radius:11px;min-width:0}
+.one-project-connection-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
+.one-project-connection-head h3{margin:0;font-size:.91rem}
+.one-project-connection-main{display:grid;gap:5px;margin-bottom:7px}
+.one-project-connection-main strong{font-size:.88rem;overflow-wrap:anywhere}
+.one-project-connection-main span{font-size:.85rem;font-variant-numeric:tabular-nums}
+.one-project-connection-values{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0}
+.one-project-connection-values>span{display:grid;gap:4px;font-size:.7rem;color:var(--muted)}
+.one-project-connection-values strong{color:var(--text);font-size:.9rem;font-variant-numeric:tabular-nums}
+.one-project-connection .muted{font-size:.74rem;line-height:1.6;margin:8px 0 0}
+@media(max-width:760px){.one-project-connections{grid-template-columns:1fr}}
 </style>
 <link rel="stylesheet" href="mobile-pilot/desktop.css">
 </head>
@@ -1641,7 +1656,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.3.0</small>
+      <small class="brand-version">v11.4.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -2103,7 +2118,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
   <section class="view" id="view-projects">
     <div class="v7-page-head">
-      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.0</div><h1>Tus proyectos</h1>
+      <div><div class="v7-eyebrow">PROYECTOS · BETA 1.1</div><h1>Tus proyectos</h1>
         <p class="sub">Organizá viajes y planes con un presupuesto propio, sin duplicar tus movimientos.</p></div>
       <div class="v7-page-actions"><button class="btn" type="button" id="oneCreateProjectBtn">＋ Nuevo proyecto</button></div>
     </div>
@@ -2115,6 +2130,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
         <div class="one-project-actions"><button type="button" class="btn secondary small" id="oneProjectEditBtn">Editar</button><button type="button" class="btn secondary small" id="oneProjectArchiveBtn">Archivar</button></div>
       </div>
       <div id="oneProjectKpis" class="one-project-kpis"></div>
+      <div id="oneProjectConnections" class="one-project-connections" aria-label="Metas y cobros relacionados"></div>
       <div class="one-project-progress"><div class="one-project-progress-head"><span>Presupuesto utilizado</span><strong id="oneProjectProgressLabel">0%</strong></div><div class="one-project-track"><span id="oneProjectProgressFill"></span></div><p id="oneProjectBudgetNote" class="muted"></p></div>
       <div class="one-project-sections">
         <div class="v7-card one-project-panel"><div class="one-project-panel-head"><div><h3>Presupuesto por concepto</h3><p class="muted">Distribuí el total sin crear categorías globales.</p></div><button class="btn secondary small" id="oneAddProjectBucket" type="button">＋ Concepto</button></div>
@@ -2191,7 +2207,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.3.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2244,6 +2260,12 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
    <div class="field"><label for="oneProjectEnd">Finalización (opcional)</label><input id="oneProjectEnd" type="date"></div>
    <div class="field"><label for="oneProjectBudget">Presupuesto total</label><input id="oneProjectBudget" type="number" min="0" step=".01" required></div>
    <div class="field"><label for="oneProjectCurrency">Moneda de presupuesto</label><select id="oneProjectCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+   <div class="field wide"><label for="oneProjectGoal">Meta de ahorro relacionada (opcional)</label>
+     <select id="oneProjectGoal"><option value="">Sin meta vinculada</option></select>
+     <small class="muted">El saldo de una meta se muestra aparte: no reduce el gasto del proyecto ni crea un aporte nuevo.</small></div>
+   <div class="field wide"><label for="oneProjectCobroGroup">Grupo de Cobros relacionado (opcional)</label>
+     <select id="oneProjectCobroGroup"><option value="">Sin grupo vinculado</option></select>
+     <small class="muted">Solo muestra lo pendiente y recuperado de ese grupo. No lo suma al presupuesto disponible.</small></div>
    <div class="field wide"><label for="oneProjectNotes">Notas (opcional)</label><textarea id="oneProjectNotes" maxlength="500"></textarea></div>
    <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneProjectCancel">Cancelar</button><button class="btn" type="submit">Guardar proyecto</button></div>
  </form></div>
@@ -2277,7 +2299,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <label class="one-module-item"><input type="checkbox" id="moduleDebtsToggle"><span><strong>Deudas</strong><small>Préstamos, tarjetas y pagos pendientes.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
-  <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.0</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.1</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.0</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
@@ -2951,6 +2973,8 @@ function migrateData(raw){
     p.status=p.status==="archived"?"archived":"active";
     p.currency=normalizeCurrency(p.currency||"CRC");
     p.buckets=Array.isArray(p.buckets)?p.buckets:[];
+    p.goalId=typeof p.goalId==="string"?p.goalId:"";
+    p.cobroGroupId=typeof p.cobroGroupId==="string"?p.cobroGroupId:"";
     p.budget=Number.isFinite(Number(p.budget))?Math.max(0,Number(p.budget)):0;
   });
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
@@ -3250,7 +3274,7 @@ function restoreValidate(raw){
     if(typeof cat.name!=="string"||!cat.name.trim()||typeof cat.type!=="string"||!cat.type.trim())
       throw Error("Hay categorías incompletas.");
   }
-  const projectIds=new Set();
+  const projectIds=new Set(),projectGoals=new Set(),projectCobroGroups=new Set();
   for(const p of raw.projects||[]){
     if(typeof p.id!=="string"||!p.id.trim()||projectIds.has(p.id)||
       typeof p.name!=="string"||!p.name.trim()||!restoreValidMoney(p.budget)||Number(p.budget)<0||
@@ -3258,6 +3282,10 @@ function restoreValidate(raw){
       throw Error("Hay proyectos con datos incompletos o identificadores duplicados.");
     if((p.startDate&&!restoreValidDate(p.startDate))||(p.endDate&&!restoreValidDate(p.endDate))||
       (p.startDate&&p.endDate&&p.endDate<p.startDate))throw Error("Hay fechas de proyecto inválidas.");
+    if(p.goalId!==undefined&&typeof p.goalId!=="string")throw Error("Una referencia a Meta en Proyectos es inválida.");
+    if(p.cobroGroupId!==undefined&&typeof p.cobroGroupId!=="string")throw Error("Una referencia a Cobros en Proyectos es inválida.");
+    if(p.goalId){if(projectGoals.has(p.goalId))throw Error("Una Meta está vinculada a varios proyectos.");projectGoals.add(p.goalId);}
+    if(p.cobroGroupId){if(projectCobroGroups.has(p.cobroGroupId))throw Error("Un grupo de Cobros está vinculado a varios proyectos.");projectCobroGroups.add(p.cobroGroupId);}
     if(p.buckets!==undefined&&(!Array.isArray(p.buckets)||p.buckets.some(b=>!restoreIsRecord(b)||
        !b.id||typeof b.name!=="string"||!b.name.trim()||!restoreValidMoney(b.budget)||Number(b.budget)<0)))
       throw Error("Hay conceptos de presupuesto de proyecto inválidos.");
@@ -3408,6 +3436,26 @@ function oneHealthCheck(raw){
  }
  countIssue(badProjectLinks,"vínculo(s) de proyecto con gasto o proyecto inexistente.");
  countIssue(duplicateProjectLinks,"gasto(s) asignados más de una vez a proyectos.");
+ const goalIds=new Set(get("reserves").filter(r=>r.type==="goal").map(r=>r.id));
+ const projectGroupIds=new Set(get("sharedChargeGroups").map(g=>g.id));
+ const usedGoals=new Set(),usedProjectGroups=new Set();
+ let orphanProjectGoals=0,orphanProjectGroups=0,repeatedProjectGoals=0,repeatedProjectGroups=0;
+ for(const project of get("projects")){
+  if(project.goalId){
+   if(!goalIds.has(project.goalId))orphanProjectGoals++;
+   if(usedGoals.has(project.goalId))repeatedProjectGoals++;
+   usedGoals.add(project.goalId);
+  }
+  if(project.cobroGroupId){
+   if(!projectGroupIds.has(project.cobroGroupId))orphanProjectGroups++;
+   if(usedProjectGroups.has(project.cobroGroupId))repeatedProjectGroups++;
+   usedProjectGroups.add(project.cobroGroupId);
+  }
+ }
+ countIssue(orphanProjectGoals,"referencia(s) de Proyecto a Metas inexistentes.");
+ countIssue(orphanProjectGroups,"referencia(s) de Proyecto a grupos de Cobros inexistentes.");
+ countIssue(repeatedProjectGoals,"Meta(s) vinculadas a más de un Proyecto.");
+ countIssue(repeatedProjectGroups,"grupo(s) de Cobros vinculados a más de un Proyecto.");
  return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
 }
 function oneRenderDataHealth(){
@@ -5622,7 +5670,7 @@ function renderCapital(){
 }
 
 let reportActiveTab="overview";
-/* V11.2 · Proyectos Beta 1.0. Capa de presupuesto sobre movimientos reales.
+/* V11.4 · Proyectos Beta 1.1. Capa de presupuesto sobre movimientos reales.
    No se crean movimientos contables al planificar, asociar ni archivar. */
 let oneProjectSelectedId="";
 function oneProjectById(idValue){return (data.projects||[]).find(p=>p&&p.id===idValue)||null}
@@ -5631,7 +5679,7 @@ function oneProjectEnabled(p){return p?.status!=="archived"}
 function oneProjectHasActivity(p){
  return (data.projectLinks||[]).some(x=>x.projectId===p.id)||
         (data.projectPlans||[]).some(x=>x.projectId===p.id)||
-        (p.buckets||[]).some(b=>num(b.budget)>0);
+        (p.buckets||[]).some(b=>num(b.budget)>0)||!!p.goalId||!!p.cobroGroupId;
 }
 function oneProjectLinkForMovement(movementId){
  return (data.projectLinks||[]).find(l=>l.movementId===movementId)||null;
@@ -5735,6 +5783,95 @@ function oneProjectAssignMovement(movementId,projectId,bucketId=""){
  }
  if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId});
 }
+
+/* V11.4: estas relaciones son vistas de solo lectura sobre Metas y Cobros.
+   Nunca generan ingresos, gastos, aportes ni ajustes a liquidez. */
+function oneProjectConnectionMoney(p,crc){
+ return originalMoney(p.currency==="CRC"?crc:fromCRC(crc,"USD"),p.currency);
+}
+function oneProjectLinkedGoal(p){
+ return (data.reserves||[]).find(r=>r.id===p?.goalId&&r.type==="goal")||null;
+}
+function oneProjectLinkedCobroGroup(p){
+ return (data.sharedChargeGroups||[]).find(g=>g.id===p?.cobroGroupId)||null;
+}
+function oneProjectCobroSummary(p){
+ const group=oneProjectLinkedCobroGroup(p);
+ const charges=group?(data.sharedCharges||[]).filter(c=>c.groupId===group.id):[];
+ return {
+  group,charges,
+  pendingCRC:charges.reduce((sum,c)=>sum+cobroRemainingCRC(c),0),
+  receivedCRC:charges.reduce((sum,c)=>sum+cobroReceivedCRC(c),0),
+  pendingCount:charges.filter(c=>cobroRemainingOriginal(c)>.005).length
+ };
+}
+function oneProjectConnectionChoices(select,rows,selected,placeholder){
+ select.replaceChildren();
+ const empty=document.createElement("option");empty.value="";empty.textContent=placeholder;select.appendChild(empty);
+ for(const item of rows){
+  const option=document.createElement("option");option.value=item.id;option.textContent=item.name;
+  if(item.archived)option.textContent+=" (archivado)";
+  if(item.busy){option.textContent+=" (otro proyecto)";option.disabled=true;}
+  select.appendChild(option);
+ }
+ select.value=rows.some(r=>r.id===selected)?selected:"";
+}
+function oneProjectRefreshConnections(p=null){
+ const all=(data.projects||[]).filter(x=>x.id!==p?.id);
+ const goals=(data.reserves||[]).filter(r=>r.type==="goal").map(r=>({
+  id:r.id,name:r.name,archived:reserveStatus(r)!=="active",busy:all.some(x=>x.goalId===r.id)
+ }));
+ const groups=(data.sharedChargeGroups||[]).map(g=>({
+  id:g.id,name:g.name,archived:sharedGroupStatus(g)!=="active",busy:all.some(x=>x.cobroGroupId===g.id)
+ }));
+ oneProjectConnectionChoices(document.getElementById("oneProjectGoal"),goals,p?.goalId||"","Sin meta vinculada");
+ oneProjectConnectionChoices(document.getElementById("oneProjectCobroGroup"),groups,p?.cobroGroupId||"","Sin grupo vinculado");
+}
+function oneProjectValidateConnections(existing,goalId,groupId){
+ const other=(data.projects||[]).filter(x=>x.id!==existing?.id);
+ if(goalId){
+  const goal=(data.reserves||[]).find(r=>r.id===goalId&&r.type==="goal");
+  if(!goal)return "La meta seleccionada ya no existe.";
+  if(reserveStatus(goal)!=="active"&&existing?.goalId!==goalId)return "Reactivá la meta para vincularla.";
+  if(other.some(p=>p.goalId===goalId))return "Esta meta ya está vinculada a otro proyecto.";
+ }
+ if(groupId){
+  const group=sharedGroupById(groupId);
+  if(!group)return "El grupo de Cobros seleccionado ya no existe.";
+  if(sharedGroupStatus(group)!=="active"&&existing?.cobroGroupId!==groupId)return "Reactivá el grupo de Cobros para vincularlo.";
+  if(other.some(p=>p.cobroGroupId===groupId))return "Este grupo de Cobros ya está vinculado a otro proyecto.";
+ }
+ return "";
+}
+function oneProjectConnectionsRender(p){
+ const slot=document.getElementById("oneProjectConnections");
+ if(!slot)return;
+ const goal=oneProjectLinkedGoal(p),goalMissing=!!p.goalId&&!goal;
+ const saved=goal?reserveBalanceAt(goal,todayIso()):0;
+ const target=goal?reserveTargetCRC(goal):0;
+ const percent=target>0?Math.round(Math.min(100,saved/target*100)):0;
+ const cobro=oneProjectCobroSummary(p);
+ const groupMissing=!!p.cobroGroupId&&!cobro.group;
+ const goalHtml=goal?
+  '<div class="one-project-connection-main"><strong>'+safe(goal.name)+'</strong><span>'+
+   safe(oneProjectConnectionMoney(p,saved))+' ahorrado'+
+   (target>0?' de '+safe(oneProjectConnectionMoney(p,target))+' · '+percent+'%':'')+'</span></div>'+
+   '<p class="muted">'+(reserveStatus(goal)==="archived"?"Meta archivada. ":"")+
+   'Ahorro apartado; no se cuenta como gasto ni como saldo operativo del proyecto.</p>':
+  '<p class="muted">'+(goalMissing?"La meta vinculada ya no existe. Podés editar la relación.":"Relacioná una meta existente desde Editar para ver su ahorro.")+'</p>';
+ const groupHtml=cobro.group?
+  '<div class="one-project-connection-main"><strong>'+safe(cobro.group.name)+'</strong><span>'+
+   cobro.charges.length+' cobro(s) · '+cobro.pendingCount+' pendiente(s)</span></div>'+
+   '<div class="one-project-connection-values"><span>Pendiente <strong>'+safe(oneProjectConnectionMoney(p,cobro.pendingCRC))+'</strong></span>'+
+   '<span>Recuperado <strong>'+safe(oneProjectConnectionMoney(p,cobro.receivedCRC))+'</strong></span></div>'+
+   '<p class="muted">'+(sharedGroupStatus(cobro.group)==="archived"?"Grupo archivado. ":"")+
+   'El cobro pendiente no es ingreso disponible. Los abonos se registran únicamente desde Cobros.</p>':
+  '<p class="muted">'+(groupMissing?"El grupo vinculado ya no existe. Podés editar la relación.":"Relacioná un grupo de Cobros desde Editar para seguir lo pendiente y recuperado.")+'</p>';
+ slot.innerHTML='<div class="one-project-connection"><div class="one-project-connection-head"><h3>Meta de ahorro</h3>'+
+  '<button type="button" class="btn secondary small" data-one-project-go-to="capital">Abrir Metas</button></div>'+goalHtml+'</div>'+
+  '<div class="one-project-connection"><div class="one-project-connection-head"><h3>Cobros relacionados</h3>'+
+  '<button type="button" class="btn secondary small" data-one-project-go-to="shared">Abrir Cobros</button></div>'+groupHtml+'</div>';
+}
 function oneProjectOpen(p=null){
  const form=document.getElementById("oneProjectForm");form.reset();
  document.getElementById("oneProjectDialogTitle").textContent=p?"Editar proyecto":"Nuevo proyecto";
@@ -5745,6 +5882,7 @@ function oneProjectOpen(p=null){
  document.getElementById("oneProjectBudget").value=p?.budget??"";
  document.getElementById("oneProjectCurrency").value=normalizeCurrency(p?.currency||displayCurrency());
  document.getElementById("oneProjectNotes").value=p?.notes||"";
+ oneProjectRefreshConnections(p);
  document.getElementById("oneProjectDialog").showModal();
 }
 function oneProjectOpenBucket(b=null){
@@ -5781,6 +5919,7 @@ function oneProjectDetailRender(p){
  document.getElementById("oneAddProjectPlan").disabled=!oneProjectEnabled(p);
  document.getElementById("oneProjectNewExpense").disabled=!oneProjectEnabled(p);
  const remaining=budget-paid,forecastRemaining=budget-paid-planned,pct=budget>0?paid/budget*100:0;
+ oneProjectConnectionsRender(p);
  document.getElementById("oneProjectKpis").innerHTML=[
   ["Presupuesto",oneProjectMoney(p,budget)],
   ["Gastado",oneProjectMoney(p,paid)],
@@ -5885,12 +6024,15 @@ function oneProjectInit(){
   const name=q("oneProjectName").value.trim(),budget=Number(q("oneProjectBudget").value);
   const startDate=q("oneProjectStart").value,endDate=q("oneProjectEnd").value;
   const currency=normalizeCurrency(q("oneProjectCurrency").value);
+  const goalId=q("oneProjectGoal").value,cobroGroupId=q("oneProjectCobroGroup").value;
+  const connectionError=oneProjectValidateConnections(existing,goalId,cobroGroupId);
+  if(connectionError)return alert(connectionError);
   if(!name||!Number.isFinite(budget)||budget<0)return alert("Ingresá un nombre y un presupuesto válido.");
   if((startDate&&!restoreValidDate(startDate))||(endDate&&!restoreValidDate(endDate))||(startDate&&endDate&&endDate<startDate))return alert("Revisá las fechas: la finalización no puede ser anterior al inicio.");
   if(existing&&existing.currency!==currency&&oneProjectHasActivity(existing))return alert("Este proyecto ya tiene importes asociados. No podés cambiar su moneda sin alterar su interpretación histórica.");
   let selectedId=existing?.id||id();
   if(!oneProjectStore(()=>{
-   const next={...(existing||{}),id:selectedId,name,budget,currency,startDate,endDate,
+   const next={...(existing||{}),id:selectedId,name,budget,currency,startDate,endDate,goalId,cobroGroupId,
      notes:q("oneProjectNotes").value.trim(),status:existing?.status||"active",
      buckets:existing?.buckets||[],createdAt:existing?.createdAt||new Date().toISOString()};
    if(existing)Object.assign(existing,next);else data.projects.push(next);
@@ -5925,6 +6067,12 @@ function oneProjectInit(){
   q("oneProjectPlanDialog").close();renderProjects();
  });
  q("oneProjectDetails").addEventListener("click",event=>{
+  const open=event.target.closest("[data-one-project-go-to]");
+  if(open){
+   const target=open.dataset.oneProjectGoTo;
+   if(!oneModuleEnabled(target))return alert("Activá esta herramienta desde el botón + antes de abrirla.");
+   navigate(target);return;
+  }
   const p=oneProjectCurrent();if(!p||!oneProjectEnabled(p))return;
   const bucket=event.target.closest("[data-one-edit-bucket]");
   const plan=event.target.closest("[data-one-edit-plan]");
