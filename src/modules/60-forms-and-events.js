@@ -157,6 +157,15 @@ function bind(){
       if(!splitCategory||splitCategory.type!=="Gasto"||(!categoryIsActive(splitCategory)&&!historicalCategories.has(line.categoryId)))
         return alert("Una categoría de la división ya no está disponible. Elegí una categoría activa.");
     }
+    const projectChoice=oneProjectReadMovementSelection(type,existing);
+    if(!projectChoice.ok)return alert(projectChoice.error);
+    const scheduledId=!existing?document.getElementById("mScheduledId").value:"";
+    const scheduledTemplate=scheduledId?data.movementTemplates.find(t=>t.id===scheduledId):null;
+    if(scheduledId){
+      if(!scheduledTemplate?.active)return alert("Esta programación ya no está activa.");
+      if(data.movements.some(m=>m.scheduleTemplateId===scheduledId&&m.scheduledFor===scheduledTemplate.nextDate))
+        return alert("Esta fecha programada ya fue registrada. Revisá el historial antes de continuar.");
+    }
     const obj={...existing,id:existing?.id||id(),seq:existing?.seq||data.movementSeq+1,
       createdAt:existing?.createdAt||new Date().toISOString(),date,type,categoryId,
       category:category.name,
@@ -168,29 +177,35 @@ function bind(){
       period:periodKey(p),quarter:budgetQuarter(p)};
     const dup=data.movements.find(m=>m.id!==obj.id&&m2SameMovement(m,obj));
     if(dup&&!confirm(`Ya existe un ${type.toLowerCase()} de ${originalMoney(amount,currency)} el ${date} con la misma cuenta y categoría. ¿Registrar igualmente?`))return;
+    if(existing&&!confirm("¿Guardar los cambios de este movimiento? Se actualizarán los indicadores y se conservará el registro del cambio."))return;
+    const rollback={movements:data.movements.slice(),movementSeq:data.movementSeq,
+      movementAudit:clone(data.movementAudit||[]),movementTemplates:clone(data.movementTemplates||[]),
+      projectLinks:clone(data.projectLinks||[])};
     if(existing){
-      if(!confirm("¿Guardar los cambios de este movimiento? Se actualizarán los indicadores y se conservará el registro del cambio."))return;
       m2Audit("edit",obj,existing);
       const index=data.movements.findIndex(m=>m.id===existing.id);
       data.movements[index]=obj;
     }else{
       data.movementSeq++;
       obj.seq=data.movementSeq;
-      const templateId=document.getElementById("mScheduledId").value;
-      if(templateId){
-        const template=data.movementTemplates.find(t=>t.id===templateId);
-        if(!template?.active)return alert("Esta programación ya no está activa.");
-        if(data.movements.some(m=>m.scheduleTemplateId===templateId&&m.scheduledFor===template.nextDate))
-          return alert("Esta fecha programada ya fue registrada. Revisá el historial antes de continuar.");
-        obj.scheduleTemplateId=templateId;obj.scheduledFor=template.nextDate;
-        template.lastPostedFor=template.nextDate;
-        template.nextDate=m2NextScheduledDate(template.nextDate,template.frequency,template.anchorDay);
+      if(scheduledTemplate){
+        obj.scheduleTemplateId=scheduledId;obj.scheduledFor=scheduledTemplate.nextDate;
+        scheduledTemplate.lastPostedFor=scheduledTemplate.nextDate;
+        scheduledTemplate.nextDate=m2NextScheduledDate(scheduledTemplate.nextDate,scheduledTemplate.frequency,scheduledTemplate.anchorDay);
       }
       data.movements.push(obj);m2Audit("create",obj);
     }
-    save();m2ResetComposer();
+    oneProjectAssignMovement(obj.id,projectChoice.projectId,projectChoice.bucketId);
+    try{save()}catch(error){
+      data.movements=rollback.movements;data.movementSeq=rollback.movementSeq;
+      data.movementAudit=rollback.movementAudit;data.movementTemplates=rollback.movementTemplates;
+      data.projectLinks=rollback.projectLinks;
+      return alert("No se pudo guardar el movimiento ni su vínculo al proyecto. Revisá el almacenamiento.");
+    }
+    m2ResetComposer();
     refreshV7MovementCategoryFilter();m2RefreshAccounts();
     renderMovements();renderDashboard();renderPlan();renderReports();m2RenderTemplates();
+    if(oneModuleEnabled("projects"))renderProjects();
     oneActionSaved(existing?"Movimiento actualizado":
       type==="Ingreso"?"Ingreso registrado":type==="Gasto"?"Gasto registrado":"Pago de deuda registrado",
       originalMoney(amount,currency)+(obj.description?" · "+obj.description:"")+
@@ -207,9 +222,17 @@ function bind(){
       const movement=data.movements.find(m=>m.id===del.dataset.deleteMovement);
       if(oneIsLinkedCobroMovement(movement))return alert("Este movimiento está vinculado a un cobro. Editá o revertí el abono desde Cobros.");
       if(movement&&confirm("¿Eliminar este movimiento? Se actualizarán tus saldos, presupuesto e indicadores.")){
+        const previousMovements=data.movements,previousLinks=data.projectLinks,previousAudit=clone(data.movementAudit||[]);
         m2Audit("delete",movement,movement);
         data.movements=data.movements.filter(m=>m.id!==movement.id);
-        save();renderMovements();renderDashboard();renderPlan();renderReports();m2RenderAccountSummary(selectedMovements(document.getElementById("movementLevel").value,document.getElementById("movementPeriod").value));
+        data.projectLinks=(data.projectLinks||[]).filter(l=>l.movementId!==movement.id);
+        try{save()}catch(error){
+          data.movements=previousMovements;data.projectLinks=previousLinks;data.movementAudit=previousAudit;
+          return alert("No se pudo eliminar el movimiento. El historial sigue sin cambios.");
+        }
+        renderMovements();renderDashboard();renderPlan();renderReports();
+        if(oneModuleEnabled("projects"))renderProjects();
+        m2RenderAccountSummary(selectedMovements(document.getElementById("movementLevel").value,document.getElementById("movementPeriod").value));
       }
       return;
     }
