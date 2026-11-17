@@ -1699,3 +1699,27 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
  .one-project-plan-amounts span{padding:8px}
  .one-project-plan-match{align-items:start;flex-wrap:wrap}
 }
+
+/* V11.7 · Amortización de deudas: mismos colores y geometría en ambos temas. */
+.one-debt-sim-panel{margin-bottom:15px}
+.one-debt-sim-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:18px 0 13px}
+.one-debt-sim-controls .one-scenario-field button{justify-self:start}
+.one-debt-sim-controls input,.one-debt-sim-controls select{width:100%;min-width:0}
+.one-debt-sim-compare{margin:18px 0}
+.one-debt-sim-row{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(110px,1fr) auto;gap:15px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.one-debt-sim-row>div:first-child{display:grid;gap:4px}
+.one-debt-sim-row strong{font-size:.81rem;font-variant-numeric:tabular-nums}
+.one-debt-sim-row small{font-size:.72rem;color:var(--muted)}
+.one-debt-sim-track{height:9px;border-radius:99px;background:var(--surface-hover);overflow:hidden}
+.one-debt-sim-track span{display:block;height:100%;background:var(--text);border-radius:inherit}
+.one-debt-sim-row:nth-child(2) .one-debt-sim-track span{opacity:.45}
+.one-debt-sim-compare>.muted{font-size:.77rem;margin-top:12px}
+.one-debt-sim-heading{font-size:.86rem;margin:16px 0 10px}
+.one-debt-sim-table-wrap{width:100%;overflow-x:auto}
+.one-debt-sim-table{width:100%;border-collapse:collapse;font-size:.77rem;font-variant-numeric:tabular-nums}
+.one-debt-sim-table th,.one-debt-sim-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.one-debt-sim-table th:first-child,.one-debt-sim-table td:first-child{text-align:left}
+.one-debt-sim-table th{color:var(--muted);font-weight:650}
+#oneDebtSimSchedule>.muted,#oneDebtSimSettings{font-size:.74rem;line-height:1.6}
+@media(max-width:850px){.one-debt-sim-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.one-debt-sim-controls{grid-template-columns:1fr}.one-debt-sim-row{grid-template-columns:minmax(110px,.7fr) minmax(70px,1fr) auto;gap:9px}.one-debt-sim-table th,.one-debt-sim-table td{padding:8px}}

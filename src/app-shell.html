@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.9.0</small>
+      <small class="brand-version">v11.10.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -515,7 +515,7 @@
 
   <section class="view" id="view-future" aria-labelledby="oneFutureTitle">
     <div class="v7-page-head">
-      <div><div class="v7-eyebrow">FUTURO · BETA 1.1</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
+      <div><div class="v7-eyebrow">FUTURO · BETA 1.2</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
         <p class="sub">Visualizá cómo podría evolucionar tu saldo operativo, sin cambiar tus registros.</p></div>
       <div class="one-future-selector" role="group" aria-label="Horizonte de la proyección">
         <button type="button" data-one-future-days="30" class="active" aria-pressed="true">30 días</button>
@@ -568,6 +568,40 @@
         </div>
       </div>
     </details>
+
+    <details class="v7-card one-scenario-panel one-debt-sim-panel" id="oneDebtSimulatorPanel">
+      <summary><span><strong>¿Y si pagás esa deuda antes?</strong><small>V11.7 · Futuro Beta 1.2 · Intereses, abonos extraordinarios y plazo estimado</small></span><span class="one-scenario-expand">Abrir simulación</span></summary>
+      <div class="one-scenario-body">
+        <p class="muted">Compará una deuda con su cuota actual frente a un abono extraordinario hoy y otro adicional cada mes. Este cálculo es independiente de la proyección de liquidez a 30, 60 o 90 días.</p>
+        <div class="one-debt-sim-controls">
+          <div class="one-scenario-field">
+            <label for="oneDebtSimDebt">Deuda a simular</label><select id="oneDebtSimDebt"></select>
+            <button type="button" class="btn secondary small" id="oneDebtSimEdit">Editar condiciones</button>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneDebtSimOnce">Abono extraordinario hoy</label>
+            <input type="number" id="oneDebtSimOnce" min="0" max="100000000" step="any" inputmode="decimal" value="0">
+            <small>Se aplica al capital al comenzar.</small>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneDebtSimMonthly">Abono extra cada mes</label>
+            <input type="number" id="oneDebtSimMonthly" min="0" max="100000000" step="any" inputmode="decimal" value="0">
+            <small>Se suma a la cuota; no la reemplaza.</small>
+          </div>
+        </div>
+        <div class="one-scenario-toolbar">
+          <label for="oneDebtSimCurrency">Ingresar extras en <select id="oneDebtSimCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></label>
+          <button type="button" class="btn secondary small" id="oneDebtSimReset" disabled>Restablecer extras</button>
+        </div>
+        <p class="muted" id="oneDebtSimSettings"></p>
+        <div class="one-future-stats" id="oneDebtSimSummary" aria-label="Resultados de amortización"></div>
+        <div id="oneDebtSimCompare" class="one-debt-sim-compare"></div>
+        <h3 class="one-debt-sim-heading">Detalle del escenario con extras</h3>
+        <div id="oneDebtSimSchedule"></div>
+        <ul id="oneDebtSimWarnings" class="one-scenario-warnings"></ul>
+        <p class="muted one-scenario-disclaimer">Modelo simplificado: tasa nominal anual, interés mensual, cuota fija y sin cargos adicionales. El banco puede aplicar el abono de otra forma. No crea pagos, no guarda el escenario y no cambia la proyección de liquidez.</p>
+      </div>
+    </details>
     <div class="one-future-columns">
       <section class="v7-card one-future-panel">
         <h2>¿Qué compone la proyección?</h2>
@@ -607,7 +641,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.9.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.10.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 

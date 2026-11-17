@@ -221,3 +221,15 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - Los respaldos antiguos con `projectLinks` sin `planId` siguen siendo válidos, sin migraciones destructivas. Nuevos respaldos validan que `planId` pertenezca a una previsión del mismo proyecto y que su concepto coincida. El diagnóstico de salud señala referencias huérfanas y conceptos obsoletos sin alterar datos.
 - No cambian Presupuesto, Movimientos, Deudas, Cobros, Metas, transferencia D1, claves de datos, Worker, ni `one-less-one-gloriana`. El coste esperado sigue en $0.
 - Pruebas en `tests/v11-6-project-reconciliation.test.cjs` más la batería histórica de compatibilidad.
+
+
+## V11.7 — Futuro Beta 1.2: simulación avanzada de deudas (release v11.10.0)
+
+- Panel opcional **¿Y si pagás esa deuda antes?** en Futuro y acceso **Simular** desde una deuda activa. La herramienta Futuro se activa al elegir deliberadamente Simular; esto modifica únicamente la preferencia visual del módulo.
+- Permite elegir una deuda y comparar cuota registrada frente a un **abono extraordinario único hoy** y un **extra mensual**, ambos configurables en CRC/USD. Muestra meses estimados, intereses base, ahorro potencial y un desglose de los primeros doce pagos del escenario.
+- Se calcula desde el saldo pendiente estimado de la deuda, la cuota mensual y la tasa anual nominal configuradas. Supuestos: tasa y cuota constantes, interés compuesto mensualmente, abonos extra aplicados a capital, ausencia de compras, comisiones, seguros, multas y cambios de divisa. Horizonte máximo: 600 meses. Las cifras no equivalen al estado de cuenta del banco.
+- La tasa de 0% ingresada explícitamente es válida, pero una tasa omitida o inválida bloquea el cálculo. También se bloquean deuda sin cuota y saldo mezclado CRC/USD con tasa única; sin día de pago se presentan meses sin fabricar fechas. Si un pago no cubre intereses o no amortiza dentro del límite, no se promete ahorro total ni plazo ficticio.
+- Tarjetas y préstamos presentan advertencias específicas sobre mínimos variables y condiciones contractuales de amortización. Deudas en USD se comparan en CRC usando TC venta actual como referencia, sin reescribir la moneda ni el tipo de cambio de movimientos anteriores.
+- Esta simulación es **independiente** del escenario V11.5 de liquidez de 30/60/90 días. No se suman dos veces las cuotas ni se alteran los flujos pronosticados; para confirmar un pago real hay que registrarlo explícitamente en Movimientos.
+- Los controles viven solo en memoria; el simulador no llama a guardar datos financieros ni toca Movimientos, Deudas, Proyectos, Cobros, Metas, respaldos o Cloudflare. Daniel y Lab comparten código y mantienen almacenamiento separado. Gloriana queda sin cambios.
+- Se añadieron pruebas para matemática, falta de datos, USD, navegación desde Deudas y ausencia de escritura financiera a la batería y compuerta de GitHub Pages.

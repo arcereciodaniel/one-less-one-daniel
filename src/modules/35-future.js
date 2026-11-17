@@ -214,6 +214,7 @@ function renderFuture(){
  }
  q("oneFutureCoverage").textContent=forecast.coverageDays+" de "+horizon+" días tienen períodos de presupuesto.";
  oneScenarioRender(forecast);
+ oneDebtSimRender();
 }
 function oneFutureInit(){
  document.querySelectorAll("[data-one-future-days]").forEach(button=>button.addEventListener("click",()=>{
