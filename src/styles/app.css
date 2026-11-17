@@ -1620,3 +1620,18 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-future-assumptions ul{padding-left:20px}
 @media(max-width:950px){.one-future-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.one-future-columns{grid-template-columns:1fr}}
 @media(max-width:540px){#view-future>.v7-page-head{align-items:flex-start;gap:12px}.one-future-selector{width:100%;justify-content:stretch}.one-future-selector button{flex:1}.one-future-stats{gap:8px}.one-future-stat{padding:12px}.one-future-milestone,.one-future-breakdown-row{align-items:flex-start}.one-future-milestone>strong{white-space:normal;text-align:right}}
+
+
+/* V11.4 · Proyectos + Metas + Cobros: referencias, no transacciones. */
+.one-project-connections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.one-project-connection{padding:15px 17px;background:var(--surface);border:1px solid var(--border);border-radius:11px;min-width:0}
+.one-project-connection-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
+.one-project-connection-head h3{margin:0;font-size:.91rem}
+.one-project-connection-main{display:grid;gap:5px;margin-bottom:7px}
+.one-project-connection-main strong{font-size:.88rem;overflow-wrap:anywhere}
+.one-project-connection-main span{font-size:.85rem;font-variant-numeric:tabular-nums}
+.one-project-connection-values{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0}
+.one-project-connection-values>span{display:grid;gap:4px;font-size:.7rem;color:var(--muted)}
+.one-project-connection-values strong{color:var(--text);font-size:.9rem;font-variant-numeric:tabular-nums}
+.one-project-connection .muted{font-size:.74rem;line-height:1.6;margin:8px 0 0}
+@media(max-width:760px){.one-project-connections{grid-template-columns:1fr}}
