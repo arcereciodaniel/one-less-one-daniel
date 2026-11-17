@@ -1,4 +1,47 @@
 function bind(){
+  const settingsDialog=document.getElementById("oneSettingsDialog");
+  const debtTypesDialog=document.getElementById("oneDebtTypesDialog");
+  document.querySelector("#oneSettingsPaydayMount")?.appendChild(document.querySelector(".one-payday-panel"));
+  document.querySelector("#oneSettingsMaintenanceMount")?.appendChild(document.querySelector(".rastro-maintenance"));
+  document.getElementById("oneSettingsBtn").addEventListener("click",()=>settingsDialog.showModal());
+  document.getElementById("oneSettingsCategories").addEventListener("click",()=>{settingsDialog.close();renderCategories();document.getElementById("categoryManagerDialog").showModal()});
+  document.getElementById("oneSettingsDebtTypes").addEventListener("click",()=>{settingsDialog.close();oneDebtTypeFormReset();oneDebtTypesRender();debtTypesDialog.showModal()});
+  document.getElementById("oneSettingsFx").addEventListener("click",()=>{settingsDialog.close();openFxDialog(true)});
+  document.getElementById("oneSettingsBackup").addEventListener("click",()=>document.getElementById("exportBtn").click());
+  document.getElementById("oneSettingsRestore").addEventListener("click",()=>{settingsDialog.close();document.getElementById("importBtn").click()});
+  document.getElementById("oneDebtTypeCancel").addEventListener("click",oneDebtTypeFormReset);
+  document.getElementById("oneDebtTypesList").addEventListener("click",event=>{
+    const edit=event.target.closest("[data-edit-debt-type]");
+    const toggle=event.target.closest("[data-toggle-debt-type]");
+    if(edit){
+      const t=data.debtTypes.find(x=>x.id===edit.dataset.editDebtType);if(!t)return;
+      document.getElementById("oneDebtTypeId").value=t.id;document.getElementById("oneDebtTypeName").value=t.name;document.getElementById("oneDebtTypeShape").value=t.shape;
+      document.getElementById("oneDebtTypeName").focus();return;
+    }
+    if(toggle){
+      const t=data.debtTypes.find(x=>x.id===toggle.dataset.toggleDebtType);if(!t)return;
+      if(t.active&&oneDebtTypeUsage(t)>0)return alert("Este tipo tiene deudas asociadas. Para conservar el historial, primero reasigná esas deudas.");
+      const previous=t.active;t.active=!t.active;
+      try{save()}catch(e){t.active=previous;return alert("No se pudo guardar el cambio.")}
+      oneDebtTypesRender();
+    }
+  });
+  document.getElementById("oneDebtTypeForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const typeId=document.getElementById("oneDebtTypeId").value;
+    const name=document.getElementById("oneDebtTypeName").value.trim();
+    const shape=document.getElementById("oneDebtTypeShape").value;
+    if(!name||!Object.hasOwn(ONE_DEBT_SHAPES,shape))return;
+    if(data.debtTypes.some(t=>t.id!==typeId&&t.active&&t.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es")))return alert("Ya existe un tipo de deuda activo con ese nombre.");
+    const current=data.debtTypes.find(t=>t.id===typeId);
+    if(current&&current.shape!==shape&&oneDebtTypeUsage(current)>0)return alert("No se puede modificar la estructura de un tipo que ya tiene deudas. Podés cambiar su nombre o crear otro tipo.");
+    const snapshot=clone(data.debtTypes);
+    if(current){current.name=name;current.shape=shape}
+    else data.debtTypes.push({id:id(),name,shape,active:true,builtin:false});
+    try{save()}catch(e){data.debtTypes=snapshot;return alert("No se pudo guardar el tipo de deuda.")}
+    oneDebtTypeFormReset();oneDebtTypesRender();
+  });
+  document.getElementById("dType").addEventListener("change",oneDebtFormUpdate);
   const categoryManager=document.getElementById("categoryManagerDialog");
   const categoryManagerMount=document.getElementById("categoryManagerMount");
   const categoryView=document.getElementById("view-categories");
@@ -410,12 +453,42 @@ function bind(){
   document.getElementById("debtForm").addEventListener("submit",e=>{
     e.preventDefault();const did=document.getElementById("dId").value;
     const status=document.getElementById("dStatus").value;
-    const obj={...(data.debts.find(d=>d.id===did)||{}),id:did||id(),type:document.getElementById("dType").value,name:document.getElementById("dName").value.trim(),status,usd:num(document.getElementById("dUsd").value),crc:num(document.getElementById("dCrc").value),fx:currentRates().sell,limit:num(document.getElementById("dLimit").value),limitCurrency:normalizeCurrency(document.getElementById("dLimitCurrency").value),minimum:num(document.getElementById("dMinimum").value),minimumCurrency:normalizeCurrency(document.getElementById("dMinimumCurrency").value),payDay:document.getElementById("dPayDay").value.trim(),rate:document.getElementById("dRate").value.trim(),priority:num(document.getElementById("dPriority").value),goal:document.getElementById("dGoal").value.trim(),notes:document.getElementById("dNotes").value.trim()};
+    const selectedType=data.debtTypes.find(t=>t.id===document.getElementById("dType").value);
+    if(!selectedType)return alert("Seleccioná un tipo de deuda vigente.");
+    const previous=data.debts.find(d=>d.id===did);
+    if(!selectedType.active&&previous?.typeId!==selectedType.id)return alert("No podés usar un tipo archivado para una deuda nueva.");
+    if(previous&&debtPayments(previous)>0&&previous.type!==ONE_DEBT_SHAPES[selectedType.shape])return alert("Esta deuda tiene pagos históricos. Para cambiar su estructura financiera, creá una nueva deuda sin alterar la anterior.");
+    const shape=selectedType.shape,field=fieldName=>document.getElementById(fieldName).value,is=key=>shape===key;
+    const obj={...(previous||{}),id:did||id(),type:ONE_DEBT_SHAPES[shape],typeId:selectedType.id,name:field("dName").trim(),status,
+      usd:num(field("dUsd")),crc:num(field("dCrc")),fx:currentRates().sell,
+      limit:is("card")?num(field("dLimit")):0,limitCurrency:normalizeCurrency(field("dLimitCurrency")),
+      minimum:["card","loan","installments"].includes(shape)?num(field("dMinimum")):0,
+      minimumCurrency:normalizeCurrency(field("dMinimumCurrency")),
+      payDay:shape==="other"?"":field("dPayDay").trim(),
+      rate:["card","loan","installments"].includes(shape)?field("dRate").trim():"",
+      closeDay:is("card")?num(field("dCloseDay")):0,
+      fullPayment:is("card")?num(field("dFullPayment")):0,
+      lender:["loan","installments","family"].includes(shape)?field("dLender").trim():"",
+      endDate:["loan","installments"].includes(shape)?field("dEndDate"):"",
+      installmentsTotal:is("installments")?num(field("dInstallmentsTotal")):0,
+      installmentsLeft:is("installments")?num(field("dInstallmentsLeft")):0,
+      priority:num(field("dPriority")),goal:field("dGoal").trim(),notes:field("dNotes").trim()};
+    if(!obj.name)return alert("Ingresá un nombre para la deuda.");
+    if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay))return alert("El día de pago debe estar entre 1 y 31.");
+    if(is("card")&&obj.closeDay&&(obj.closeDay<1||obj.closeDay>31))return alert("El día de corte debe estar entre 1 y 31.");
+    if(is("installments")&&obj.installmentsTotal&&obj.installmentsLeft>obj.installmentsTotal)return alert("Las cuotas restantes no pueden superar las cuotas totales.");
     const i=data.debts.findIndex(d=>d.id===did),old=i>=0?data.debts[i]:null,oldName=old?.name||"";
     if(status==="archived"){obj.closedAt=old?.closedAt||todayIso();obj.closedReason=old?.closedReason||"Pagada / finalizada"}else{obj.closedAt="";obj.closedReason=""}
+    const originalDebt=i>=0?clone(data.debts[i]):null;
+    const matchedMovements=i>=0&&oldName!==obj.name?data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)):[],movementSnapshot=matchedMovements.map(m=>({m,debtId:m.debtId,debt:m.debt}));
     i>=0?data.debts[i]=obj:data.debts.push(obj);
-    if(i>=0&&oldName!==obj.name)data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)).forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
-    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
+    matchedMovements.forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
+    try{save()}catch(error){
+      if(i>=0)data.debts[i]=originalDebt;else data.debts.pop();
+      movementSnapshot.forEach(x=>{x.m.debtId=x.debtId;x.m.debt=x.debt});
+      return alert("No se pudo guardar la deuda. No se modificó el historial.");
+    }
+    document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
     oneActionSaved(did?"Deuda actualizada":"Deuda registrada",obj.name);
   });
 
