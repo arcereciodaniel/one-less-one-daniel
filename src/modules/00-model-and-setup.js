@@ -558,7 +558,7 @@ function restoreValidate(raw){
   }
   if(!raw.periods.length)throw Error("El respaldo no contiene períodos financieros.");
   const optional=["reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups",
-    "receivableRecurring","categories","movementTemplates","movementAudit"];
+    "receivableRecurring","categories","movementTemplates","movementAudit","projects","projectLinks","projectPlans"];
   for(const key of optional){
     if(raw[key]!==undefined&&(!Array.isArray(raw[key])||!raw[key].every(restoreIsRecord)))
       throw Error("La lista "+key+" no tiene el formato esperado.");
@@ -624,16 +624,44 @@ function restoreValidate(raw){
     if(typeof cat.name!=="string"||!cat.name.trim()||typeof cat.type!=="string"||!cat.type.trim())
       throw Error("Hay categorías incompletas.");
   }
+  const projectIds=new Set();
+  for(const p of raw.projects||[]){
+    if(typeof p.id!=="string"||!p.id.trim()||projectIds.has(p.id)||
+      typeof p.name!=="string"||!p.name.trim()||!restoreValidMoney(p.budget)||Number(p.budget)<0||
+      !["CRC","USD"].includes(p.currency))
+      throw Error("Hay proyectos con datos incompletos o identificadores duplicados.");
+    if((p.startDate&&!restoreValidDate(p.startDate))||(p.endDate&&!restoreValidDate(p.endDate))||
+      (p.startDate&&p.endDate&&p.endDate<p.startDate))throw Error("Hay fechas de proyecto inválidas.");
+    if(p.buckets!==undefined&&(!Array.isArray(p.buckets)||p.buckets.some(b=>!restoreIsRecord(b)||
+       !b.id||typeof b.name!=="string"||!b.name.trim()||!restoreValidMoney(b.budget)||Number(b.budget)<0)))
+      throw Error("Hay conceptos de presupuesto de proyecto inválidos.");
+    projectIds.add(p.id);
+  }
+  const linkedMoves=new Set(),realMoves=new Set(raw.movements.filter(m=>m.type==="Gasto").map(m=>m.id));
+  for(const link of raw.projectLinks||[]){
+    if(!link.id||!projectIds.has(link.projectId)||!realMoves.has(link.movementId)||linkedMoves.has(link.movementId))
+      throw Error("Hay vínculos duplicados o inexistentes entre proyectos y gastos.");
+    linkedMoves.add(link.movementId);
+    const project=raw.projects.find(p=>p.id===link.projectId);
+    if(link.bucketId&&!(project.buckets||[]).some(b=>b.id===link.bucketId))
+      throw Error("Un gasto está vinculado a un concepto de proyecto inexistente.");
+  }
+  for(const plan of raw.projectPlans||[]){
+    if(!plan.id||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
+       !restoreValidMoney(plan.amount)||Number(plan.amount)<=0||
+       (plan.dueDate&&!restoreValidDate(plan.dueDate)))
+      throw Error("Hay gastos previstos inválidos.");
+  }
   return raw;
 }
 function restoreDetailsHtml(raw,file){
  const safeFile=String(file||"respaldo.json").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
- const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
+ const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
  return '<p><strong>Archivo:</strong> '+safeFile+'</p><div class="one-restore-counts">'+groups.map(([n,v])=>'<div><span>'+n+'</span><strong>'+v+'</strong></div>').join("")+'</div>';
 }
 function restorePrepare(raw){
  const valid=restoreValidate(raw),migrated=migrateData(clone(valid));
- for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring"]){
+ for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans"]){
   if(Array.isArray(valid[field])&&migrated[field].length!==valid[field].length)
     throw Error("La conversión no conservó todos los registros de "+field+".");
  }
