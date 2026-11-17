@@ -150,7 +150,7 @@ test("V10.8: interfaz USD presenta explicación sin agregar campos y conserva fe
   const prior=date.value;
   doc.dispatchEvent(new w.Event("visibilitychange"));
   assert.equal(date.value,prior,"Volver a Safari no modifica la fecha introducida");
-  assert.match(date.max,/^\\d{4}-\\d{2}-\\d{2}$/);
+  assert.match(date.max,/^\d{4}-\d{2}-\d{2}$/);
   assert.equal(x.errors.length,0);
  }finally{x.close()}
 });
