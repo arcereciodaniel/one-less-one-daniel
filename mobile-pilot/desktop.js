@@ -68,6 +68,7 @@
       (data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===id);
   }
   function validDate(date){return restoreValidDate(date)&&date<=todayIso();}
+  const createMobileGroupId=()=>id();
   function apply(item){
     const id=String(item?.id||""),p=item?.movement;
     if(!/^[a-zA-Z0-9_-]{16,80}$/.test(id)||!p||typeof p!=="object")throw Error("Registro remoto mal formado.");
@@ -75,8 +76,10 @@
     const amount=Number(p.amount),date=p.date;
     if(!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||
       !["CRC","USD"].includes(p.currency)||
-      (p.currency==="USD"&&p.type!=="Cobro"&&p.type!=="Cobro dividido"))
+      (p.currency==="USD"&&!["Gasto","Ingreso","Cobro","Cobro dividido"].includes(p.type)))
       throw Error("Fecha, moneda o monto inválidos.");
+    if(p.currency==="USD"&&(!num(data.settings?.fxBuy)||!num(data.settings?.fxSell)||!data.settings?.fxDate))
+      throw Error("Confirmá el tipo de cambio en Daniel antes de importar dólares.");
     if(p.type==="Cobro dividido"){
       // Un envío equivale a un grupo completo. save() persiste todas las filas juntas.
       const result=oneCreateSplitFare(p,{sourceId:id});
@@ -104,9 +107,18 @@
       if(!person)throw Error("El cobro no tiene persona.");
       const dueDate=String(p.dueDate||"");
       if(dueDate&&!restoreValidDate(dueDate))throw Error("Fecha de cobro inválida.");
-      const groupId=String(p.groupId||"").trim();
+      let groupId=String(p.groupId||"").trim();
+      const groupName=String(p.groupName||"").trim().slice(0,120);
+      if(groupId&&groupName)throw Error("No podés elegir y crear un grupo al mismo tiempo.");
       if(groupId&&!activeSharedGroups().some(g=>g.id===groupId))
         throw Error("Grupo inexistente o archivado. Actualizá la lista en el iPhone.");
+      if(!groupId&&groupName){
+        if(activeSharedGroups().some(g=>g.name.toLocaleLowerCase("es")===groupName.toLocaleLowerCase("es")))
+          throw Error("Ya existe un grupo con ese nombre. Actualizá el catálogo del iPhone.");
+        const group={id:createMobileGroupId(),name:groupName,person,notes:"",cutDay:0,status:"active",
+          closedAt:"",closedReason:"",createdAt:common.createdAt,mobilePilotId:id};
+        data.sharedChargeGroups.push(group);groupId=group.id;
+      }
       data.sharedCharges.push({...common,groupId,person,dueDate,chargeMonth:monthKey(date),
         kind:"Uso / consumo",notes:"",payments:[],status:"pending",paidAt:"",
         remindBeforeDays:3,snoozedUntil:"",sourceRecurringId:""});
