@@ -112,3 +112,18 @@ La configuración **Movimientos → Registro desde iPhone** muestra las incidenc
 
 Daniel y Lab comparten código pero no información financiera; Gloriana se mantiene en V9, sin cambios. No se añade servidor, base de datos ni módulo. QA comprueba que una acción no exitosa no muestra confirmación, que las metas no duplican asientos, que las programaciones no contabilizan movimientos y que el iPhone distingue recepción de importación.
 
+
+
+## V10.10 — Menos esfuerzo cotidiano y confirmaciones claras
+
+**Confirmaciones emergentes en escritorio.** Una ventana pequeña informa que se guardó un gasto, ingreso, pago de deuda, cobro pendiente, abono recibido, aporte/retiro de metas o programación recurrente. El aviso muestra tipo, monto y contexto, distinguiendo un cobro **pendiente** de un **ingreso recibido** y un aporte interno de un **gasto**. Los avisos se invocan **después** de `save()` y su verificación de almacenamiento; un formulario inválido o un guardado fallido nunca deben producir una confirmación de éxito. No hay confirmación adicional antes de cada movimiento: las confirmaciones previas siguen reservadas para operaciones delicadas y posibles duplicados.
+
+**iPhone.** Tras la aceptación confirmada del Worker aparece «Registro recibido» con el importe y una aclaración: **todavía no fue contabilizado en Daniel**. Un fallo de red conserva el borrador y no abre la ventana. No se crean nuevos endpoints, claves ni registros financieros en Cloudflare.
+
+**Metas.** Una meta activa cuyo saldo alcanza el monto objetivo puede marcarse **Cumplida**, diferenciándose de Archivada. Guarda la fecha y motivo de cierre y conserva íntegros fondo, aportes, historial y saldo en el patrimonio. Para utilizar posteriormente los fondos, se reactiva la meta y se registra un Uso objetivo o Retiro (no se crean ingresos/gastos automáticos).
+
+**Movimientos frecuentes.** «Repetir último» prepara una copia editable del último gasto, ingreso o pago de deuda con categoría vigente, sin registrarlo hasta confirmar. Las programaciones existentes muestran **Revisar y registrar** si están vencidas y **Preparar** si son futuras; no se contabilizan solas.
+
+**Deudas.** Los avisos muestran fecha y tiempo relativo hasta el vencimiento, cuota estimada, abonos asociados y diferencias parciales. En pagos tardíos o con cambios de mínimo se pide verificar el estado de cuenta. La agenda sigue siendo derivada y no modifica cuotas ni movimientos.
+
+**Alcance:** versión publicada únicamente en Daniel y Lab, con almacenamiento separado, sin cambios a Gloriana y sin migración de bases de datos. Cobros, Metas, Deudas y demás cálculos se mantienen como ya estaban. Pruebas en CI: confirmación posterior al guardado, no éxito antes de confirmar la recepción, cierre sin doble contabilidad, repetición no automática y ciclos de deudas en distintos meses.
