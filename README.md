@@ -207,3 +207,17 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - Protección del coste esperado de $0, claves de almacenamiento local sin cambios y respaldo financiero intacto. Pruebas: `tests/v11-8-mobile-projects.test.cjs` y nuevas pruebas de interfaz/Worker en `mobile-pilot/tests`.
 
 **Prueba manual:** creá un proyecto activo con concepto en Daniel, abrí Movimientos y sincronizá el piloto. En Safari del iPhone pulsá Actualizar, registrá un Gasto asignándolo al proyecto y concepto, y sincronizá en Daniel. Abrí Proyectos para confirmar el gasto real enlazado.
+
+## V11.6 — Proyectos Beta 1.2 (release acumulativa v11.9.0)
+
+Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gastos reales. El número de la versión pública avanza a **v11.9.0** para no retroceder respecto a v11.8.0; se mantiene el nombre de la mejora **V11.6** del plan de trabajo.
+
+- En **Proyectos → Previsto vs. real** se muestran el monto previsto, el real conciliado, el pendiente y la desviación en moneda original del proyecto, aplicando tasas históricas disponibles en cada movimiento.
+- **Conciliar gasto** reutiliza un movimiento de tipo `Gasto` ya registrado. Si está vinculado al mismo proyecto, se le añade la referencia `projectLinks.planId`. Si aún no pertenece a ningún proyecto, se vincula en la misma operación. Nunca se crea un movimiento nuevo.
+- Una previsión admite varios gastos (pagos parciales). Un movimiento solo puede estar en un proyecto y conciliado con una previsión a la vez. Una previsión con concepto asignado únicamente admite gastos de ese concepto; para gastos sin concepto se asigna el de la previsión explícitamente durante la conciliación.
+- El pendiente se calcula como `max(0, previsto - gasto real conciliado)` en una previsión abierta. Si se marca manualmente resuelta, el pendiente es cero pero se conserva el histórico. El gasto por encima de lo previsto produce diferencia/sobrecoste y no pendiente negativo.
+- **Quitar relación** borra únicamente `planId`: conserva gasto, saldo, categoría, movimiento, vínculo de proyecto y auditoría. Desvincular por completo o borrar el movimiento elimina la conciliación y restaura lo no cubierto.
+- Proyectos incluye el cuadro general de importes previstos, conciliados y pendientes. Los gastos del iPhone V11.8 se pueden conciliar después de sincronizar y aparecer como movimientos reales.
+- Los respaldos antiguos con `projectLinks` sin `planId` siguen siendo válidos, sin migraciones destructivas. Nuevos respaldos validan que `planId` pertenezca a una previsión del mismo proyecto y que su concepto coincida. El diagnóstico de salud señala referencias huérfanas y conceptos obsoletos sin alterar datos.
+- No cambian Presupuesto, Movimientos, Deudas, Cobros, Metas, transferencia D1, claves de datos, Worker, ni `one-less-one-gloriana`. El coste esperado sigue en $0.
+- Pruebas en `tests/v11-6-project-reconciliation.test.cjs` más la batería histórica de compatibilidad.
