@@ -802,7 +802,7 @@ function syncQuarterSelectors(){
 }
 function navigate(view){
   if(ONE_OPTIONAL_MODULES.has(view)&&!oneModuleEnabled(view))view="dashboard";
-  if(!["dashboard","plan","movements","debts","shared","capital","projects"].includes(view))view="dashboard";
+  if(!["dashboard","plan","movements","debts","shared","capital","projects","future"].includes(view))view="dashboard";
   uiState.activeView=view;
   saveUiState();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===`view-${view}`));
@@ -814,6 +814,7 @@ function navigate(view){
   if(view==="shared")renderSharedCharges();
   if(view==="capital")renderCapital();
   if(view==="projects")renderProjects();
+  if(view==="future")renderFuture();
   if(view==="reports")return navigate("dashboard");
   if(view==="categories")renderCategories();
 }
