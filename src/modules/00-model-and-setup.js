@@ -20,12 +20,13 @@ function saveUiState(){
   try{localStorage.setItem(UI_STORAGE_KEY,JSON.stringify(uiState))}catch{}
 }
 const ONE_DEFAULT_SHOW_COBROS=true;
-const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital"]);
+const ONE_OPTIONAL_MODULES=new Set(["debts","shared","capital","projects"]);
 function oneModuleEnabled(name){
   if(!ONE_OPTIONAL_MODULES.has(name))return true;
   if(typeof uiState.modules?.[name]==="boolean")return uiState.modules[name];
   if(name==="debts")return !!((data.debts||[]).length||(data.movements||[]).some(m=>m.type==="Pago deuda"));
   if(name==="capital")return !!((data.reserves||[]).length||(data.reserveMovements||[]).length);
+  if(name==="projects")return !!((data.projects||[]).length);
   return ONE_DEFAULT_SHOW_COBROS||!!((data.sharedCharges||[]).length||(data.sharedChargeGroups||[]).length||(data.receivableRecurring||[]).length);
 }
 function oneRefreshModuleVisibility(){
@@ -41,6 +42,8 @@ function oneRefreshModuleVisibility(){
   if(cobrosInput)cobrosInput.checked=oneModuleEnabled("shared");
   const goalsInput=document.getElementById("moduleGoalsToggle");
   if(goalsInput)goalsInput.checked=oneModuleEnabled("capital");
+  const projectsInput=document.getElementById("moduleProjectsToggle");
+  if(projectsInput)projectsInput.checked=oneModuleEnabled("projects");
   const current=document.querySelector(".view.active")?.id?.replace("view-","");
   if(ONE_OPTIONAL_MODULES.has(current)&&!oneModuleEnabled(current))navigate("dashboard");
 }
@@ -63,6 +66,7 @@ function initModulesBeta(){
   document.getElementById("moduleDebtsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("debts",e.target.checked));
   document.getElementById("moduleCollectionsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("shared",e.target.checked));
   document.getElementById("moduleGoalsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("capital",e.target.checked));
+  document.getElementById("moduleProjectsToggle")?.addEventListener("change",e=>oneSetModuleEnabled("projects",e.target.checked));
   document.getElementById("closeModulesBtn")?.addEventListener("click",()=>document.getElementById("modulesDialog")?.close());
   document.getElementById("openCollectionsFromHome")?.addEventListener("click",()=>navigate("shared"));
 }
@@ -212,7 +216,8 @@ const initialData = {
   movementAudit:[],
   accounts:[...ACCOUNTS],
   debts:[],
-  debtTypes:clone(ONE_DEBT_TYPE_PRESETS)
+  debtTypes:clone(ONE_DEBT_TYPE_PRESETS),
+  projects:[],projectLinks:[],projectPlans:[]
 };
 
 /* Calendario de salario configurable: la siguiente fecha de pago cierra el ciclo anterior. */
@@ -311,6 +316,17 @@ function migrateData(raw){
   raw.reconciliations=Array.isArray(raw.reconciliations)?raw.reconciliations:[];
   raw.debts=Array.isArray(raw.debts)?raw.debts:[];
   raw.debtTypes=oneNormalizeDebtTypes(raw.debtTypes);
+  // Proyectos V11.2: solo referencias a movimientos; no se migran ni duplican gastos.
+  raw.projects=Array.isArray(raw.projects)?raw.projects:[];
+  raw.projectLinks=Array.isArray(raw.projectLinks)?raw.projectLinks:[];
+  raw.projectPlans=Array.isArray(raw.projectPlans)?raw.projectPlans:[];
+  raw.projects.forEach(p=>{
+    if(!p||typeof p!=="object")return;
+    p.status=p.status==="archived"?"archived":"active";
+    p.currency=normalizeCurrency(p.currency||"CRC");
+    p.buckets=Array.isArray(p.buckets)?p.buckets:[];
+    p.budget=Number.isFinite(Number(p.budget))?Math.max(0,Number(p.budget)):0;
+  });
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
   raw.reserveMovements=Array.isArray(raw.reserveMovements)?raw.reserveMovements:[];
   raw.sharedChargeGroups=Array.isArray(raw.sharedChargeGroups)?raw.sharedChargeGroups:[];
