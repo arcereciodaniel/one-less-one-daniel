@@ -1,0 +1,37 @@
+name: Validación temporal V11.6 Conciliación de Proyectos
+on:
+  push:
+    branches: [work/v11-6-project-reconciliation]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar jsdom
+        run: npm install jsdom@26 --no-save --no-package-lock
+      - name: Comprobar build modular y aislamiento Lab
+        run: |
+          node scripts/build-app.cjs --check
+          node scripts/build-lab.cjs --check
+      - name: Probar finanzas y conciliaciones sin duplicidad
+        run: |
+          node tests/metas-render.test.cjs
+          node tests/quincenas-metas-presupuesto.test.cjs
+          node tests/movimientos-integrados.test.cjs
+          node tests/formularios-v8.test.cjs
+          node tests/tipo-cambio-deudas-v9.test.cjs
+          node --test tests/v10-4-ledger.test.cjs
+          node --test tests/split-fare-v10-5.test.cjs tests/mobile-split-ui-v10-5.test.cjs tests/shared-groups-v10-6.test.cjs tests/mobile-group-ui-v10-6.test.cjs
+          node tests/mobile-pilot-v10.test.cjs
+          node --test tests/mobile-trust-v10-8.test.cjs
+          node --test tests/financial-trust-v10-9.test.cjs
+          node --test tests/less-friction-v10-10.test.cjs
+          node --test tests/v11-source-build.test.cjs tests/v11-1-settings-debt-types.test.cjs tests/v11-2-projects.test.cjs tests/v11-3-future.test.cjs tests/v11-4-project-connections.test.cjs tests/v11-5-scenarios.test.cjs tests/v11-8-mobile-projects.test.cjs tests/v11-6-project-reconciliation.test.cjs
+          node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs
+          node --test mobile-pilot/tests/*.test.mjs
