@@ -103,16 +103,22 @@ test("D1: un split USD llega como un único registro idempotente con cobros indi
  assert.equal((await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items.length,0);
 });
 
-test("D1: Cobro simple puede ser USD, pero gastos e ingresos móviles continúan CRC",async()=>{
+test("V10.7: gastos, ingresos y cobros permiten USD",async()=>{
  const {env,req}=fixture();
- await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[{id:"g1",name:"Alimentación",type:"Gasto"}],debts:[],goals:[]});
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[{id:"g1",name:"Alimentación",type:"Gasto"},{id:"i1",name:"Ingresos extra",type:"Ingreso"}],debts:[],goals:[]});
  const day=new Date().toISOString().slice(0,10);
  const cobro=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
   {id:"simple-usd-abcdefgh123456",movement:{type:"Cobro",date:day,amount:50.5,currency:"USD",person:"Charlie",description:"Cena"}});
  assert.equal(cobro.response.status,200);
  const gasto=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
   {id:"gasto-usd-abcdefgh123456",movement:{type:"Gasto",date:day,amount:50,currency:"USD",categoryId:"g1"}});
- assert.equal(gasto.response.status,400);
+ assert.equal(gasto.response.status,200);
+ const ingreso=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
+  {id:"ingreso-usd-abcdefgh12345",movement:{type:"Ingreso",date:day,amount:120,currency:"USD",categoryId:"i1"}});
+ assert.equal(ingreso.response.status,200);
+ const received=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items;
+ assert.equal(received.find(x=>x.movement.type==="Ingreso").movement.amount,120);
+ assert.equal(received.find(x=>x.movement.type==="Gasto").movement.currency,"USD");
 });
 test("D1: no admite repartos personalizados que no cierren",async()=>{
  const {env,req,rows}=fixture();
@@ -181,4 +187,19 @@ test("D1 impide relacionar cobros con grupos desconocidos y admite cobro simple 
  assert.equal(simple.response.status,200);
  const found=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items[0].movement;
  assert.equal(found.groupId,groupId);
+});
+
+test("V10.7: un cobro simple crea grupo nuevo en un envío idempotente",async()=>{
+ const {env,req,rows}=fixture();
+ await req("/api/catalog","PUT",env.DESKTOP_SYNC_KEY,{categories:[],debts:[],goals:[],groups:[]});
+ const date=new Date().toISOString().slice(0,10);
+ const entry={id:"cobro-mama-grupo-abcdefgh12",movement:{type:"Cobro",date,currency:"CRC",amount:8500,groupName:"Mamá",person:"Mamá",description:"Supermercado"}};
+ assert.equal((await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,entry)).response.status,200);
+ assert.equal((await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,entry)).response.status,200);
+ assert.equal(rows.size,1);
+ const m=(await req("/api/inbox","GET",env.DESKTOP_SYNC_KEY)).json.items[0].movement;
+ assert.equal(m.groupName,"Mamá");assert.equal(m.person,"Mamá");assert.equal(m.groupId,"");
+ const invalid=await req("/api/inbox","POST",env.MOBILE_WRITE_KEY,
+  {id:"cobro-grupo-doble-abcdefgh12",movement:{...entry.movement,groupId:"group-123456"}});
+ assert.equal(invalid.response.status,400);
 });
