@@ -6760,6 +6760,11 @@ function oneDebtClassificationWarnings(){
     !(data.debts||[]).some(d=>m.debtId?d.id===m.debtId:d.name===m.debt)).length;
   return {mismatch,orphan};
 }
+function oneDebtDueWhen(date,asOf=todayIso()){
+  if(!date)return "Sin día configurado";
+  const days=Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(asOf+"T00:00:00Z"))/86400000);
+  return days===0?"Vence hoy":days<0?"Venció hace "+Math.abs(days)+" día(s)":"En "+days+" día(s)";
+}
 function oneDebtRenderDueSchedule(asOf=todayIso()){
   const summary=document.getElementById("debtDueSummary"),list=document.getElementById("debtDueList");
   if(!summary||!list)return;
@@ -6771,13 +6776,14 @@ function oneDebtRenderDueSchedule(asOf=todayIso()){
     (unknown?" · "+unknown+" sin datos completos":"")+"</span><strong>"+money(total)+"</strong>";
   const visible=entries.filter(x=>x.date&&x.minimum>0).slice(0,5);
   list.innerHTML=visible.length?visible.map(x=>{
-    const payment=x.paid>0?"Abonos: "+money(x.paid)+" · ":"";
-    const meta=x.state==="review"?payment+"Diferencia con mínimo: "+money(x.minimum)+" · verificar con el banco":
-      x.state==="partial"?payment+"Saldo estimado para esta cuota: "+money(x.minimum):
-      x.state==="past"?"Fecha pasada sin pago vinculado · revisá el estado de cuenta":
-      x.state==="today"?"Programado para hoy":
+    const payment=x.paid>0?"Abonos vinculados: "+money(x.paid)+" · ":"";
+    const when=oneDebtDueWhen(x.date,asOf),scheduled=" · "+dateLabel(x.date);
+    const meta=x.state==="review"?when+scheduled+" · "+payment+"Diferencia estimada: "+money(x.minimum)+" · verificá con el banco":
+      x.state==="partial"?when+scheduled+" · "+payment+"Faltante estimado: "+money(x.minimum):
+      x.state==="past"?when+scheduled+" · sin pago vinculado; revisá el banco":
+      x.state==="today"?"Vence hoy"+scheduled:
       x.coveredThisMonth?"Cuota anterior cubierta · próximo vencimiento "+dateLabel(x.date):
-      "Fecha estimada · "+dateLabel(x.date);
+      "Vencimiento estimado"+scheduled+" · "+when;
     const label=x.state==="review"?"Por verificar":x.state==="partial"?"Saldo estimado":"Cuota / mínimo";
     return '<div class="one-debt-due-row"><div><div class="one-due-name">'+v7SafeText(x.debt.name)+
       '</div><div class="one-due-meta">'+meta+'</div></div><div class="one-due-amount">'+money(x.minimum)+
@@ -6785,6 +6791,8 @@ function oneDebtRenderDueSchedule(asOf=todayIso()){
   }).join(""):'<p class="one-debt-due-note">'+(entries.length?
     "No hay cuotas pendientes con fecha y mínimo configurados.":"Todavía no tenés deudas activas.")+"</p>";
   if(unknown)list.insertAdjacentHTML("beforeend",'<p class="one-debt-due-note">Revisá el día de pago y mínimo de las deudas sin información completa.</p>');
+  if(visible.some(x=>x.paid>0||["past","review"].includes(x.state)))
+    list.insertAdjacentHTML("beforeend",'<p class="one-debt-due-note">Los abonos se asignan al ciclo estimado según su fecha. Un pago tardío o un cambio del mínimo puede requerir verificar el estado de cuenta. No se modifica el historial.</p>');
   const quality=oneDebtClassificationWarnings();
   if(quality.mismatch||quality.orphan)list.insertAdjacentHTML("beforeend",
     '<p class="one-debt-due-note">Revisión de historial: '+quality.mismatch+
