@@ -99,7 +99,7 @@ test("V11.3: el presupuesto de deuda no duplica su cuota programada",()=>{
  assert.equal(m.items.filter(x=>x.kind==="debt").length,1);
  assert.equal(m.items.find(x=>x.kind==="debt").date,"2026-11-25");
  assert.equal(m.items.find(x=>x.kind==="debt").amount,-20000);
- assert.equal(m.items.find(x=>x.kind==="budget").reduce((s,x)=>s-x.amount,0),15000);
+ assert.equal(m.items.filter(x=>x.kind==="budget").reduce((s,x)=>s-x.amount,0),15000);
 });
 test("V11.3: gasto futuro real reemplaza parte de presupuesto, nunca suma dos veces",()=>{
  const sample=seed();
