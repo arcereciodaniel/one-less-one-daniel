@@ -187,3 +187,13 @@ Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente,
 ## V10.10 — Confirmación de recepción desde el iPhone
 
 Al registrar Gasto, Ingreso o Cobro desde Safari aparece una ventana pequeña **solo después** de recibir respuesta válida de la API: «Registro recibido». Se muestran importe original, moneda y descripción y se explica que el dato está pendiente de sincronización con One Less One Daniel. No se declara que fue contabilizado, convertido ni agregado a saldos. Si falla la conexión, la ventana no aparece: el envío conserva el mismo identificador en el borrador local para un reintento seguro. El acceso directo de Atajos de iPhone no cambia.
+
+## V11.8 — Vincular Gasto a Proyectos
+
+Solo para Daniel: el formulario móvil muestra dos selectores opcionales cuando hay proyectos activos sincronizados desde el navegador principal. En `Gasto`, elegí el proyecto y opcionalmente uno de sus conceptos. Los importes, presupuestos y notas de proyectos **no** viajan al teléfono ni se guardan en el catálogo remoto: únicamente nombres e IDs.
+
+El registro pasa temporalmente por D1 y **solo** al sincronizarse en Daniel se crea un movimiento real y su vínculo con `projectLinks`. Un proyecto archivado, un concepto eliminado o Proyectos desactivado deja el registro pendiente para revisión y evita confirmarlo como importado. Los gastos sin proyectos no cambian.
+
+Para ver los selectores después de publicar la versión móvil, sincronizá desde Daniel y pulsá **Actualizar** en Safari. No requiere una segunda base D1, ni cambiar claves, ni gestionar Project Plans en Cloudflare.
+
+**Siguiente fase V11.6:** conciliar previsiones de proyectos contra gastos reales vinculados, manualmente o con ayuda, sin duplicar contabilidad.
