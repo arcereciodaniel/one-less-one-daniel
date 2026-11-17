@@ -89,7 +89,7 @@ function setType(type){
  $("categoryId").required=ordinary;$("person").required=cobro&&!$("splitToggle").checked;
  $("descriptionLabel").innerHTML=cobro?'Concepto <span class="optional">(opcional)</span>':'Detalle <span class="optional">(opcional)</span>';
  $("description").placeholder=cobro?"¿Qué te deben?":type==="Ingreso"?"¿De dónde viene?":"¿En qué fue?";
- $("submit").textContent=LABELS[type];$("moneySymbol").textContent=$("currency").value==="USD"?"$":"₡";options();return true;
+ $("submit").textContent=LABELS[type];$("moneySymbol").textContent=$("currency").value==="USD"?"$":"₡";$("currencyHint").hidden=$("currency").value!=="USD";options();return true;
 }
 function freeze(locked){
  for(const field of $("entryForm").querySelectorAll("input,select"))field.disabled=locked;
@@ -208,6 +208,10 @@ async function send(event){
  finally{submitting=false;$("submit").disabled=false;freeze(!!pending);}
 }
 $("date").value=today();$("date").max=today();syncDateDisplays();
+// Safari puede mantener el formulario abierto durante la noche; actualizar límite sin borrar lo escrito.
+document.addEventListener("visibilitychange",()=>{
+ if(document.visibilityState==="visible")$("date").max=today();
+});
 showCapture(!!localStorage.getItem(KEY));
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();const key=$("mobileKey").value.trim();if(key.length<32)return;localStorage.setItem(KEY,key);if(await refresh())restoreDraft();});
 $("entryForm").addEventListener("submit",send);
