@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#191919">
+  <meta name="application-name" content="One Less One">
+  <meta name="description" content="One Less One: organizá ingresos, gastos, presupuestos y tu saldo real en un solo lugar.">
+  <title>One Less One · by rastro.</title>
+  <link rel="manifest" href="./site.webmanifest?v=812">
+  <meta name="apple-mobile-web-app-title" content="One Less One">
+  <link rel="icon" href="data:,">
+  <!-- ONE_LESS_ONE_STYLES -->
+<link rel="stylesheet" href="mobile-pilot/desktop.css">
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="topbar">
+    <div class="brand" aria-label="One Less One, by rastro.">
+      <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
+      <small class="brand-version">v11.0.0</small>
+    </div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
+      <button data-view="plan"><span class="nav-icon" aria-hidden="true">◔</span><span>Presupuesto</span></button>
+      <button data-view="movements"><span class="nav-icon" aria-hidden="true">≡</span><span>Movimientos</span></button>
+      <button data-view="debts" data-optional-module="debts"><span class="nav-icon" aria-hidden="true">▭</span><span>Deudas</span></button>
+      <button data-view="shared" data-optional-module="shared"><span class="nav-icon" aria-hidden="true">◷</span><span>Cobros <span class="one-beta-tag">BETA</span></span></button>
+      <button data-view="capital" data-optional-module="capital"><span class="nav-icon" aria-hidden="true">◎</span><span>Metas <span class="one-beta-tag">BETA</span></span></button>
+      <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
+    </nav>
+    <div class="header-actions">
+        <div class="ui-switch" aria-label="Tema">
+        <button type="button" data-theme-choice="light" title="Tema claro">☀</button>
+        <button type="button" data-theme-choice="dark" title="Tema oscuro">☾</button>
+      </div>
+      <div class="currency-switch" aria-label="Moneda de visualización">
+        <span>Ver en</span>
+        <button type="button" data-display-currency="CRC" class="active">₡ CRC</button>
+        <button type="button" data-display-currency="USD">$ USD</button>
+      </div>
+      <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
+      <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
+      <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
+      <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</header>
+<div class="one-storage-guard-banner" id="oneStorageGuardBanner" role="alert" hidden>
+  <span id="oneStorageGuardMessage">Cambios externos detectados. El guardado está protegido.</span>
+  <button type="button" id="oneStorageReload">Recargar datos actuales</button>
+</div>
+<button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Ocultar menú lateral" title="Ocultar menú lateral">«</button>
+
+<main>
+  <section class="view active" id="view-dashboard">
+    <div class="note" id="dataIntegrityNotice" role="status" hidden></div>
+    <div class="v7-page-head">
+      <div>
+        <div class="v7-eyebrow">INICIO</div>
+        <h1>Tu panorama financiero</h1>
+        <p class="sub">Comprendé tu flujo de dinero y tomá mejores decisiones para lo que viene.</p>
+      </div>
+    </div>
+
+    <div class="v7-hero-card" id="dashboardHero">
+      <div class="v7-hero-main">
+        <div class="v7-kicker">Saldo operativo hoy</div>
+        <div class="v7-hero-value" id="dashboardHeroValue">—</div>
+        <div class="v7-hero-delta" id="dashboardHeroDelta">—</div>
+      </div>
+      <div class="v7-hero-note one-available-note" id="dashboardHeroNote" aria-label="Dinero disponible estimado"></div>
+    </div>
+
+    <div class="v7-kpis" id="kpiGrid"></div>
+
+    <div class="one-dashboard-analytics-grid">
+      <section class="v7-card v7-chart-card one-dashboard-budget-chart" aria-labelledby="oneBudgetChartTitle">
+<div class="v7-card-head"><div><h2 id="oneBudgetChartTitle">Presupuesto vs. real</h2><p>Gastos y aportes a metas comparados con lo presupuestado.</p></div></div>
+          <div class="one-chart-legend" id="expenseChartLegend" aria-label="Leyenda del gráfico de presupuesto frente a real">
+            <span class="one-chart-legend-item"><span class="one-chart-swatch one-chart-budget" aria-hidden="true"></span><strong>Presupuesto</strong></span>
+            <span class="one-chart-legend-item"><span class="one-chart-swatch one-chart-real" aria-hidden="true"></span><strong>Real</strong></span>
+          </div>
+          <div class="one-dashboard-bar-plot">
+            <canvas id="expenseChart" aria-label="Salidas presupuestadas y reales, incluidos los ahorros transferidos a metas" aria-describedby="expenseChartLegend"></canvas>
+          </div>
+      </section>
+<section class="v7-card rastro-category-spotlight one-dashboard-category-card" aria-labelledby="dashboardCategoryTitle">
+      <div class="v7-card-head">
+        <div><h2 id="dashboardCategoryTitle">Estado por categoría</h2><p>Presupuesto, gastos y ahorros registrados, y disponibilidad.</p></div>
+      </div>
+      <div class="rastro-category-spotlight-filters">
+        <div class="toolbar">
+          <div class="period-filter" id="dashboardFilters">
+            <div><label>Vista</label>
+              <select id="dashboardLevel">
+                <option value="quarter" selected>Trimestre</option>
+                <option value="month">Mes</option>
+                <option value="fortnight">Quincena</option>
+              </select>
+            </div>
+            <div id="dashboardQuarterWrap"><label>Trimestre</label><select id="dashboardQuarter"></select></div>
+            <div id="dashboardMonthWrap" class="month-select" hidden><label>Mes</label><select id="dashboardMonth"></select></div>
+            <div id="dashboardFortnightWrap" hidden><label>Quincena</label><select id="dashboardFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap" id="dashboardCategories"></div>
+    </section>
+    </div>
+
+    <div class="v7-main-grid">
+      <div class="v7-card v7-chart-card">
+        <div class="v7-card-head">
+          <div>
+            <h2>Evolución de tu liquidez</h2>
+            <p id="dashboardChartMeta">Últimos meses</p>
+          </div>
+          <div class="v7-mini-badge">6 meses</div>
+        </div>
+        <div class="one-chart-legend" id="cashChartLegend" aria-label="Leyenda del gráfico de liquidez">
+          <span class="one-chart-legend-item"><span class="one-chart-swatch one-chart-line" aria-hidden="true"></span>Saldo operativo real · cierres mensuales y hoy</span>
+        </div>
+        <div class="one-liquidity-plot" id="cashChartPlot">
+          <canvas id="cashChart" tabindex="0" aria-label="Evolución del saldo operativo real. Usa las flechas izquierda y derecha para explorar cada mes." aria-describedby="cashChartLegend cashChartHelp"></canvas>
+          <div class="one-liquidity-tooltip" id="cashChartTooltip" role="status" aria-live="polite" hidden>
+            <div class="one-liquidity-tooltip-date" id="cashChartTooltipDate"></div>
+            <strong class="one-liquidity-tooltip-amount" id="cashChartTooltipAmount"></strong>
+            <div class="one-liquidity-tooltip-caption">Saldo operativo real</div>
+          </div>
+        </div>
+        <p class="one-liquidity-help" id="cashChartHelp">Pasá el cursor o tocá el gráfico para consultar el monto exacto de cada mes.</p>
+        <div id="cashChartEmpty" class="one-liquidity-empty" role="status" hidden>Registra tu primer movimiento o actualiza tu saldo real para comenzar a visualizar la evolución de tu liquidez.</div>
+      </div>
+      <div class="v7-card v7-insight-card" id="dashboardInsight"></div>
+    </div>
+
+    <section class="v7-card one-collections-widget" id="dashboardCollectionsCard" hidden>
+      <div class="one-collections-head">
+        <div><h2>Cobros por recordar <span class="one-beta-tag">BETA</span></h2><p>Fechas y montos pendientes que necesitan seguimiento.</p></div>
+        <button class="btn secondary small" id="openCollectionsFromHome" type="button">Ver cobros</button>
+      </div>
+      <div class="one-collections-summary" id="dashboardCollectionsSummary"></div>
+      <div class="one-collections-list" id="dashboardCollectionsList"></div>
+    </section>
+    <div class="v7-bottom-grid">
+      <div class="v7-card" id="dashboardDebtCommitmentsCard">
+        <div class="v7-card-head">
+          <div><h2>Próximos compromisos</h2><p>Lo que necesita tu atención primero.</p></div>
+        </div>
+        <div class="v7-list" id="dashboardCommitments"></div>
+      </div>
+      <div class="v7-card">
+        <div class="v7-card-head">
+          <div><h2>Actividad reciente</h2><p>Tus últimos movimientos registrados.</p></div>
+        </div>
+        <div class="v7-list" id="dashboardActivity"></div>
+      </div>
+    </div>
+
+    <details class="v7-details one-dashboard-reconcile-details" id="dashboardAdvancedDetails">
+      <summary>Conciliación de saldo</summary>
+      <div class="v7-details-body">
+        <div class="one-dashboard-reconcile-toolbar">
+          <p>Compará el saldo calculado con el dinero realmente disponible para operar. La conciliación no se cuenta como ingreso ni gasto.</p>
+          <button class="btn secondary" id="reconcileBtn">Actualizar saldo real</button>
+        </div>
+        <div class="card reconcile" id="reconcileStatus"></div>
+        <details class="one-health-details" id="oneDataHealthDetails">
+          <summary>Estado de tus datos y respaldos</summary>
+          <p class="muted">Revisión local y de solo lectura. No modifica saldos ni envía información a ningún servidor.</p>
+          <div id="oneDataHealthReport" role="status" aria-live="polite"></div>
+        </details>
+      </div>
+    </details>
+  </section>
+
+  <section class="view" id="view-plan">
+    <div class="v7-page-head r8-plan-heading">
+      <div>
+        <div class="v7-eyebrow" id="r8PlanEyebrow">PLAN FINANCIERO</div>
+        <h1 id="planTitle">Presupuesto</h1>
+        <p class="sub" id="planSub"></p>
+      </div>
+      <div class="r8-plan-title-actions">
+        <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
+        <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
+        <div class="r8-view-switch" aria-label="Nivel de presupuesto">
+          <button type="button" data-r8-plan-level="quarter">Trimestre</button>
+          <button type="button" data-r8-plan-level="month">Mes</button>
+          <button type="button" data-r8-plan-level="fortnight">Quincena</button>
+        </div>
+      </div>
+    </div>
+    <dialog id="copyBudgetDialog" class="one-budget-copy-dialog" aria-labelledby="copyBudgetTitle">
+      <form id="copyBudgetForm">
+        <div class="one-budget-copy-head"><h2 id="copyBudgetTitle">Copiar presupuesto anterior</h2><button type="button" id="closeCopyBudgetDialog" aria-label="Cerrar">×</button></div>
+        <p id="copyBudgetContext" class="one-budget-copy-context"></p>
+        <div id="copyBudgetPreview" class="one-budget-copy-preview"></div>
+        <p class="one-budget-copy-note">Se copiarán los importes planificados de ambas quincenas. Las proyecciones automáticas del mes de destino se conservan. <strong>No se duplican movimientos ni se modifican saldos reales.</strong></p>
+        <div class="one-budget-copy-actions"><button class="btn secondary" type="button" id="cancelCopyBudget">Cancelar</button><button class="btn" type="submit" id="confirmCopyBudget">Copiar presupuesto</button></div>
+      </form>
+    </dialog>
+    <details class="r8-plan-options" id="r8PlanOptions">
+      <summary>Opciones de período, categorías y planificación</summary>
+    <div class="toolbar v7-plan-toolbar">
+      <div class="period-filter" id="planFilters">
+        <div><label>Vista</label>
+          <select id="planLevel">
+            <option value="quarter">Trimestre</option>
+            <option value="month" selected>Mes</option>
+            <option value="fortnight">Quincena</option>
+          </select>
+        </div>
+        <div id="planQuarterWrap"><label>Trimestre</label><select id="planQuarter"></select></div>
+        <div id="planMonthWrap" class="month-select" hidden><label>Mes</label><select id="planMonth"></select></div>
+        <div id="planFortnightWrap" hidden><label>Quincena</label><select id="planFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>
+      </div>
+      <button class="btn" id="newQuarterBtn">Crear trimestre</button>
+      <button class="btn secondary" id="duplicateQuarterBtn">Duplicar trimestre</button>
+      <button class="btn secondary" id="expandPlanBtn" type="button">Ver todo</button>
+      <button class="btn secondary" id="collapsePlanBtn" type="button">Compactar</button>
+      <button class="btn secondary" type="button" data-manage-categories>Administrar categorías</button>
+    </div>
+    <details class="v7-inline-help">
+      <summary>Cómo interpreta One Less One tus quincenas</summary>
+      <div class="note"><strong>Regla de lectura:</strong> pago del 28 = 1.ª quincena del mes siguiente; pago del 14 = 2.ª quincena del mes actual. <strong>Proyección adaptativa:</strong> al conciliar tu saldo real, ese monto se vuelve el nuevo punto de partida y se arrastra hacia las quincenas futuras.</div>
+    </details>
+    </details>
+    <div id="planQuarterSummary" class="plan-quarter-summary"></div>
+    <section id="goalBudgetPreview" class="one-goal-context" hidden aria-label="Orientación de ahorro para metas"></section>
+    <div class="one-payday-panel"><form id="onePaydayForm"><div><strong>Días de salario</strong><small>La quincena va desde cada pago hasta el siguiente.</small></div><label>Primer pago<input id="onePaydayFirst" type="number" min="1" max="27" required></label><label>Segundo pago<input id="onePaydaySecond" type="number" min="2" max="31" required></label><button type="submit" class="btn secondary small">Aplicar</button></form></div>
+    <div id="planMonths" class="plan-months"></div>
+    <div class="v7-legacy-hidden" aria-hidden="true">
+      <strong id="planClosingTitle">Cierre del periodo</strong>
+      <span id="planSummary"></span>
+      <div id="planClosing"></div>
+    </div>
+  </section>
+
+
+  <section class="view" id="view-movements">
+    <div class="v7-page-head"><div><div class="v7-eyebrow">MOVIMIENTOS</div><h1>Movimientos</h1><p class="sub">Tu actividad financiera, en orden.</p></div>
+      <div class="v7-page-actions"><button class="btn secondary one-move-repeat-last" id="oneRepeatLastMovement" type="button" hidden>↻ Repetir último</button><button class="btn" id="toggleMovementComposer" type="button">＋ Agregar movimiento</button></div>
+    </div>
+
+    <section id="goalMovementPreview" class="one-goal-context" hidden aria-label="Transferencias internas de metas"></section>
+    <div id="oneCentralFeedback" class="one-central-feedback" role="status" aria-live="polite" hidden></div>
+    <div class="one-move-period-control" aria-label="Período de movimientos">
+      <div class="one-move-view-switch" role="group" aria-label="Vista del período">
+        <button type="button" data-one-move-level="quarter" aria-pressed="false">Trimestre</button>
+        <button type="button" data-one-move-level="month" aria-pressed="true">Mes</button>
+        <button type="button" data-one-move-level="fortnight" aria-pressed="false">Quincena</button>
+      </div>
+      <div class="one-move-period-pickers">
+        <div class="one-move-period-field" id="movementQuarterWrap" hidden><label for="movementQuarter">Trimestre</label><select id="movementQuarter"></select></div>
+        <div class="one-move-period-field" id="movementMonthWrap"><label for="movementMonth">Mes</label><select id="movementMonth"></select></div>
+        <div class="one-move-period-field" id="movementFortnightWrap" hidden><label for="movementFortnight">Quincena</label><select id="movementFortnight"></select></div>
+        <div class="one-move-period-navigation">
+          <button type="button" id="movementPreviousPeriod" aria-label="Período anterior" title="Período anterior">‹</button>
+          <button type="button" id="movementNextPeriod" aria-label="Período siguiente" title="Período siguiente">›</button>
+          <button type="button" id="movementTodayPeriod" title="Ir al mes actual">Hoy</button>
+        </div>
+      </div>
+      <span class="one-move-screen-reader-only" id="movementPeriodHeading" aria-live="polite"></span>
+      <div hidden aria-hidden="true"><select id="movementLevel"><option value="quarter">Trimestre</option><option value="month" selected>Mes</option><option value="fortnight">Quincena</option></select><select id="movementPeriod"></select></div>
+    </div>
+    <div class="v7-kpis one-move-kpis" id="movementSummary"></div>
+    <div class="one-move-toolbar">
+      <div class="v7-search one-move-search"><span aria-hidden="true">⌕</span><input id="movementSearch" type="search" aria-label="Buscar movimientos" placeholder="Buscar movimientos..."></div>
+      <button type="button" id="movementFilterToggle" class="one-move-filter-button" aria-expanded="false" aria-controls="movementFiltersPanel">☷ Filtros <span class="one-move-filter-count" id="movementFiltersCount" hidden></span></button>
+    </div>
+    <section class="one-move-filter-panel" id="movementFiltersPanel" hidden aria-label="Filtros de movimientos">
+      <div class="one-move-filter-head"><div><strong>Refinar movimientos</strong><p>Filtrá solamente cuando lo necesités.</p></div><button type="button" class="one-move-filter-close" id="movementFiltersClose" aria-label="Cerrar filtros">×</button></div>
+      <div class="one-move-filter-grid">
+        <div class="field"><label for="movementTypeFilter">Tipo</label><select id="movementTypeFilter"><option value="">Todos</option></select></div>
+        <div class="field"><label for="movementCategoryFilter">Categoría</label><select id="movementCategoryFilter"><option value="">Todas</option></select></div>
+        <div class="field"><label for="movementCurrencyFilter">Moneda</label><select id="movementCurrencyFilter"><option value="">Todas</option><option value="CRC">CRC</option><option value="USD">USD</option></select></div>
+        <div class="field"><label for="movementDateFrom">Desde</label><input type="date" id="movementDateFrom"></div>
+        <div class="field"><label for="movementDateTo">Hasta</label><input type="date" id="movementDateTo"></div>
+      </div>
+      <div class="one-move-filter-footer">
+        <button class="btn secondary small" type="button" id="movementClearFilters">Limpiar filtros</button>
+        <button class="btn secondary small" type="button" id="exportMovementsCsv">Exportar CSV</button>
+        <button class="btn secondary small" type="button" data-manage-categories>Administrar categorías</button>
+      </div>
+    </section>
+    <details class="v7-card one-move-scheduled" id="movementTemplatesCard" hidden>
+      <summary><strong id="movementScheduledTitle">Programados</strong><small>Recordatorios que no afectan tu saldo hasta registrarlos.</small></summary>
+      <div id="movementTemplatesList" class="m2-template-grid"></div>
+    </details>
+    <div class="v7-card v7-feed-card one-move-feed"><div class="v7-card-head"><div><h2>Historial</h2><p id="movementCount"></p></div></div><div class="v7-transaction-feed" id="movementFeed"></div></div>
+    <div class="one-move-insights">
+      <details class="v7-card"><summary>Gastos por categoría</summary><div id="movementQuick"></div></details>
+      <details class="v7-card"><summary>Actividad por cuenta</summary><div id="movementAccountsSummary"></div></details>
+    </div>
+    <details class="v7-card m2-audit-card" id="movementAuditPanel"><summary>Historial de cambios en movimientos</summary><p class="m2-helper">Registra los cambios realizados desde esta versión. No modifica tus movimientos históricos ni es una conciliación bancaria.</p><div id="movementAuditList"></div></details>
+    <dialog class="one-move-dialog" id="movementComposerDialog" aria-labelledby="movementComposerTitle">
+      <div id="movementComposer" class="one-move-composer" hidden>
+        <div class="one-move-composer-head"><div><h2 id="movementComposerTitle">Nuevo movimiento</h2><p class="muted">Registralo en segundos.</p></div><button class="v7-icon-button" id="closeMovementComposer" aria-label="Cerrar" type="button">×</button></div>
+        <div class="m2-quick-types" id="movementQuickTypes" role="group" aria-label="Tipo de movimiento"><button type="button" data-m2-type="Gasto" class="active" aria-pressed="true">Gasto</button><button type="button" data-m2-type="Ingreso" aria-pressed="false">Ingreso</button><button type="button" data-m2-type="Pago deuda" aria-pressed="false">Pago deuda</button><button type="button" data-one-action="cobro" aria-pressed="false" title="Crear un cobro pendiente, sin registrar ingreso">Cobro</button><button type="button" data-one-action="goal" aria-pressed="false" title="Aportar a una meta, sin registrar gasto">Ahorro para meta</button></div>
+        <button type="button" id="movementSplitToggle" class="one-move-split-toggle" aria-pressed="false" aria-controls="movementSplitDetails">＋ Dividir entre categorías</button>
+        <form id="movementForm" class="form-grid one-move-form">
+          <input type="hidden" id="mEditId"><input type="hidden" id="mScheduledId"><select id="mType" required hidden aria-hidden="true"></select>
+          <div class="field one-move-amount"><label for="mAmount">Monto</label><div class="money-input"><input id="mAmount" type="number" min="0" step=".01" inputmode="decimal" placeholder="0.00" required><select id="mCurrency" aria-label="Moneda"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+          <div class="field one-move-date"><label for="mDate">Fecha</label><input type="date" id="mDate" required></div>
+          <div class="field one-move-category" id="mCategoryField"><label for="mCategory">Categoría</label><select id="mCategory" required></select></div>
+          <section id="movementSplitDetails" class="one-move-split-panel" hidden aria-label="División del gasto">
+            <div class="one-move-split-head"><strong>Distribución del gasto</strong><span>Un solo movimiento, varias categorías</span></div>
+            <div class="m2-splits" id="movementSplitRows"></div>
+            <button class="btn secondary small" type="button" id="addMovementSplit">＋ Agregar categoría</button>
+            <div class="m2-status" id="movementSplitStatus" aria-live="polite"></div>
+          </section>
+          <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
+          <div class="field wide"><label for="mDescription">Descripción (opcional)</label><input id="mDescription" placeholder="¿En qué gastaste?"></div>
+          <!-- Se conservan los valores históricos al editar, pero ya no se ofrecen como opciones de captura. -->
+          <div class="one-move-legacy-fields" hidden aria-hidden="true">
+            <select id="mAccount" tabindex="-1" aria-label="Cuenta histórica"></select>
+            <select id="mPaymentMethod" tabindex="-1" aria-label="Método de pago histórico"><option value="">No especificado</option><option>Transferencia</option><option>SINPE</option><option>Tarjeta de débito</option><option>Tarjeta de crédito</option><option>Efectivo</option><option>Otro</option></select>
+          </div>
+          <div class="form-actions one-move-form-actions"><button class="btn" id="movementSubmitBtn" type="submit">Registrar</button><button class="btn secondary" type="button" id="movementCancelEdit" hidden>Cancelar</button></div>
+        </form>
+        <form id="oneCentralGoalForm" class="one-central-goal-form" hidden>
+          <p class="one-central-goal-hint" id="oneCentralGoalHint">Un aporte pasa dinero de tu saldo operativo a una meta sin registrarlo como gasto.</p>
+          <div id="oneCentralGoalEmpty" class="one-central-goal-empty" hidden>
+            <p>Primero necesitás una meta activa. Podés crearla sin salir del registro.</p>
+            <button class="btn secondary" id="oneCentralCreateGoal" type="button">+ Crear una meta</button>
+          </div>
+          <div class="field wide"><label for="oneCentralGoalSelect">Meta de ahorro</label><select id="oneCentralGoalSelect" required></select></div>
+          <div class="field wide"><label for="oneCentralGoalTxnType">Operación</label><select id="oneCentralGoalTxnType"><option value="Aporte">Aportar dinero</option><option value="Retiro a operación">Devolver dinero al saldo operativo</option><option value="Uso objetivo">Usar ahorros para la meta</option></select></div>
+          <div class="field wide" id="oneCentralGoalCategoryField"><label for="oneCentralGoalCategory">Vincular al presupuesto</label><select id="oneCentralGoalCategory"></select><small class="muted">Seleccioná “Ahorro e inversión” para reflejar el aporte en esa categoría sin crear un gasto.</small></div>
+          <div class="field one-move-amount"><label for="oneCentralGoalAmount">Monto</label><div class="money-input"><input id="oneCentralGoalAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required><select id="oneCentralGoalCurrency" aria-label="Moneda del ahorro"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+          <div class="field wide"><label for="oneCentralGoalDate">Fecha</label><input id="oneCentralGoalDate" type="date" required></div>
+          <div class="field wide"><label for="oneCentralGoalDescription">Descripción (opcional)</label><input id="oneCentralGoalDescription" placeholder="Ej. Aporte quincenal"></div>
+          <div class="form-actions"><button class="btn" id="oneCentralGoalSubmit" type="submit">Guardar movimiento</button></div>
+        </form>
+        <div id="oneCentralCobroMount" class="one-central-cobro-mount" hidden>
+          <p class="one-central-goal-hint">El cobro pendiente no se cuenta como ingreso. Sus abonos se controlan desde Cobros.</p>
+        </div>
+      </div>
+    </dialog>
+  </section>
+
+  <section class="view" id="view-debts">
+    <div class="v7-page-head">
+      <div>
+        <div class="v7-eyebrow">DEUDAS</div>
+        <h1>Deudas</h1>
+        <p class="sub">Llevá el control de tus tarjetas, préstamos y el progreso para pagarlas.</p>
+      </div>
+      <div class="v7-page-actions"><button class="btn" id="addDebtBtn">＋ Agregar deuda</button></div>
+    </div>
+
+    <div class="v7-hero-card v7-debt-hero" id="debtHero">
+      <div class="v7-hero-main">
+        <div class="v7-kicker">Saldo total pendiente</div>
+        <div class="v7-hero-value" id="debtHeroValue">—</div>
+        <div class="v7-hero-delta" id="debtHeroDelta">—</div>
+      </div>
+      <div class="v7-hero-note" id="debtHeroNote"></div>
+    </div>
+
+    <div class="v7-kpis" id="debtKpis"></div>
+
+    <section class="v7-card one-debt-due-section" aria-labelledby="debtDueHeading">
+      <div class="v7-card-head"><div><h2 id="debtDueHeading">Próximos pagos</h2>
+        <p>Cuotas estimadas según los días y montos registrados. Revisá siempre tu estado de cuenta.</p></div></div>
+      <div class="one-debt-due-summary" id="debtDueSummary"></div>
+      <div class="one-debt-due-list" id="debtDueList"></div>
+    </section>
+
+    <div class="v7-main-grid v7-debt-grid">
+      <div class="v7-card">
+        <div class="v7-card-head"><div><h2>Avance de pago</h2><p>Qué parte de cada deuda ya has cubierto.</p></div></div>
+        <div class="v7-debt-progress" id="debtProgress"></div>
+      </div>
+      <div class="v7-card v7-insight-card" id="debtStrategy"></div>
+    </div>
+
+    <div class="v7-section-head">
+      <div><h2>Tus deudas</h2><p id="debtTotal"></p></div>
+      <div><label>Mostrar</label><select id="debtStatusFilter"><option value="active">Deudas activas</option><option value="archived">Archivadas / pagadas</option><option value="all">Todas</option></select></div>
+    </div>
+    <div class="v7-debt-list" id="debtList"></div>
+
+    <details class="v7-inline-help">
+      <summary>Cómo interpretar los próximos pagos</summary>
+      <div class="note">Las fechas son mensuales y estimadas a partir del día de pago guardado. La cuota mostrada es el mínimo configurado (limitado al saldo pendiente). Los pagos registrados en Movimientos durante el mes pueden marcar la cuota como cubierta en el sistema; esto no confirma su aplicación por el banco. Si un pago no está registrado, la fecha puede aparecer como pasada. No se crean pagos ni notificaciones automáticas.</div>
+    </details>
+    <details class="v7-inline-help">
+      <summary>Cómo calcula One Less One el saldo restante</summary>
+      <div class="note"><strong>Pagado registrado</strong> suma únicamente los movimientos creados con tipo <em>Pago deuda</em> y vinculados a esa deuda. El saldo restante es una estimación basada en saldos iniciales y pagos vinculados. Al corregir el saldo base, revisá los pagos históricos para evitar descontarlos dos veces.</div>
+    </details>
+  </section>
+
+  <section class="view" id="view-shared">
+    <h1>Cobros <span class="one-beta-tag">BETA</span></h1>
+    <p class="sub">Organizá por persona, registrá abonos y recordatorios, y conservá los cargos recurrentes de cada mes. Un abono no se suma automáticamente a Movimientos.</p>
+    <div class="receivable-toolbar">
+      <div class="month-navigator" aria-label="Navegar por mes">
+        <button class="month-nav-btn" id="sharedPrevMonth" type="button" title="Mes anterior" aria-label="Mes anterior">‹</button>
+        <div class="month-nav-label">
+          <small>Mes</small>
+          <strong id="sharedMonthLabel">—</strong>
+        </div>
+        <button class="month-nav-btn" id="sharedNextMonth" type="button" title="Mes siguiente" aria-label="Mes siguiente">›</button>
+      </div>
+      <div class="receivable-actions">
+        <button class="btn secondary" id="sharedCurrentMonth" type="button">Mes actual</button>
+        <button class="btn secondary" id="toggleArchivedSharedGroups" type="button">Ver archivados</button>
+        <button class="btn secondary" id="addSharedGroupBtn">Agregar grupo</button>
+        <button class="btn secondary" id="oneSplitFareOpen" type="button">Dividir gasto</button>
+        <button class="btn" id="addSharedChargeBtn">Agregar cobro</button>
+      </div>
+      <input type="hidden" id="sharedStatementMonth">
+    </div>
+    <div class="receivable-helper">Podés combinar varios cargos de la misma persona en un grupo. Los cobros pendientes de meses anteriores siguen visibles hasta que los marques como pagados. Los recordatorios aparecen dentro de la aplicación, no como avisos externos.</div>
+    <div class="one-cobros-tools"><div class="one-cobros-segment"><button type="button" id="cobrosPeopleTab">Personas</button><button type="button" id="cobrosGroupsTab">Grupos</button></div><span class="one-cobros-caption">Organizá por persona o por concepto</span></div>
+    <div class="receivable-bulk" id="sharedBulkActions">
+      <strong id="sharedSelectedCount">0 cobros seleccionados</strong>
+      <div class="actions">
+        <button class="btn secondary small" id="clearSharedSelectionBtn" type="button">Cancelar selección</button>
+        <button class="btn secondary small" id="removeSelectedGroupBtn" type="button">Quitar de grupo</button>
+        <button class="btn small" id="assignSelectedGroupBtn" type="button">Agregar a grupo</button>
+      </div>
+    </div>
+    <div id="sharedKpis" class="one-collection-stats"></div>
+    <div id="sharedPeopleContainer" class="one-people-list"></div>
+    <div id="sharedGroupsContainer" class="receivable-groups" hidden></div>
+  </section>
+
+  <section class="view" id="view-capital">
+    <div class="v7-page-head one-goal-header"><div><div class="v7-eyebrow">METAS · BETA 1.0</div><h1>Tus metas financieras</h1><p class="sub">Ahorrá con propósito, a tu ritmo.</p></div>
+      <div class="v7-page-actions"><button class="btn" id="createGoalBtn" type="button">+ Nueva meta</button></div>
+    </div>
+    <div class="one-goal-summary" id="goalSummary"></div>
+    <div class="one-goal-toolbar"><h2>Objetivos de ahorro</h2><label>Mostrar <select id="goalStatusFilter" aria-label="Filtrar metas"><option value="active">Activas</option><option value="archived">Archivadas</option><option value="all">Todas</option></select></label></div>
+    <div id="goalCardGrid" class="one-goal-grid"></div>
+    <section class="one-goal-activity"><div class="one-goal-activity-head"><h2>Actividad reciente</h2><span>Aportes y retiros</span></div><div id="oneGoalActivityList"></div></section>
+    <p class="one-goal-disclaimer">Ahorrá desde Movimientos o desde cada meta. El aporte reduce el saldo operativo, sin contarse como un gasto.</p>
+    <div id="capitalLegacyDetails" hidden aria-hidden="true" style="display:none!important">
+      <summary>Controles históricos internos (no visibles)</summary>
+      <div class="one-goal-advanced-body">
+        <p class="one-goal-disclaimer">Datos anteriores preservados para recuperación, sin mostrarse en la interfaz.</p>
+
+    <div class="toolbar">
+      <button class="btn" id="addReserveBtn">Agregar fondo</button>
+      <div><label>Mostrar</label><select id="reserveStatusFilter"><option value="active">Fondos activos</option><option value="archived">Archivados</option><option value="all">Todos</option></select></div>
+    </div>
+    <div class="grid kpis" id="capitalKpis"></div>
+    <div class="note" style="margin-top:16px"><strong>Regla:</strong> un aporte a una meta reduce tu saldo operativo disponible, pero no reduce tu patrimonio. No se agrega ningún gasto ni ingreso duplicado.</div>
+    <div class="card table-card" style="margin-bottom:16px">
+      <div class="table-head"><strong>Fondos y capital</strong><span class="pill" id="reserveTotal"></span></div>
+      <div class="table-wrap"><table id="reserveTable"></table></div>
+    </div>
+    <div class="card">
+      <strong>Registrar movimiento de fondo</strong>
+      <form id="reserveTxnForm" class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Fecha</label><input type="date" id="rtDate" required></div>
+        <div class="field"><label>Fondo</label><select id="rtReserve" required></select></div>
+        <div class="field"><label>Tipo</label><select id="rtType"><option>Aporte</option><option>Retiro a operación</option><option>Uso objetivo</option><option>Rendimiento</option><option>Ajuste</option></select></div>
+        <div class="field"><label>Monto</label><div class="money-input"><input id="rtAmount" type="number" min="0" step="0.01" required><select id="rtCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+        <div class="field wide"><label>Descripción</label><input id="rtDescription" placeholder="Ej. aporte crucero, interés mensual, retiro"></div>
+        <div class="form-actions"><button class="btn" type="submit">Registrar</button></div>
+      </form>
+      <div class="table-wrap" style="margin-top:14px"><table id="reserveTxnTable"></table></div>
+    </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-categories">
+    <h1>Categorías</h1>
+    <p class="sub">Personaliza cómo llamas a tus ingresos, gastos y compromisos. Los ingresos también pueden tener frecuencia, monto esperado y proyección automática conectada directamente con Presupuesto.</p>
+    <div class="note"><strong>Tu personalización se conserva.</strong> Puedes mantener nombres como Ingreso Walmart, Ingreso Filtro o Préstamo BN. One Less One separa el nombre visible de su función financiera para que puedas personalizarlo sin perder historial ni romper el presupuesto.</div>
+    <div class="toolbar">
+      <button class="btn" id="addCategoryBtn">Nueva categoría</button>
+      <div><label>Mostrar</label><select id="categoryStatusFilter"><option value="active">Activas</option><option value="archived">Archivadas</option><option value="all">Todas</option></select></div>
+      <div><label>Tipo</label><select id="categoryTypeFilter"><option value="">Todos</option><option value="Ingreso">Ingreso</option><option value="Gasto">Gasto</option><option value="Pago deuda">Pago de deuda</option><option value="Movimiento patrimonial">Movimiento patrimonial</option></select></div>
+    </div>
+    <div class="grid kpis" id="categoryKpis"></div>
+    <div class="card table-card" style="margin-top:16px">
+      <div class="table-head"><strong>Tu estructura financiera</strong><span class="pill" id="categoryCount"></span></div>
+      <div class="table-wrap"><table id="categoryTable"></table></div>
+    </div>
+  </section>
+
+</main>
+<footer>One Less One · by rastro. · v11.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+</div>
+
+
+<dialog id="oneActionSuccessDialog" class="one-action-success-dialog" aria-labelledby="oneActionSuccessTitle" aria-describedby="oneActionSuccessDescription">
+  <div class="one-action-success-content">
+    <div class="one-action-success-icon" aria-hidden="true">✓</div>
+    <h2 id="oneActionSuccessTitle">Registro guardado</h2>
+    <p id="oneActionSuccessDescription"></p>
+    <button type="button" class="btn" id="oneActionSuccessClose">Continuar</button>
+  </div>
+</dialog>
+<dialog id="movementTemplateDialog">
+ <div class="dialog-body"><button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+  <h2 id="movementTemplateTitle">Programar movimiento</h2>
+  <p class="muted">Cada movimiento recurrente requiere confirmación antes de afectar tu saldo. Cuando registrés uno, programaremos automáticamente la próxima fecha.</p>
+  <form id="movementTemplateForm" class="form-grid">
+   <input id="mtId" type="hidden">
+   <div class="field wide"><label>Nombre</label><input id="mtName" placeholder="Ej. Recibo de internet" required></div>
+   <div class="field"><label>Tipo</label><select id="mtType"><option>Gasto</option><option>Ingreso</option><option>Pago deuda</option></select></div>
+   <div class="field"><label>Frecuencia</label><select id="mtFrequency"><option value="weekly">Semanal</option><option value="fortnightly">Quincenal (14 días)</option><option value="monthly" selected>Mensual</option><option value="yearly">Anual</option></select></div>
+   <div class="field"><label>Próxima fecha</label><input id="mtNextDate" type="date" required></div>
+   <div class="field"><label>Categoría</label><select id="mtCategory" required></select></div>
+   <div class="field" id="mtDebtField" hidden><label>Deuda</label><select id="mtDebt"></select></div>
+   <div class="field"><label>Monto</label><input id="mtAmount" type="number" min=".01" step=".01" required></div>
+   <div class="field"><label>Moneda</label><select id="mtCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+   <div class="field wide"><label>Descripción</label><input id="mtDescription" placeholder="Concepto"></div>
+   <div class="field wide"><label>Cuenta</label><select id="mtAccount"></select></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelMovementTemplate">Cancelar</button><button type="submit" class="btn">Guardar programación</button></div>
+  </form>
+ </div>
+</dialog>
+<dialog id="movementAccountsDialog">
+ <div class="dialog-body"><button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+  <h2>Administrar cuentas</h2>
+  <p class="muted">Clasificá los movimientos por cuenta. Los totales mostrados son actividad registrada, no saldos bancarios conciliados.</p>
+  <form id="movementAccountForm" class="form-grid">
+   <div class="field wide"><label>Nombre de cuenta</label><input id="newMovementAccount" maxlength="60" placeholder="Ej. Banco, efectivo, tarjeta" required></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="closeMovementAccounts">Cerrar</button><button type="submit" class="btn">Agregar cuenta</button></div>
+  </form>
+  <div class="m2-helper" id="movementAccountsList"></div>
+ </div>
+</dialog>
+<dialog id="modulesDialog" class="one-modules-dialog" aria-labelledby="modulesDialogTitle">
+  <div style="padding:20px 22px;border-bottom:1px solid var(--border)"><h2 id="modulesDialogTitle">Herramientas adicionales</h2><p>Activá las herramientas que querés utilizar. Podés ocultarlas cuando no las necesités sin perder sus datos.</p></div>
+  <div class="one-module-fixed"><strong>Siempre visibles:</strong> Inicio · Presupuesto · Movimientos</div>
+  <label class="one-module-item"><input type="checkbox" id="moduleDebtsToggle"><span><strong>Deudas</strong><small>Préstamos, tarjetas y pagos pendientes.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
+  <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
+</dialog>
+<dialog id="categoryManagerDialog" class="rastro-category-manager">
+  <div class="rastro-category-manager-header"><div><strong>Tu estructura financiera</strong><p>Administrá tus categorías sin abandonar el presupuesto o los movimientos.</p></div><button type="button" class="v7-icon-button" id="closeCategoryManager" aria-label="Cerrar">×</button></div>
+  <div id="categoryManagerMount"></div>
+  <details class="rastro-maintenance"><summary>Datos y mantenimiento</summary><p>Restablecer elimina la información local. Generá un respaldo antes de hacerlo.</p><button type="button" class="btn danger" id="resetBtn">Restablecer datos locales</button></details>
+</dialog>
+
+<dialog id="sharedGroupDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2 id="sharedGroupDialogTitle">Agregar grupo</h2>
+    <form id="sharedGroupForm" class="form-grid">
+      <input type="hidden" id="sgId">
+      <div class="field wide"><label>Nombre del grupo</label><input id="sgName" placeholder="Ej. Tarjeta 3095, Préstamo Juan, Viaje con amigos" required></div>
+      <div class="field"><label>Persona principal (opcional)</label><input id="sgPerson" placeholder="Ej. Gloriana"></div>
+      <div class="field wide"><label>Notas</label><textarea id="sgNotes" placeholder="Información útil del grupo, tarjeta o motivo del cobro"></textarea></div>
+      <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelSharedGroupBtn">Cancelar</button><button type="submit" class="btn">Guardar</button></div>
+    </form>
+  </div>
+</dialog>
+
+
+<dialog id="oneSplitFareDialog" class="one-split-dialog">
+ <div class="dialog-body">
+  <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+  <h2>Dividir gasto entre personas</h2>
+  <p class="muted">Un grupo con un cobro por persona. Tu parte no se cobra. No crea otro gasto ni ingreso en Movimientos.</p>
+  <form id="oneSplitFareForm" class="one-split-form">
+   <label>Grupo<select id="oneSplitGroupChoice" aria-label="Elegir un grupo existente o crear uno nuevo"><option value="">Crear grupo nuevo</option></select></label>
+   <label id="oneSplitGroupNameField">Nombre del grupo nuevo<input id="oneSplitGroupName" maxlength="120" placeholder="Viaje a Santa Teresa" required></label>
+   <div id="oneSplitMembers" class="one-split-members" hidden></div>
+   <label>Concepto del gasto<input id="oneSplitDescription" maxlength="200" placeholder="Ej. Hotel o cena" required></label>
+   <div class="one-split-grid">
+    <label>Monto total<input id="oneSplitTotal" type="number" min="0.01" step="0.01" required placeholder="328.00"></label>
+    <label>Moneda<select id="oneSplitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></label>
+    <label>Fecha del pago<input id="oneSplitDate" type="date" required></label>
+    <label>Fecha esperada <small>(opcional)</small><input id="oneSplitDue" type="date"></label>
+    <label>Dividir por<select id="oneSplitMode"><option value="equal">Partes iguales</option><option value="amount">Montos personalizados</option></select></label>
+    <label id="oneSplitSelfSharesField">Tus partes pagadas<input id="oneSplitSelfShares" type="number" min="0" max="20" step="1" value="1"></label>
+    <label id="oneSplitSelfAmountField" hidden>Tu parte del gasto<input id="oneSplitSelfAmount" type="number" min="0" step="0.01" value="0"></label>
+   </div>
+   <div class="one-split-people-heading"><strong>Personas de este gasto</strong><small>Elegí únicamente a quienes participaron. Podés asignarle dos partes a Charlie en una sola fila.</small></div>
+   <div id="oneSplitPeople" class="one-split-people"></div>
+   <button class="btn secondary small" type="button" id="oneSplitAddPerson">+ Persona</button>
+   <div id="oneSplitPreview" class="one-split-preview" role="status" aria-live="polite"></div>
+   <div class="dialog-actions"><button class="btn secondary" type="button" id="oneSplitCancel">Cancelar</button><button class="btn" id="oneSplitSubmit" type="submit">Guardar reparto y cobros</button></div>
+  </form>
+ </div>
+</dialog>
+
+<dialog id="sharedChargeDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2 id="sharedChargeDialogTitle">Agregar cobro</h2>
+    <form id="sharedChargeForm" class="form-grid one-cobro-simple-form">
+      <input type="hidden" id="scId">
+      <input type="month" id="scMonth" required hidden aria-hidden="true">
+      <div class="field wide"><label for="scPerson">¿Quién te debe?</label><input id="scPerson" placeholder="Nombre de la persona" required></div>
+      <div class="field wide"><label for="scDescription">¿Qué te deben?</label><input id="scDescription" placeholder="Ej. Una cena, un préstamo o una compra" required></div>
+      <div class="field wide"><label for="scAmount">¿Cuánto te deben?</label><div class="money-input"><input id="scAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required><select id="scCurrency" aria-label="Moneda del cobro"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field wide"><label for="scDueDate">¿Cuándo esperás que te paguen? <small>(opcional)</small></label><input type="date" id="scDueDate"><small>Si no sabés la fecha, dejala vacía. El cobro no se marcará como vencido.</small></div>
+      <details id="scAdvanced" class="one-cobro-advanced">
+        <summary>Más opciones <span>Grupo, recordatorio y repetición</span></summary>
+        <div class="one-cobro-advanced-grid">
+          <div class="field"><label for="scGroup">Grupo (opcional)</label><select id="scGroup"></select></div>
+          <div class="field"><label for="scKind">Tipo de cobro</label><select id="scKind"><option>Compra compartida</option><option>Préstamo</option><option>Suscripción</option><option>Uso / consumo</option><option>Otro</option></select></div>
+          <div class="field" id="scReminderField" hidden><label for="scReminderDays">Recordarme</label><select id="scReminderDays"><option value="0" selected>En la fecha esperada</option><option value="1">1 día antes</option><option value="3">3 días antes</option><option value="7">7 días antes</option></select></div>
+          <div class="field"><label for="scDate">Fecha de registro</label><input type="date" id="scDate" required></div>
+          <div class="field wide"><label class="check-row"><input type="checkbox" id="scRecurring"><span><strong>Repetir cada mes</strong><small>Solo si esperás este cobro mensualmente. Necesita una fecha esperada de pago.</small></span></label></div>
+          <div class="field wide"><label for="scNotes">Notas (opcional)</label><input id="scNotes" placeholder="Algo que querás recordar"></div>
+          <select id="scStatus" hidden aria-hidden="true"><option value="pending">Pendiente</option><option value="paid">Pagado</option></select>
+        </div>
+      </details>
+      <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelSharedChargeBtn">Cancelar</button><button type="submit" class="btn">Guardar cobro</button></div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="cobroPaymentDialog">
+ <div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button><h2>Registrar abono</h2><p class="muted" id="cpContext"></p>
+ <form id="cpForm" class="form-grid"><input id="cpChargeId" type="hidden"><input id="cpPaymentId" type="hidden">
+  <div class="field"><label>Fecha recibida</label><input id="cpDate" type="date" required></div>
+  <div class="field"><label>Monto recibido</label><div class="money-input"><input id="cpAmount" type="number" min="0.01" step="0.01" required><input id="cpCurrency" readonly aria-label="Moneda del cobro"></div></div>
+  <div class="field wide"><label>Nota opcional</label><input id="cpNote" placeholder="SINPE, transferencia, efectivo…"></div>
+  <div class="one-cobro-sync wide">
+    <label class="check-row"><input id="cpSyncMovement" type="checkbox"><span><strong>Registrar también en Movimientos</strong><small>Activá esta opción solo si todavía no registraste el dinero. El movimiento quedará vinculado al abono.</small></span></label>
+    <div id="cpMovementOptions" class="one-cobro-sync-options" hidden>
+      <div><label for="cpMovementKind">Cómo clasificar este dinero</label><select id="cpMovementKind">
+        <option value="reimbursement">Reembolso / devolución (no es ingreso habitual)</option>
+        <option value="income">Ingreso (cuenta como ingreso real)</option>
+      </select></div>
+      <div id="cpMovementIncomeWrap" class="one-cobro-sync-category" hidden><label for="cpMovementIncomeCategory">Categoría de ingreso</label><select id="cpMovementIncomeCategory"></select></div>
+      <p id="cpMovementHint">Un reembolso aumenta la liquidez, sin sumarse a tus ingresos habituales.</p>
+    </div>
+  </div>
+  <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cpCancel">Cancelar</button><button type="submit" class="btn" id="cpSubmitBtn">Guardar abono</button></div>
+</form></div>
+</dialog>
+<dialog id="cobroHistoryDialog"><div class="dialog-body"><button type="button" class="dialog-close" aria-label="Cerrar">×</button><h2>Historial de abonos</h2><p class="muted" id="cpHistoryContext"></p><div id="cpHistoryList"></div><div class="dialog-actions"><button type="button" class="btn secondary" id="cpHistoryClose">Cerrar</button></div></div></dialog>
+<dialog id="assignSharedGroupDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2>Agrupar cobros</h2>
+    <p class="muted" id="assignSharedGroupSummary">Seleccioná el grupo para los cobros marcados.</p>
+    <form id="assignSharedGroupForm" class="form-grid">
+      <div class="field wide">
+        <div class="group-assign-mode">
+          <button type="button" id="assignExistingModeBtn" class="active">Grupo existente</button>
+          <button type="button" id="assignNewModeBtn">Crear grupo nuevo</button>
+        </div>
+      </div>
+      <div class="field wide" id="assignExistingWrap"><label>Grupo</label><select id="assignGroupSelect"></select></div>
+      <div id="assignNewWrap" class="wide" hidden>
+        <div class="form-grid">
+          <div class="field wide"><label>Nombre del grupo</label><input id="assignNewGroupName" placeholder="Ej. Mamá, Tarjeta 3095, Viaje" /></div>
+          <div class="field"><label>Persona principal (opcional)</label><input id="assignNewGroupPerson" placeholder="Ej. Mamá" /></div>
+          <div class="field wide"><label>Notas</label><input id="assignNewGroupNotes" /></div>
+        </div>
+      </div>
+      <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelAssignSharedGroupBtn">Cancelar</button><button type="submit" class="btn">Agrupar cobros</button></div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="reserveDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2 id="reserveDialogTitle">Agregar fondo</h2>
+    <form id="reserveForm" class="form-grid">
+      <input type="hidden" id="fId">
+      <div class="field"><label>Nombre</label><input id="fName" required></div>
+      <div class="field" hidden><label>Tipo histórico</label><select id="fType"><option value="goal">Meta</option><option value="protected">Histórico</option></select></div>
+      <div class="field"><label>Meta (opcional)</label><div class="money-input"><input id="fTarget" type="number" min="0" step="0.01" value="0"><select id="fTargetCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field"><label>Fecha objetivo (opcional)</label><input id="fTargetDate" type="date"></div>
+      <div class="field wide"><label>Categoría de ahorro en Presupuesto (opcional)</label><select id="fBudgetCategory"></select><small class="muted">Los aportes cuentan como ahorro ejecutado en esta categoría, no como un gasto nuevo.</small></div>
+      <div class="field"><label>Ahorrado inicialmente (opcional)</label><div class="money-input"><input id="fOpeningAmount" type="number" min="0" step="0.01" value="0"><select id="fOpeningCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field"><label>Fecha inicial</label><input id="fOpeningDate" type="date" required></div>
+      <p class="one-goal-form-note wide">El saldo inicial debe ser dinero que ya estaba reservado fuera de tu saldo operativo. Para apartar dinero de tu saldo actual, iniciá en cero y registrá un <strong>Aporte</strong>: así no se cuenta dos veces.</p>
+      <div class="field" hidden><label>Ubicación</label><input id="fLocation" placeholder="Ej. MultiMoney, cuenta bancaria"></div>
+      <div class="field" hidden><label>Tasa histórica</label><input id="fRate" type="number" min="0" step=".01" value="0"></div>
+      <div class="field wide"><label>Notas</label><textarea id="fNotes"></textarea></div>
+      <div class="dialog-actions wide">
+        <button type="button" class="btn secondary" id="cancelReserveBtn">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="debtDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2 id="debtDialogTitle">Agregar deuda</h2>
+    <form id="debtForm" class="form-grid">
+      <input type="hidden" id="dId">
+      <div class="field"><label>Tipo</label><select id="dType"><option>Tarjeta</option><option>Préstamo</option><option>Familiar</option><option>Otra</option></select></div>
+      <div class="field"><label>Nombre / ID</label><input id="dName" required></div>
+      <div class="field"><label>Estado</label><select id="dStatus"><option value="active">Activa</option><option value="archived">Pagada / archivada</option></select></div>
+      <div class="field"><label>Saldo base USD</label><input id="dUsd" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Saldo base CRC</label><input id="dCrc" type="number" min="0" step="1" value="0"></div>
+      <div class="field"><label>Conversión USD</label><input id="dFxPreview" readonly value="Usa TC venta diario"></div>
+      <div class="field"><label>Límite</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
+      <div class="field"><label>Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field"><label>Día de pago</label><input id="dPayDay" placeholder="Ej. 4, 20, 30"></div>
+      <div class="field"><label>Tasa</label><input id="dRate"></div>
+      <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
+      <div class="field wide"><label>Meta</label><input id="dGoal"></div>
+      <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>
+      <div class="dialog-actions wide">
+        <button type="button" class="btn secondary" id="cancelDebtBtn">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="debtBalanceDialog"><div class="dialog-body">
+<button class="dialog-close" type="button" id="closeDebtBalanceDialog" aria-label="Cerrar">×</button>
+<h2>Actualizar saldo real</h2><p class="muted">Usá el saldo pendiente de tu estado de cuenta. No se modifican pagos ni movimientos anteriores; los nuevos pagos sí reducirán el saldo conciliado.</p>
+<form id="debtBalanceForm" class="form-grid"><input type="hidden" id="debtBalanceId">
+<div class="field wide"><label>Deuda</label><input id="debtBalanceName" readonly></div>
+<div class="field"><label>Saldo pendiente confirmado</label><input id="debtBalanceAmount" type="number" min="0" step=".01" required></div>
+<div class="field"><label>Moneda</label><select id="debtBalanceCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div>
+<div class="field wide"><label>Nota (opcional)</label><input id="debtBalanceNote" maxlength="240" placeholder="Ej. Estado de cuenta bancario"></div>
+<div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelDebtBalance">Cancelar</button><button type="submit" class="btn">Guardar saldo real</button></div>
+</form></div></dialog>
+<dialog id="reconcileDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2>Actualizar saldo real</h2>
+    <p class="muted">Ingresá únicamente el saldo disponible para operar, excluyendo ahorros ya apartados. Este ajuste no crea un ingreso ni un gasto.</p>
+    <form id="reconcileForm" class="form-grid">
+      <div class="field"><label>Fecha de conciliación</label><input type="date" id="rDate" required></div>
+      <div class="field"><label>Saldo calculado antes del ajuste</label><input id="rCalculated" readonly></div>
+      <div class="field"><label>Saldo operativo real</label><div class="money-input"><input id="rAmount" type="number" min="0" step="0.01" required><select id="rCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field"><label>Diferencia (ajuste de saldo)</label><input id="rDifference" readonly></div>
+      <p class="muted one-reconcile-explainer wide" id="oneReconcileExplanation" role="status" aria-live="polite">Ingresá el saldo real para revisar cómo cambiaría el cálculo.</p>
+      <div class="field wide"><label>Nota</label><input id="rNote" placeholder="Ej. concilié contra mi cuenta bancaria"></div>
+      <div class="dialog-actions wide">
+        <button type="button" class="btn secondary" id="cancelReconcileBtn">Cancelar</button>
+        <button type="submit" class="btn">Usar este saldo</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+
+<dialog id="categoryDialog">
+  <div class="dialog-body">
+    <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2 id="categoryDialogTitle">Nueva categoría</h2>
+    <form id="categoryForm" class="form-grid">
+      <input type="hidden" id="cId">
+      <div class="field wide"><label>Nombre visible</label><input id="cName" placeholder="Ej. Ingreso Walmart, Mascotas, Préstamo BN" required></div>
+      <div class="field"><label>Tipo financiero</label><select id="cType"><option value="Ingreso">Ingreso</option><option value="Gasto">Gasto</option><option value="Pago deuda">Pago de deuda</option><option value="Movimiento patrimonial">Movimiento patrimonial</option></select></div>
+      <div class="field"><label>Grupo (opcional)</label><input id="cGroup" placeholder="Ej. Trabajo, Alimentación, Deudas"></div>
+      <div class="field wide">
+        <label class="check-row"><input type="checkbox" id="cBudgetable"><span><strong>Incluir en Presupuesto</strong><small>Si está activo, esta categoría aparecerá como una línea editable dentro de Presupuesto. Los movimientos patrimoniales normalmente se dejan fuera.</small></span></label>
+      </div>
+      <div class="income-config-panel" id="incomeConfigFields" hidden>
+        <div class="income-config-head"><div><strong>Planificación del ingreso</strong><small>Configúralo una vez y One Less One podrá prellenar automáticamente tus presupuestos futuros.</small></div><span class="category-type income">Ingreso</span></div>
+        <div class="income-config-grid">
+          <div class="field"><label>Tipo de ingreso</label><select id="cIncomeSubtype"><option>Salario</option><option>Negocio</option><option>Freelance</option><option>Pensión</option><option>Renta</option><option>Comisión</option><option>Otro</option></select></div>
+          <div class="field"><label>Comportamiento</label><select id="cIncomeBehavior"><option value="fixed">Fijo</option><option value="variable">Variable</option></select></div>
+          <div class="field"><label>Frecuencia</label><select id="cIncomeFrequency"><option value="semimonthly">Quincenal · 2 veces al mes</option><option value="monthly">Mensual</option><option value="biweekly">Cada 2 semanas</option><option value="weekly">Semanal</option><option value="irregular">Irregular / variable</option><option value="once">Una vez</option></select></div>
+          <div class="field"><label>Monto esperado por pago</label><div class="money-input"><input id="cIncomeAmount" type="number" min="0" step="0.01"><select id="cIncomeCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+          <div class="field"><label>Cuenta destino</label><select id="cIncomeAccount"><option>Cuenta bancaria</option><option>Efectivo</option><option>MultiMoney</option><option>Otra cuenta</option></select></div>
+          <div class="field"><label>Proyección</label><label class="check-row"><input type="checkbox" id="cIncomeAuto"><span><strong>Proyectar automáticamente</strong><small>Prellena Presupuesto según esta frecuencia.</small></span></label></div>
+
+          <div class="income-schedule" id="incomeScheduleSemimonthly">
+            <div class="field"><label>Primer pago · día</label><input id="cIncomeDay1" type="number" min="1" max="31" step="1"></div>
+            <div class="field"><label>Financia</label><select id="cIncomeAssign1"><option value="current-1">1.ª quincena del mismo mes</option><option value="current-2">2.ª quincena del mismo mes</option><option value="next-1">1.ª quincena del mes siguiente</option><option value="next-2">2.ª quincena del mes siguiente</option></select></div>
+            <div class="field"><label>Segundo pago · día</label><input id="cIncomeDay2" type="number" min="1" max="31" step="1"></div>
+            <div class="field"><label>Financia</label><select id="cIncomeAssign2"><option value="current-1">1.ª quincena del mismo mes</option><option value="current-2">2.ª quincena del mismo mes</option><option value="next-1">1.ª quincena del mes siguiente</option><option value="next-2">2.ª quincena del mes siguiente</option></select></div>
+          </div>
+          <div class="income-schedule" id="incomeScheduleMonthly" hidden>
+            <div class="field"><label>Día de pago</label><input id="cIncomeMonthlyDay" type="number" min="1" max="31" step="1"></div>
+            <div class="income-projection-note">One Less One asignará el pago a la quincena financiera que corresponda según la fecha.</div>
+          </div>
+          <div class="income-schedule" id="incomeScheduleWeekly" hidden>
+            <div class="field"><label>Día de la semana</label><select id="cIncomeWeekday"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+            <div class="income-projection-note">Cada pago semanal se suma automáticamente a la quincena financiera donde cae.</div>
+          </div>
+          <div class="income-schedule" id="incomeScheduleBiweekly" hidden>
+            <div class="field"><label>Fecha de referencia</label><input id="cIncomeBiweeklyStart" type="date"></div>
+            <div class="income-projection-note">Usaremos esta fecha como ancla y proyectaremos cada 14 días hacia adelante.</div>
+          </div>
+          <div class="income-schedule" id="incomeScheduleOnce" hidden>
+            <div class="field"><label>Fecha esperada</label><input id="cIncomeOnceDate" type="date"></div>
+            <div class="income-projection-note">Ideal para aguinaldos, bonos, trabajos puntuales u otros ingresos que esperas una sola vez.</div>
+          </div>
+          <div class="income-schedule" id="incomeScheduleIrregular" hidden>
+            <div class="income-projection-note"><strong>Ingreso irregular:</strong> permanecerá disponible en Presupuesto, pero One Less One no asumirá que llegará automáticamente. Podrás presupuestarlo manualmente en cada período.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-actions wide"><button type="button" class="btn secondary" id="cancelCategoryBtn">Cancelar</button><button type="submit" class="btn">Guardar categoría</button></div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="restorePreviewDialog" aria-labelledby="restorePreviewTitle">
+<div class="dialog-body">
+<button type="button" class="dialog-close" id="restorePreviewClose" aria-label="Cerrar">×</button>
+<h2 id="restorePreviewTitle">Revisar respaldo</h2>
+<p class="muted">Revisá el contenido antes de reemplazar los datos financieros de este navegador.</p>
+<div id="restorePreviewDetails" class="one-restore-preview"></div>
+<p class="muted">Antes de restaurar se descargará un respaldo de tus datos actuales y se conservará una copia preventiva en este navegador.</p>
+<div class="dialog-actions">
+<button class="btn secondary" type="button" id="restorePreviewCancel">Cancelar</button>
+<button class="btn" type="button" id="restorePreviewConfirm">Restaurar estos datos</button>
+</div></div></dialog>
+<dialog id="fxDialog">
+  <div class="dialog-body">
+<button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+    <h2>Tipo de cambio del día</h2>
+    <p class="muted">One Less One usa compra y venta para valorar correctamente dólares por cobrar, deudas, metas y movimientos. El selector CRC/USD solo cambia la visualización; nunca reescribe el monto original.</p>
+    <p id="fxAutoStatus" class="muted" role="status">Se consulta automáticamente la referencia de Hacienda; podés editar los valores manualmente si tu banco aplica otra tasa.</p>
+    <form id="fxForm">
+      <div class="fx-grid">
+        <div class="field"><label>Fecha</label><input id="fxDate" type="date" required></div>
+        <div class="field"><label>Compra (CRC por USD)</label><input id="fxBuy" type="number" min="1" step="0.01" required></div>
+        <div class="field"><label>Venta (CRC por USD)</label><input id="fxSell" type="number" min="1" step="0.01" required></div>
+      </div>
+      <div class="fx-help" style="margin-top:12px"><strong>Compra:</strong> cuánto recibes en colones cuando entregas dólares. <strong>Venta:</strong> cuánto te cuesta comprar dólares con colones. Para la visualización general One Less One usa el punto medio entre ambos.</div>
+      <div class="fx-history" id="fxHistoryList"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn secondary" id="fxFetchNowBtn">Consultar Hacienda</button>
+        <button type="button" class="btn secondary" id="useLastFxBtn">Usar último registrado</button>
+        <button type="submit" class="btn">Guardar tipo de cambio</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="mobile-pilot/public/split-fare.js"></script>
+<!-- ONE_LESS_ONE_MAIN_SCRIPT -->
+<script src="mobile-pilot/desktop.js"></script>
+</body>
+</html>
