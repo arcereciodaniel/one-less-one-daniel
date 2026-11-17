@@ -10,14 +10,15 @@ const MANIFEST = path.join(ROOT, "site.webmanifest");
 const LAB_MANIFEST = path.join(ROOT, "lab", "site.webmanifest");
 
 const REPLACEMENTS = [
-  ['<small class="brand-version">v10.4.0</small>', '<small class="brand-version">v10.4.0 LAB</small>'],
-  ['<footer>One Less One · by rastro. · v10.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>', '<footer>One Less One · by rastro. · v10.4.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>'],
+  ['<small class="brand-version">v10.5.0</small>', '<small class="brand-version">v10.5.0 LAB</small>'],
+  ['<footer>One Less One · by rastro. · v10.5.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>', '<footer>One Less One · by rastro. · v10.5.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>'],
   ['const STORAGE_KEY = "daniel_finanzas_local_v1";', 'const STORAGE_KEY = "rastro_lab_v7_1_data_v1";'],
   ['const UI_STORAGE_KEY = "daniel_finanzas_ui_v1";', 'const UI_STORAGE_KEY = "rastro_lab_v7_1_ui_v1";'],
   ['const RECEIVABLE_CLEAN_START_KEY = "rastro_receivables_clean_start_v57";', 'const RECEIVABLE_CLEAN_START_KEY = "rastro_lab_v7_1_receivables_v1";'],
   ['const ONE_DEFAULT_SHOW_COBROS=true;', 'const ONE_DEFAULT_SHOW_COBROS=false;'],
   ['const UI_PREFS_KEY="rastro-ui-v6";', 'const UI_PREFS_KEY="rastro_lab_v7_1_prefs_v1";'],
   ['href="mobile-pilot/desktop.css"', 'href="../mobile-pilot/desktop.css"'],
+  ['src="mobile-pilot/split-fare.js"', 'src="../mobile-pilot/split-fare.js"'],
   ['src="mobile-pilot/desktop.js"', 'src="../mobile-pilot/desktop.js"']
 ];
 

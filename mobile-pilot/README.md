@@ -144,3 +144,14 @@ Tras guardar los secretos, entrá en GitHub → Actions → Publicar One Less On
 **Seguridad:** si falta uno de los tres secretos, se omite el despliegue y el Worker que ya funciona no se toca. El workflow genera su archivo wrangler.ci.jsonc temporal en el ejecutor de GitHub, no lo versiona, y no imprime el UUID. Las claves MOBILE_WRITE_KEY y DESKTOP_SYNC_KEY permanecen únicamente en los secretos del Worker existente y **NO** deben agregarse a GitHub. No se recrea D1, no se ejecuta schema.sql y no se modifican Lab ni Gloriana. El nombre del Worker y la dirección para los widgets y Atajos continúan iguales.
 
 **Atención:** la plantilla wrangler.jsonc de GitHub sigue teniendo un database_id de ejemplo, para evitar publicar el real. Si trabajás en tu Mac, conservá tu copia local con el ID correcto, aunque descargués nuevos archivos del repositorio.
+
+
+## V10.5 — Cobros compartidos en CRC/USD
+
+En **Cobros → Dividir gasto** registrá un gasto pagado por vos (ej. hotel por **$328**) y distribuí el total por partes iguales o montos personalizados. Podés asignar varias partes a una sola persona: si vos cubrís 1 parte, Charlie cubre 2 y Ana 1, se generan **Charlie: $164**, **Ana: $82**, **tu parte: $82**. La herramienta crea **un grupo** y **un cobro pendiente individual por persona**, con moneda original, fecha y el importe exacto. La propia parte NO genera un cobro.
+
+One Less One Móvil conserva las tres acciones principales y añade en **Cobro** la selección CRC/USD y el control **Dividir entre varias personas**. El iPhone envía un único paquete idempotente al Worker D1 y Daniel crea todos los cargos al sincronizar. Un reintento no duplica el grupo.
+
+Este reparto **no registra automáticamente un Gasto ni un Ingreso** en Movimientos: si pagaste un hotel de $328 y todavía no registraste ese gasto, registralo una vez por separado. Los pagos posteriores se anotan en cada cobro y, opcionalmente, como ingreso o reembolso vinculado al movimiento. Lab solo utiliza la interfaz local: Cloudflare permanece exclusivo para Daniel. Los registros históricos siguen intactos y Gloriana no fue modificada.
+
+Los cálculos de reparto se hacen en unidades monetarias mínimas (centavos), con validación de sumas exactas y sin permitir deudores repetidos. La función está cubierta por pruebas del Worker, el reparto y la interfaz de escritorio.
