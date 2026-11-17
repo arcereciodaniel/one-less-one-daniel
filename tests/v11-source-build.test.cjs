@@ -41,6 +41,6 @@ test("V11: claves de datos intactas, Lab separado y móvil sin migración",()=>{
  assert(lab.includes('const UI_STORAGE_KEY = "rastro_lab_v7_1_ui_v1";'));
  assert(main.includes('src="mobile-pilot/desktop.js"'));
  assert(lab.includes('src="../mobile-pilot/desktop.js"'));
- assert(main.includes('<small class="brand-version">v11.3.0</small>'));
- assert(lab.includes('<small class="brand-version">v11.3.0 LAB</small>'));
+ assert(main.includes('<small class="brand-version">v11.4.0</small>'));
+ assert(lab.includes('<small class="brand-version">v11.4.0 LAB</small>'));
 });
