@@ -1500,6 +1500,34 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
+
+/* V11.1 · Configuración y formularios adaptativos */
+.one-settings-dialog{width:min(610px,calc(100vw - 28px));max-height:90vh;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0}
+.one-settings-dialog::backdrop{background:rgba(0,0,0,.55)}
+.one-settings-dialog .dialog-body{padding:23px;max-width:none}
+.one-settings-dialog h2{margin:0 0 6px}
+.one-settings-dialog h3{font-size:.86rem;margin:0 0 10px}
+.one-settings-dialog .muted{font-size:.8rem;line-height:1.55}
+.one-settings-group{border-top:1px solid var(--border);margin-top:18px;padding-top:17px}
+.one-settings-action{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:12px;margin:7px 0}
+.one-settings-action:hover{background:var(--surface-hover)}
+.one-settings-action span:first-child{display:grid;gap:4px}
+.one-settings-action small,.one-debt-type-row small{color:var(--muted);font-size:.72rem}
+.one-settings-action>span:last-child{font-size:1.3rem;color:var(--muted)}
+.one-settings-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.one-settings-dialog .one-payday-panel{margin:10px 0 0}
+.one-settings-dialog .one-payday-panel form{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.one-settings-dialog .one-payday-panel form>div{flex:1 1 100%}
+.one-settings-dialog .one-payday-panel form label{flex:1 1 90px}
+.one-settings-dialog .one-payday-panel form input{max-width:100%}
+.one-debt-field[hidden]{display:none!important}
+.one-debt-type-list{display:grid;gap:8px;margin-top:18px}
+.one-debt-type-row{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.one-debt-type-row>div:first-child{display:grid;gap:3px;min-width:0}
+.one-debt-type-row.is-archived{opacity:.65}
+.one-debt-type-actions{display:flex;gap:5px;flex-wrap:wrap}
+.one-debt-type-actions button{font-size:.74rem}
+@media(max-width:600px){.one-settings-dialog .dialog-body{padding:17px}.one-debt-type-row{align-items:flex-start;flex-direction:column}}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -1509,7 +1537,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.0.0 LAB</small>
+      <small class="brand-version">v11.1.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1531,6 +1559,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
         <button type="button" data-display-currency="USD">$ USD</button>
       </div>
       <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
+      <button id="oneSettingsBtn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">⚙</button>
       <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
       <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
       <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
@@ -1978,7 +2007,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.0.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.1.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2028,6 +2057,44 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
+</dialog>
+
+<dialog id="oneSettingsDialog" class="one-settings-dialog" aria-labelledby="oneSettingsTitle">
+ <div class="dialog-body">
+  <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+  <h2 id="oneSettingsTitle">Configuración</h2>
+  <p class="muted">Personalizá One Less One. Tus registros siguen almacenados en este navegador.</p>
+  <div class="one-settings-group">
+   <h3>Estructura financiera</h3>
+   <button type="button" id="oneSettingsCategories" class="one-settings-action"><span><strong>Categorías</strong><small>Ingresos, gastos y grupos personalizados</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="oneSettingsDebtTypes" class="one-settings-action"><span><strong>Tipos de deuda</strong><small>Tarjetas, préstamos, cuotas y tipos propios</small></span><span aria-hidden="true">›</span></button>
+  </div>
+  <div class="one-settings-group">
+   <h3>Moneda y calendario</h3>
+   <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small>Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <div id="oneSettingsPaydayMount"></div>
+  </div>
+  <div class="one-settings-group">
+   <h3>Datos y seguridad</h3>
+   <p class="muted">Los archivos de respaldo son locales. Comprobá su descarga antes de restaurar o restablecer datos.</p>
+   <div class="one-settings-buttons"><button class="btn secondary" type="button" id="oneSettingsBackup">Respaldar</button><button class="btn secondary" type="button" id="oneSettingsRestore">Restaurar</button></div>
+   <div id="oneSettingsMaintenanceMount"></div>
+  </div>
+ </div>
+</dialog>
+<dialog id="oneDebtTypesDialog" class="one-settings-dialog" aria-labelledby="oneDebtTypesTitle">
+ <div class="dialog-body">
+  <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
+  <h2 id="oneDebtTypesTitle">Tipos de deuda</h2>
+  <p class="muted">El nombre es personalizable. La estructura define el formulario y los cálculos; las deudas existentes conservan su historial.</p>
+  <form id="oneDebtTypeForm" class="form-grid">
+   <input type="hidden" id="oneDebtTypeId">
+   <div class="field"><label for="oneDebtTypeName">Nombre</label><input id="oneDebtTypeName" maxlength="70" required placeholder="Ej. Préstamo BAC"></div>
+   <div class="field"><label for="oneDebtTypeShape">Estructura</label><select id="oneDebtTypeShape"><option value="card">Tarjeta de crédito</option><option value="loan">Préstamo</option><option value="installments">Compra en cuotas</option><option value="family">Préstamo familiar</option><option value="other">Otra deuda</option></select></div>
+   <div class="dialog-actions wide"><button type="button" class="btn secondary" id="oneDebtTypeCancel">Nuevo tipo</button><button type="submit" class="btn">Guardar tipo</button></div>
+  </form>
+  <div id="oneDebtTypesList" class="one-debt-type-list" aria-live="polite"></div>
+ </div>
 </dialog>
 <dialog id="categoryManagerDialog" class="rastro-category-manager">
   <div class="rastro-category-manager-header"><div><strong>Tu estructura financiera</strong><p>Administrá tus categorías sin abandonar el presupuesto o los movimientos.</p></div><button type="button" class="v7-icon-button" id="closeCategoryManager" aria-label="Cerrar">×</button></div>
@@ -2183,16 +2250,22 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
     <h2 id="debtDialogTitle">Agregar deuda</h2>
     <form id="debtForm" class="form-grid">
       <input type="hidden" id="dId">
-      <div class="field"><label>Tipo</label><select id="dType"><option>Tarjeta</option><option>Préstamo</option><option>Familiar</option><option>Otra</option></select></div>
+      <div class="field wide"><label for="dType">Tipo de deuda</label><select id="dType" required></select><small class="muted">Administrá tus tipos desde Configuración.</small></div>
       <div class="field"><label>Nombre / ID</label><input id="dName" required></div>
       <div class="field"><label>Estado</label><select id="dStatus"><option value="active">Activa</option><option value="archived">Pagada / archivada</option></select></div>
       <div class="field"><label>Saldo base USD</label><input id="dUsd" type="number" min="0" step=".01" value="0"></div>
       <div class="field"><label>Saldo base CRC</label><input id="dCrc" type="number" min="0" step="1" value="0"></div>
       <div class="field"><label>Conversión USD</label><input id="dFxPreview" readonly value="Usa TC venta diario"></div>
-      <div class="field"><label>Límite</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
-      <div class="field"><label>Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
-      <div class="field"><label>Día de pago</label><input id="dPayDay" placeholder="Ej. 4, 20, 30"></div>
-      <div class="field"><label>Tasa</label><input id="dRate"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Límite de crédito</label><div class="money-input"><input id="dLimit" type="number" min="0" step=".01" value="0"><select id="dLimitCurrency"><option value="USD">USD $</option><option value="CRC">CRC ₡</option></select></div></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments"><label id="dMinimumLabel">Pago mínimo / cuota</label><div class="money-input"><input id="dMinimum" type="number" min="0" step=".01" value="0"><select id="dMinimumCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></div></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments family"><label>Día de pago</label><input id="dPayDay" inputmode="numeric" placeholder="Ej. 4, 20, 30"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Fecha de corte (día)</label><input id="dCloseDay" type="number" min="1" max="31" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label>Pago de contado (opcional)</label><input id="dFullPayment" type="number" min="0" step=".01"></div>
+      <div class="field one-debt-field" data-debt-fields="loan installments family"><label>Entidad o persona</label><input id="dLender" maxlength="120"></div>
+      <div class="field one-debt-field" data-debt-fields="loan installments"><label>Fecha de finalización (opcional)</label><input id="dEndDate" type="date"></div>
+      <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas totales</label><input id="dInstallmentsTotal" type="number" min="1" max="600" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas restantes</label><input id="dInstallmentsLeft" type="number" min="0" max="600" step="1"></div>
+      <div class="field one-debt-field" data-debt-fields="card loan installments"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
       <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
       <div class="field wide"><label>Meta</label><input id="dGoal"></div>
       <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>
@@ -2501,6 +2574,26 @@ function syncIncomeProjectionsForData(raw,{categoryId="",adoptExisting=false}={}
   }
 }
 
+const ONE_DEBT_TYPE_PRESETS = Object.freeze([
+ {id:"olo-debt-card",name:"Tarjeta de crédito",shape:"card",active:true,builtin:true},
+ {id:"olo-debt-loan",name:"Préstamo",shape:"loan",active:true,builtin:true},
+ {id:"olo-debt-installments",name:"Compra en cuotas",shape:"installments",active:true,builtin:true},
+ {id:"olo-debt-family",name:"Préstamo familiar",shape:"family",active:true,builtin:true},
+ {id:"olo-debt-other",name:"Otra deuda",shape:"other",active:true,builtin:true}
+]);
+const ONE_DEBT_SHAPES={card:"Tarjeta",loan:"Préstamo",installments:"Préstamo",family:"Familiar",other:"Otra"};
+function oneNormalizeDebtTypes(rows){
+ const seen=new Set(),result=[];
+ (Array.isArray(rows)?rows:[]).forEach(t=>{
+  if(!t||typeof t.id!=="string"||seen.has(t.id))return;
+  const shape=Object.hasOwn(ONE_DEBT_SHAPES,t.shape)?t.shape:"other";
+  const name=String(t.name||"").trim().slice(0,70);
+  if(!name)return;
+  seen.add(t.id);result.push({id:t.id,name,shape,active:t.active!==false,builtin:ONE_DEBT_TYPE_PRESETS.some(p=>p.id===t.id)});
+ });
+ ONE_DEBT_TYPE_PRESETS.forEach(p=>{if(!seen.has(p.id))result.push({...p})});
+ return result;
+}
 const initialData = {
   settings:{fx:460,fxBuy:0,fxSell:0,fxDate:"",fxHistory:[],displayCurrency:"CRC"},
   quarters:["2026-T3","2026-T4","2027-T1"],
@@ -2517,7 +2610,8 @@ const initialData = {
   movementTemplates:[],
   movementAudit:[],
   accounts:[...ACCOUNTS],
-  debts:[]
+  debts:[],
+  debtTypes:clone(ONE_DEBT_TYPE_PRESETS)
 };
 
 /* Calendario de salario configurable: la siguiente fecha de pago cierra el ciclo anterior. */
@@ -2615,6 +2709,7 @@ function migrateData(raw){
   raw.movementTemplates.forEach(t=>{t.id=t.id||id();t.active=t.active!==false;t.frequency=["weekly","fortnightly","monthly","yearly"].includes(t.frequency)?t.frequency:"monthly";t.nextDate=t.nextDate||todayIso();t.amount=num(t.amount);t.currency=normalizeCurrency(t.currency||"CRC")});
   raw.reconciliations=Array.isArray(raw.reconciliations)?raw.reconciliations:[];
   raw.debts=Array.isArray(raw.debts)?raw.debts:[];
+  raw.debtTypes=oneNormalizeDebtTypes(raw.debtTypes);
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
   raw.reserveMovements=Array.isArray(raw.reserveMovements)?raw.reserveMovements:[];
   raw.sharedChargeGroups=Array.isArray(raw.sharedChargeGroups)?raw.sharedChargeGroups:[];
@@ -5641,18 +5736,54 @@ function openCategory(c=null){
   fillIncomeConfigForm(c?.type==="Ingreso"?c:null);updateIncomeConfigVisibility();document.getElementById("categoryDialog").showModal();
 }
 
+function oneDebtTypeForDebt(d){
+ const byId=(data.debtTypes||[]).find(t=>t.id===d?.typeId);
+ if(byId)return byId;
+ const presetId=({Tarjeta:"olo-debt-card","Préstamo":"olo-debt-loan",Familiar:"olo-debt-family",Otra:"olo-debt-other"})[d?.type]||"olo-debt-other";
+ return (data.debtTypes||[]).find(t=>t.id===presetId)||ONE_DEBT_TYPE_PRESETS.find(t=>t.id===presetId);
+}
+function oneDebtTypeName(d){return d?.typeId?(data.debtTypes||[]).find(t=>t.id===d.typeId)?.name||d.type||"Otra":d?.type||"Otra"}
+function oneDebtTypeUsage(t){return (data.debts||[]).filter(d=>d.typeId===t.id||(!d.typeId&&oneDebtTypeForDebt(d)?.id===t.id)).length}
+function oneDebtTypeFormReset(){
+ document.getElementById("oneDebtTypeId").value="";
+ document.getElementById("oneDebtTypeName").value="";
+ document.getElementById("oneDebtTypeShape").value="loan";
+}
+function oneDebtTypesRender(){
+ const target=document.getElementById("oneDebtTypesList");if(!target)return;
+ target.innerHTML=(data.debtTypes||[]).map(t=>{
+  const count=oneDebtTypeUsage(t);
+  return '<div class="one-debt-type-row '+(t.active?"":"is-archived")+'"><div><strong>'+safe(t.name)+'</strong><small>'+
+   safe(({card:"Tarjeta",loan:"Préstamo",installments:"Cuotas",family:"Familiar",other:"Otra"})[t.shape]||"Otra")+
+   ' · '+count+' deuda(s) · '+(t.active?"Activo":"Archivado")+'</small></div>'+
+   '<div class="one-debt-type-actions"><button type="button" class="btn secondary small" data-edit-debt-type="'+safe(t.id)+'">Editar</button>'+
+   '<button type="button" class="btn secondary small" data-toggle-debt-type="'+safe(t.id)+'">'+(t.active?"Archivar":"Reactivar")+'</button></div></div>';
+ }).join("");
+}
+function oneRefreshDebtTypeSelect(d=null){
+ const select=document.getElementById("dType"),current=d?oneDebtTypeForDebt(d)?.id:"";
+ const choices=(data.debtTypes||[]).filter(t=>t.active||t.id===current);
+ fillObjectSelect(select,choices.map(t=>({value:t.id,label:t.name+(t.active?"":" (archivado)")})),current||choices[0]?.id||"");
+}
+function oneDebtFormUpdate(){
+ const t=(data.debtTypes||[]).find(x=>x.id===document.getElementById("dType").value);
+ const shape=t?.shape||"other";
+ document.querySelectorAll("#debtForm [data-debt-fields]").forEach(el=>{el.hidden=!el.dataset.debtFields.split(" ").includes(shape)});
+ document.getElementById("dMinimumLabel").textContent=shape==="card"?"Pago mínimo":"Cuota mensual";
+}
 function openDebt(d=null){
-  const dialog=document.getElementById("debtDialog");
-  document.getElementById("debtDialogTitle").textContent=d?"Editar deuda":"Agregar deuda";
-  ["Id","Type","Name","Status","Usd","Crc","Limit","Minimum","PayDay","Rate","Priority","Goal","Notes"].forEach(k=>{
-    const el=document.getElementById("d"+k);if(!el)return;
-    const map={Id:"id",Type:"type",Name:"name",Status:"status",Usd:"usd",Crc:"crc",Limit:"limit",Minimum:"minimum",PayDay:"payDay",Rate:"rate",Priority:"priority",Goal:"goal",Notes:"notes"};
-    el.value=d?.[map[k]]??({Status:"active",Usd:0,Crc:0,Limit:0,Minimum:0,Priority:activeDebts().length+1}[k]??"")
-  });
-  document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
-  document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
-  const rates=currentRates();document.getElementById("dFxPreview").value=`Venta actual: ₡${rates.sell.toFixed(2)}`;
-  dialog.showModal();
+ const dialog=document.getElementById("debtDialog");
+ document.getElementById("debtDialogTitle").textContent=d?"Editar deuda":"Agregar deuda";
+ ["Id","Name","Status","Usd","Crc","Limit","Minimum","PayDay","Rate","Priority","Goal","Notes","CloseDay","FullPayment","Lender","EndDate","InstallmentsTotal","InstallmentsLeft"].forEach(k=>{
+  const el=document.getElementById("d"+k);if(!el)return;
+  const map={Id:"id",Name:"name",Status:"status",Usd:"usd",Crc:"crc",Limit:"limit",Minimum:"minimum",PayDay:"payDay",Rate:"rate",Priority:"priority",Goal:"goal",Notes:"notes",CloseDay:"closeDay",FullPayment:"fullPayment",Lender:"lender",EndDate:"endDate",InstallmentsTotal:"installmentsTotal",InstallmentsLeft:"installmentsLeft"};
+  el.value=d?.[map[k]]??({Status:"active",Usd:0,Crc:0,Limit:0,Minimum:0,Priority:activeDebts().length+1}[k]??"");
+ });
+ document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
+ document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
+ oneRefreshDebtTypeSelect(d);oneDebtFormUpdate();
+ const rates=currentRates();document.getElementById("dFxPreview").value="Venta actual: ₡"+rates.sell.toFixed(2);
+ dialog.showModal();
 }
 
 
@@ -5661,6 +5792,49 @@ renderReports=function(){};
 function bindReportStudio(){}
 
 function bind(){
+  const settingsDialog=document.getElementById("oneSettingsDialog");
+  const debtTypesDialog=document.getElementById("oneDebtTypesDialog");
+  document.querySelector("#oneSettingsPaydayMount")?.appendChild(document.querySelector(".one-payday-panel"));
+  document.querySelector("#oneSettingsMaintenanceMount")?.appendChild(document.querySelector(".rastro-maintenance"));
+  document.getElementById("oneSettingsBtn").addEventListener("click",()=>settingsDialog.showModal());
+  document.getElementById("oneSettingsCategories").addEventListener("click",()=>{settingsDialog.close();renderCategories();document.getElementById("categoryManagerDialog").showModal()});
+  document.getElementById("oneSettingsDebtTypes").addEventListener("click",()=>{settingsDialog.close();oneDebtTypeFormReset();oneDebtTypesRender();debtTypesDialog.showModal()});
+  document.getElementById("oneSettingsFx").addEventListener("click",()=>{settingsDialog.close();openFxDialog(true)});
+  document.getElementById("oneSettingsBackup").addEventListener("click",()=>document.getElementById("exportBtn").click());
+  document.getElementById("oneSettingsRestore").addEventListener("click",()=>{settingsDialog.close();document.getElementById("importBtn").click()});
+  document.getElementById("oneDebtTypeCancel").addEventListener("click",oneDebtTypeFormReset);
+  document.getElementById("oneDebtTypesList").addEventListener("click",event=>{
+    const edit=event.target.closest("[data-edit-debt-type]");
+    const toggle=event.target.closest("[data-toggle-debt-type]");
+    if(edit){
+      const t=data.debtTypes.find(x=>x.id===edit.dataset.editDebtType);if(!t)return;
+      document.getElementById("oneDebtTypeId").value=t.id;document.getElementById("oneDebtTypeName").value=t.name;document.getElementById("oneDebtTypeShape").value=t.shape;
+      document.getElementById("oneDebtTypeName").focus();return;
+    }
+    if(toggle){
+      const t=data.debtTypes.find(x=>x.id===toggle.dataset.toggleDebtType);if(!t)return;
+      if(t.active&&oneDebtTypeUsage(t)>0)return alert("Este tipo tiene deudas asociadas. Para conservar el historial, primero reasigná esas deudas.");
+      const previous=t.active;t.active=!t.active;
+      try{save()}catch(e){t.active=previous;return alert("No se pudo guardar el cambio.")}
+      oneDebtTypesRender();
+    }
+  });
+  document.getElementById("oneDebtTypeForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const typeId=document.getElementById("oneDebtTypeId").value;
+    const name=document.getElementById("oneDebtTypeName").value.trim();
+    const shape=document.getElementById("oneDebtTypeShape").value;
+    if(!name||!Object.hasOwn(ONE_DEBT_SHAPES,shape))return;
+    if(data.debtTypes.some(t=>t.id!==typeId&&t.active&&t.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es")))return alert("Ya existe un tipo de deuda activo con ese nombre.");
+    const current=data.debtTypes.find(t=>t.id===typeId);
+    if(current&&current.shape!==shape&&oneDebtTypeUsage(current)>0)return alert("No se puede modificar la estructura de un tipo que ya tiene deudas. Podés cambiar su nombre o crear otro tipo.");
+    const snapshot=clone(data.debtTypes);
+    if(current){current.name=name;current.shape=shape}
+    else data.debtTypes.push({id:id(),name,shape,active:true,builtin:false});
+    try{save()}catch(e){data.debtTypes=snapshot;return alert("No se pudo guardar el tipo de deuda.")}
+    oneDebtTypeFormReset();oneDebtTypesRender();
+  });
+  document.getElementById("dType").addEventListener("change",oneDebtFormUpdate);
   const categoryManager=document.getElementById("categoryManagerDialog");
   const categoryManagerMount=document.getElementById("categoryManagerMount");
   const categoryView=document.getElementById("view-categories");
@@ -6072,12 +6246,42 @@ function bind(){
   document.getElementById("debtForm").addEventListener("submit",e=>{
     e.preventDefault();const did=document.getElementById("dId").value;
     const status=document.getElementById("dStatus").value;
-    const obj={...(data.debts.find(d=>d.id===did)||{}),id:did||id(),type:document.getElementById("dType").value,name:document.getElementById("dName").value.trim(),status,usd:num(document.getElementById("dUsd").value),crc:num(document.getElementById("dCrc").value),fx:currentRates().sell,limit:num(document.getElementById("dLimit").value),limitCurrency:normalizeCurrency(document.getElementById("dLimitCurrency").value),minimum:num(document.getElementById("dMinimum").value),minimumCurrency:normalizeCurrency(document.getElementById("dMinimumCurrency").value),payDay:document.getElementById("dPayDay").value.trim(),rate:document.getElementById("dRate").value.trim(),priority:num(document.getElementById("dPriority").value),goal:document.getElementById("dGoal").value.trim(),notes:document.getElementById("dNotes").value.trim()};
+    const selectedType=data.debtTypes.find(t=>t.id===document.getElementById("dType").value);
+    if(!selectedType)return alert("Seleccioná un tipo de deuda vigente.");
+    const previous=data.debts.find(d=>d.id===did);
+    if(!selectedType.active&&previous?.typeId!==selectedType.id)return alert("No podés usar un tipo archivado para una deuda nueva.");
+    if(previous&&debtPayments(previous)>0&&previous.type!==ONE_DEBT_SHAPES[selectedType.shape])return alert("Esta deuda tiene pagos históricos. Para cambiar su estructura financiera, creá una nueva deuda sin alterar la anterior.");
+    const shape=selectedType.shape,field=fieldName=>document.getElementById(fieldName).value,is=key=>shape===key;
+    const obj={...(previous||{}),id:did||id(),type:ONE_DEBT_SHAPES[shape],typeId:selectedType.id,name:field("dName").trim(),status,
+      usd:num(field("dUsd")),crc:num(field("dCrc")),fx:currentRates().sell,
+      limit:is("card")?num(field("dLimit")):0,limitCurrency:normalizeCurrency(field("dLimitCurrency")),
+      minimum:["card","loan","installments"].includes(shape)?num(field("dMinimum")):0,
+      minimumCurrency:normalizeCurrency(field("dMinimumCurrency")),
+      payDay:shape==="other"?"":field("dPayDay").trim(),
+      rate:["card","loan","installments"].includes(shape)?field("dRate").trim():"",
+      closeDay:is("card")?num(field("dCloseDay")):0,
+      fullPayment:is("card")?num(field("dFullPayment")):0,
+      lender:["loan","installments","family"].includes(shape)?field("dLender").trim():"",
+      endDate:["loan","installments"].includes(shape)?field("dEndDate"):"",
+      installmentsTotal:is("installments")?num(field("dInstallmentsTotal")):0,
+      installmentsLeft:is("installments")?num(field("dInstallmentsLeft")):0,
+      priority:num(field("dPriority")),goal:field("dGoal").trim(),notes:field("dNotes").trim()};
+    if(!obj.name)return alert("Ingresá un nombre para la deuda.");
+    if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay))return alert("El día de pago debe estar entre 1 y 31.");
+    if(is("card")&&obj.closeDay&&(obj.closeDay<1||obj.closeDay>31))return alert("El día de corte debe estar entre 1 y 31.");
+    if(is("installments")&&obj.installmentsTotal&&obj.installmentsLeft>obj.installmentsTotal)return alert("Las cuotas restantes no pueden superar las cuotas totales.");
     const i=data.debts.findIndex(d=>d.id===did),old=i>=0?data.debts[i]:null,oldName=old?.name||"";
     if(status==="archived"){obj.closedAt=old?.closedAt||todayIso();obj.closedReason=old?.closedReason||"Pagada / finalizada"}else{obj.closedAt="";obj.closedReason=""}
+    const originalDebt=i>=0?clone(data.debts[i]):null;
+    const matchedMovements=i>=0&&oldName!==obj.name?data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)):[],movementSnapshot=matchedMovements.map(m=>({m,debtId:m.debtId,debt:m.debt}));
     i>=0?data.debts[i]=obj:data.debts.push(obj);
-    if(i>=0&&oldName!==obj.name)data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)).forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
-    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
+    matchedMovements.forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
+    try{save()}catch(error){
+      if(i>=0)data.debts[i]=originalDebt;else data.debts.pop();
+      movementSnapshot.forEach(x=>{x.m.debtId=x.debtId;x.m.debt=x.debt});
+      return alert("No se pudo guardar la deuda. No se modificó el historial.");
+    }
+    document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
     oneActionSaved(did?"Deuda actualizada":"Deuda registrada",obj.name);
   });
 
@@ -6821,8 +7025,8 @@ renderDebts=function(){
   const currentMonth=todayIso().slice(0,7);
   const paidMonth=(data.movements||[]).filter(m=>m.type==="Pago deuda"&&v7MonthKey(m.date)===currentMonth).reduce((s,m)=>s+movementAmountCRC(m),0);
   const upcoming=oneDebtUpcomingEntries().find(x=>x.date>=todayIso()&&x.minimum>0);
-  const structured=active.filter(d=>d.type==="Préstamo"||d.type==="Familiar").reduce((sum,d)=>sum+debtOutstanding(d),0);
-  const revolving=active.filter(d=>d.type==="Tarjeta").reduce((sum,d)=>sum+debtOutstanding(d),0);
+  const structured=active.filter(d=>debtNature(d)==="structured").reduce((sum,d)=>sum+debtOutstanding(d),0);
+  const revolving=active.filter(d=>debtNature(d)==="revolving").reduce((sum,d)=>sum+debtOutstanding(d),0);
   document.getElementById("debtKpis").innerHTML=[
     v7Kpi("↑","green","Pagado este mes",money(paidMonth),paidMonth?"Registrado en Movimientos":"Sin pagos este mes",paidMonth?"good":""),
     v7Kpi("◫","purple","Próxima cuota",upcoming?dateLabel(upcoming.date):"—",upcoming?`${v7SafeText(upcoming.debt.name)} · ${money(upcoming.minimum)}`:"Sin cuotas con fecha pendiente",""),
@@ -6849,7 +7053,7 @@ renderDebts=function(){
       ? `<button class="btn secondary small" data-reactivate-debt="${d.id}">Reactivar</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button>`
       : `<button class="btn secondary small" data-pay-debt="${d.id}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${d.id}">Actualizar saldo real</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button><button class="btn secondary small" data-archive-debt="${d.id}">Archivar</button>`;
     return `<div class="v7-debt-card ${archivedDebt?"archived":""}">
-      <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(d.type)}${archivedDebt?" · archivada":""}</span></div></div>
+      <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(oneDebtTypeName(d))}${archivedDebt?" · archivada":""}</span></div></div>
       <div class="v7-debt-cell"><span>Saldo pendiente</span><strong>${money(out)}</strong></div>
       <div class="v7-debt-cell">${debtLatestAdjustment(d)?`<span>Saldo conciliado · ${debtLatestAdjustment(d).date}</span><strong>${money(out)}</strong><span>Pagos históricos: ${money(paid)}</span>`:`<span>${pct.toFixed(0)}% pagado</span><div class="progress"><span style="width:${pct}%"></span></div><span>${money(paid)} de ${money(base)}</span>`}</div>
       <div class="v7-debt-cell"><span>Fecha de cuota estimada</span><strong>${next?.date?dateLabel(next.date):"—"}</strong></div>
