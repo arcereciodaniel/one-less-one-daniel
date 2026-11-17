@@ -171,3 +171,12 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - Cobros pendientes y previsiones de Proyectos no se incorporan al flujo por no constituir operaciones financieras confirmadas y por riesgo de duplicación; tampoco se suma el patrimonio protegido como liquidez.
 - La proyección señala períodos sin presupuesto, ingresos sin fecha, deudas sin día/cuota y saldos sin conciliación. No pronostica intereses, comisiones, inflación ni TC futuros y no sustituye la consulta bancaria.
 - No se crea ningún movimiento ni registro financiero al visualizar/cambiar de ventana; la configuración del módulo está separada en preferencias locales UI. Daniel y Lab continúan aislados, Gloriana no se modifica, sin backend nuevo ni costo añadido.
+
+## V11.4 — Proyectos Beta 1.1 conectado a Metas y Cobros
+
+- Cada Proyecto permite **relacionar opcionalmente una Meta de ahorro y un grupo de Cobros existentes** desde Editar proyecto. Las conexiones son identificadores en el mismo registro `projects`: `goalId` y `cobroGroupId`. No se crea ningún movimiento ni se duplica un aporte o abono.
+- La vista del proyecto presenta el **saldo acumulado de la meta** y su objetivo, además de **cobros pendientes/recuperados** del grupo. Todos son indicadores separados: no incrementan el presupuesto disponible, no reducen gastos del proyecto ni crean ingresos efectivos.
+- Una Meta y un grupo de Cobros solo pueden vincularse a **un proyecto a la vez**, incluidos los archivados. La vinculación puede editarse o retirarse sin tocar fondos, cobros o movimientos. Los vínculos a registros archivados siguen visibles; los registros eliminados se señalan en el diagnóstico sin borrado automático.
+- Conversión de visualización a moneda del proyecto mediante TC de referencia actual: los movimientos originales conservan su moneda e histórico. Los abonos de Cobros usan su registro financiero original cuando esté vinculado.
+- Los respaldos antiguos sin vínculos siguen siendo compatibles. El validador protege tipos y duplicados; el diagnóstico informa relaciones huérfanas. Daniel y Lab mantienen almacenamiento separado, no se modificó Gloriana ni el piloto móvil, y no se incorpora ningún servicio de pago.
+- Esta beta no permite gastos financiados automáticamente desde metas ni convierte cobros pendientes en efectivo: esas operaciones deben realizarse explícitamente en sus herramientas.
