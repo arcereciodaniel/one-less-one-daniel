@@ -1494,6 +1494,8 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-action-success-content h2{font-size:1.08rem;line-height:1.3;margin:2px 0 0}
 .one-action-success-content p{font-size:.8rem;line-height:1.55;color:var(--muted);margin:0;overflow-wrap:anywhere;white-space:pre-line}
 .one-action-success-content button{min-width:136px;margin-top:4px}
+.one-move-repeat-last{white-space:nowrap;font-size:.76rem}
+.one-move-repeat-last[hidden]{display:none!important}
 .one-goal-state.completed{background:var(--surface-2);color:var(--text)}
 
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
@@ -1731,7 +1733,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
   <section class="view" id="view-movements">
     <div class="v7-page-head"><div><div class="v7-eyebrow">MOVIMIENTOS</div><h1>Movimientos</h1><p class="sub">Tu actividad financiera, en orden.</p></div>
-      <div class="v7-page-actions"><button class="btn" id="toggleMovementComposer" type="button">＋ Agregar movimiento</button></div>
+      <div class="v7-page-actions"><button class="btn secondary one-move-repeat-last" id="oneRepeatLastMovement" type="button" hidden>↻ Repetir último</button><button class="btn" id="toggleMovementComposer" type="button">＋ Agregar movimiento</button></div>
     </div>
 
     <section id="goalMovementPreview" class="one-goal-context" hidden aria-label="Transferencias internas de metas"></section>
@@ -5501,7 +5503,15 @@ function m2OpenTemplate(source=null){
   document.getElementById("mtAccount").value=source?.account||"";
   document.getElementById("movementTemplateDialog").showModal();
 }
+function m2LastRepeatable(){
+  return [...(data.movements||[])].filter(m=>["Gasto","Ingreso","Pago deuda"].includes(m.type)&&!oneIsLinkedCobroMovement(m)&&
+      categoryIsActive(categoryById(m.categoryId))&&
+      (m.type!=="Pago deuda"||activeDebts().some(d=>d.id===m.debtId)))
+    .sort((a,b)=>num(b.seq)-num(a.seq)||String(b.createdAt||"").localeCompare(String(a.createdAt||"")))[0]||null;
+}
 function m2RenderTemplates(){
+  const repeat=document.getElementById("oneRepeatLastMovement"),last=m2LastRepeatable();
+  if(repeat){repeat.hidden=!last;repeat.title=last?"Preparar "+last.type.toLowerCase()+" sin guardarlo hasta confirmar":"No hay movimientos repetibles";}
   const box=document.getElementById("movementTemplatesList");if(!box)return;
   const items=[...(data.movementTemplates||[])].sort((a,b)=>Number(b.active)-Number(a.active)||String(a.nextDate).localeCompare(String(b.nextDate)));
   const card=document.getElementById("movementTemplatesCard");if(card)card.hidden=items.length===0;
@@ -5512,7 +5522,7 @@ function m2RenderTemplates(){
     return `<div class="m2-template-card">
        <div><strong>${safe(t.name||t.description||"Movimiento programado")}</strong><small>${safe(freq[t.frequency]||"Mensual")}${cls} · ${dateLabel(t.nextDate)} · ${originalMoney(t.amount,t.currency)}</small></div>
        <div class="actions">
-       ${t.active?`<button class="btn small" type="button" data-m2-post-template="${safe(t.id)}">Registrar ahora</button>`:""}
+       ${t.active?`<button class="btn ${isDue?"small":"secondary small"}" type="button" data-m2-post-template="${safe(t.id)}">${isDue?"Revisar y registrar":"Preparar"}</button>`:""}
        <button class="btn secondary small" type="button" data-m2-edit-template="${safe(t.id)}">Editar</button>
        <button class="btn secondary small" type="button" data-m2-toggle-template="${safe(t.id)}">${t.active?"Pausar":"Reactivar"}</button>
        </div></div>`;
@@ -6993,6 +7003,9 @@ function initMovements2(){
   m2RefreshAccounts("");
   m2RenderTemplates();
   document.getElementById("toggleMovementComposer")?.addEventListener("click",()=>m2OpenComposer());
+  document.getElementById("oneRepeatLastMovement")?.addEventListener("click",()=>{
+    const latest=m2LastRepeatable();if(latest)m2OpenComposer(latest,{repeat:true});
+  });
   document.getElementById("closeMovementComposer")?.addEventListener("click",()=>m2ResetComposer());
   const dialog=document.getElementById("movementComposerDialog");
   dialog?.addEventListener("cancel",e=>{e.preventDefault();m2ResetComposer()});
