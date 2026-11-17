@@ -662,11 +662,6 @@ function restoreValidate(raw){
        !restoreValidMoney(plan.amount)||Number(plan.amount)<=0||
        (plan.dueDate&&!restoreValidDate(plan.dueDate)))
       throw Error("Hay gastos previstos inválidos.");
-    if(plan.bucketId){
-      const project=raw.projects.find(p=>p.id===plan.projectId);
-      if(!(project?.buckets||[]).some(b=>b.id===plan.bucketId))
-        throw Error("Un gasto previsto se refiere a un concepto inexistente.");
-    }
     planIds.add(plan.id);
   }
   // V11.6: cada vínculo puede señalar una previsión del MISMO proyecto.
