@@ -50,7 +50,7 @@ async function boot({items,history=[],failAckOnce=false}={}){
   }
   throw Error("Unexpected API "+url);
  };
- w.eval(split+"\n"+main+"\n"+pilot+"\nwindow.__qaV108={data,save};");
+ w.eval(split+"\n"+main+"\n"+pilot+"\nwindow.__qaV108={addFx:(date,buy,sell)=>{data.settings.fxHistory.push({date,buy,sell});save();}};");
  await new Promise(resolve=>setTimeout(resolve,650));
  return {w,rows,errors,read:()=>JSON.parse(w.localStorage.getItem(key)),
   retry:async()=>{w.document.getElementById("oneMobileSync").click();await new Promise(r=>setTimeout(r,180));},
@@ -87,8 +87,7 @@ test("V10.8: tasa futura no se usa; se explica la incidencia y reintenta sin dup
   assert.match(fix.textContent,/tipo de cambio/i);
   fix.click();
   assert.equal(x.w.document.getElementById("fxDialog").open,true);
-  x.w.__qaV108.data.settings.fxHistory.push({date:historical,buy:445,sell:460});
-  x.w.__qaV108.save();
+  x.w.__qaV108.addFx(historical,445,460);
   await x.retry();
   assert.equal(x.read().movements.length,1);
   assert.equal(x.read().movements[0].fxDate,historical);
