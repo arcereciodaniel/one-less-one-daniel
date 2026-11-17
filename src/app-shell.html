@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.4.0</small>
+      <small class="brand-version">v11.5.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -514,7 +514,7 @@
 
   <section class="view" id="view-future" aria-labelledby="oneFutureTitle">
     <div class="v7-page-head">
-      <div><div class="v7-eyebrow">FUTURO · BETA 1.0</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
+      <div><div class="v7-eyebrow">FUTURO · BETA 1.1</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
         <p class="sub">Visualizá cómo podría evolucionar tu saldo operativo, sin cambiar tus registros.</p></div>
       <div class="one-future-selector" role="group" aria-label="Horizonte de la proyección">
         <button type="button" data-one-future-days="30" class="active" aria-pressed="true">30 días</button>
@@ -531,6 +531,42 @@
       <p id="oneFutureMinimum" class="one-future-minimum"></p>
       <p id="oneFutureStatus" class="one-future-status" role="status"></p>
     </section>
+    <details class="v7-card one-scenario-panel" id="oneScenarioPanel">
+      <summary><span><strong>Simulá otro camino</strong><small>V11.5 · Escenarios Beta 1.0 · Cambios hipotéticos, nunca registros reales</small></span><span class="one-scenario-expand">Abrir simulador</span></summary>
+      <div class="one-scenario-body">
+        <p class="muted">Modificá tres decisiones y compará cómo cambiaría tu saldo operativo. Todo queda únicamente en esta sesión; no guardamos el escenario ni tocamos tus finanzas.</p>
+        <div class="one-scenario-controls">
+          <div class="one-scenario-field">
+            <label for="oneScenarioCut">Reducir gastos ordinarios pendientes</label>
+            <div class="one-scenario-cut-row"><input id="oneScenarioCut" type="range" min="0" max="50" step="5" value="0"><strong id="oneScenarioCutValue">0%</strong></div>
+            <small>Solo presupuestos de gastos aún no registrados. No recorta deudas ni aportes a metas.</small>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneScenarioSave">Ahorrar adicional cada mes</label>
+            <input id="oneScenarioSave" type="number" min="0" max="100000000" step="any" value="0" inputmode="decimal">
+            <small>Dinero hipotéticamente apartado de la liquidez, adicional al ahorro ya presupuestado.</small>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneScenarioDebt">Abonar adicional a deudas cada mes</label>
+            <input id="oneScenarioDebt" type="number" min="0" max="100000000" step="any" value="0" inputmode="decimal">
+            <small>Un pago extra hipotético, limitado por el saldo de deuda, sin estimar intereses.</small>
+          </div>
+        </div>
+        <div class="one-scenario-toolbar"><label for="oneScenarioCurrency">Ingresar montos en <select id="oneScenarioCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></label>
+          <button type="button" class="btn secondary small" id="oneScenarioReset" disabled>Restablecer</button></div>
+        <p class="muted one-scenario-currency-note">Los montos se expresan en <span id="oneScenarioMoneyUnit">colones (CRC)</span>. Los abonos y aportes se ubican en el segundo día de pago mensual configurado.</p>
+        <div id="oneScenarioResults">
+          <div class="one-scenario-legend" aria-hidden="true"><span><i class="one-scenario-legend-base"></i> Proyección base</span><span><i class="one-scenario-legend-sim"></i> Escenario hipotético</span></div>
+          <div id="oneScenarioChart" class="one-future-chart-wrap"></div>
+          <div id="oneScenarioSummary" class="one-future-stats"></div>
+          <p id="oneScenarioSummaryText" class="muted"></p>
+          <p id="oneScenarioBalanceNote" class="one-future-minimum"></p>
+          <div class="one-scenario-breakdown" id="oneScenarioBreakdown"></div>
+          <ul class="one-scenario-warnings" id="oneScenarioWarnings"></ul>
+          <p class="muted one-scenario-disclaimer">La proyección base mantiene sus gastos y vencimientos; una amortización real podría modificar cuotas o intereses. No es una recomendación de pago ni una garantía de liquidez.</p>
+        </div>
+      </div>
+    </details>
     <div class="one-future-columns">
       <section class="v7-card one-future-panel">
         <h2>¿Qué compone la proyección?</h2>
@@ -570,7 +606,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.4.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.5.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -663,7 +699,7 @@
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.1</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
-  <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.0</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.1</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
