@@ -380,6 +380,7 @@ function m2ResetComposer(close=true){
   document.getElementById("mCurrency").value=displayCurrency();
   refreshMovementCategorySelect();refreshDebtSelect();m2RefreshAccounts("");updateMovementFields();m2RefreshQuickTypes();
   oneCentralRestoreMovementForm();
+  oneProjectSyncComposer();
   document.getElementById("oneCentralGoalForm").reset();
   if(close){const dialog=document.getElementById("movementComposerDialog");if(dialog?.open)dialog.close();document.getElementById("movementComposer").hidden=true;}
 }
@@ -413,7 +414,7 @@ function m2OpenComposer(m=null,{repeat=false,scheduledId=""}={}){
       m2SetSplitMode(true,{createRows:false});
     }
   }
-  updateMovementFields();m2RefreshQuickTypes();
+  updateMovementFields();m2RefreshQuickTypes();oneProjectSyncComposer(original?m:null);
   document.getElementById("movementComposer").hidden=false;
   const dialog=document.getElementById("movementComposerDialog");if(dialog&&!dialog.open)dialog.showModal();
   document.getElementById("mAmount").focus({preventScroll:true});
@@ -543,6 +544,7 @@ function updateMovementFields(){
   if(debtSelect)debtSelect.required=payment;
   const description=document.getElementById("mDescription");
   if(description)description.placeholder=payment?"¿Querés agregar un detalle?":type==="Ingreso"?"¿De dónde recibiste el dinero?":"¿En qué gastaste?";
+  oneProjectSyncComposer();
   if(payment){
     const d=(data.debts||[]).find(x=>x.id===debtSelect?.value);
     const suggested=suggestDebtCategoryId(d);
