@@ -175,6 +175,26 @@ function syncIncomeProjectionsForData(raw,{categoryId="",adoptExisting=false}={}
   }
 }
 
+const ONE_DEBT_TYPE_PRESETS = Object.freeze([
+ {id:"olo-debt-card",name:"Tarjeta de crédito",shape:"card",active:true,builtin:true},
+ {id:"olo-debt-loan",name:"Préstamo",shape:"loan",active:true,builtin:true},
+ {id:"olo-debt-installments",name:"Compra en cuotas",shape:"installments",active:true,builtin:true},
+ {id:"olo-debt-family",name:"Préstamo familiar",shape:"family",active:true,builtin:true},
+ {id:"olo-debt-other",name:"Otra deuda",shape:"other",active:true,builtin:true}
+]);
+const ONE_DEBT_SHAPES={card:"Tarjeta",loan:"Préstamo",installments:"Préstamo",family:"Familiar",other:"Otra"};
+function oneNormalizeDebtTypes(rows){
+ const seen=new Set(),result=[];
+ (Array.isArray(rows)?rows:[]).forEach(t=>{
+  if(!t||typeof t.id!=="string"||seen.has(t.id))return;
+  const shape=Object.hasOwn(ONE_DEBT_SHAPES,t.shape)?t.shape:"other";
+  const name=String(t.name||"").trim().slice(0,70);
+  if(!name)return;
+  seen.add(t.id);result.push({id:t.id,name,shape,active:t.active!==false,builtin:ONE_DEBT_TYPE_PRESETS.some(p=>p.id===t.id)});
+ });
+ ONE_DEBT_TYPE_PRESETS.forEach(p=>{if(!seen.has(p.id))result.push({...p})});
+ return result;
+}
 const initialData = {
   settings:{fx:460,fxBuy:0,fxSell:0,fxDate:"",fxHistory:[],displayCurrency:"CRC"},
   quarters:["2026-T3","2026-T4","2027-T1"],
@@ -191,7 +211,8 @@ const initialData = {
   movementTemplates:[],
   movementAudit:[],
   accounts:[...ACCOUNTS],
-  debts:[]
+  debts:[],
+  debtTypes:clone(ONE_DEBT_TYPE_PRESETS)
 };
 
 /* Calendario de salario configurable: la siguiente fecha de pago cierra el ciclo anterior. */
@@ -289,6 +310,7 @@ function migrateData(raw){
   raw.movementTemplates.forEach(t=>{t.id=t.id||id();t.active=t.active!==false;t.frequency=["weekly","fortnightly","monthly","yearly"].includes(t.frequency)?t.frequency:"monthly";t.nextDate=t.nextDate||todayIso();t.amount=num(t.amount);t.currency=normalizeCurrency(t.currency||"CRC")});
   raw.reconciliations=Array.isArray(raw.reconciliations)?raw.reconciliations:[];
   raw.debts=Array.isArray(raw.debts)?raw.debts:[];
+  raw.debtTypes=oneNormalizeDebtTypes(raw.debtTypes);
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
   raw.reserveMovements=Array.isArray(raw.reserveMovements)?raw.reserveMovements:[];
   raw.sharedChargeGroups=Array.isArray(raw.sharedChargeGroups)?raw.sharedChargeGroups:[];
