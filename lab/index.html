@@ -1486,6 +1486,18 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-reconcile-explainer{font-size:.77rem;line-height:1.55;margin:0}
 .one-backup-notice{display:block;width:100%;max-width:320px;font-size:.69rem;color:var(--muted);line-height:1.3}
 .one-backup-notice[hidden]{display:none!important}
+/* V10.10: misma confirmación pequeña para registros realmente persistidos. */
+.one-action-success-dialog{width:min(350px,calc(100% - 32px));max-width:350px;padding:0;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);box-shadow:0 20px 50px #0003}
+.one-action-success-dialog::backdrop{background:#0005}
+.one-action-success-content{padding:26px 23px 22px;display:grid;justify-items:center;gap:11px;text-align:center}
+.one-action-success-icon{width:44px;height:44px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);display:grid;place-items:center;font-size:1.3rem;font-weight:700}
+.one-action-success-content h2{font-size:1.08rem;line-height:1.3;margin:2px 0 0}
+.one-action-success-content p{font-size:.8rem;line-height:1.55;color:var(--muted);margin:0;overflow-wrap:anywhere;white-space:pre-line}
+.one-action-success-content button{min-width:136px;margin-top:4px}
+.one-move-repeat-last{white-space:nowrap;font-size:.76rem}
+.one-move-repeat-last[hidden]{display:none!important}
+.one-goal-state.completed{background:var(--surface-2);color:var(--text)}
+
 @media(max-width:550px){.one-group-person-card>summary{display:block}.one-group-person-values{margin-top:8px}.one-group-person-items li{flex-wrap:wrap}.one-group-person-items li span:last-child{white-space:normal}}
 @media(max-width:520px){.one-split-grid{grid-template-columns:1fr 1fr}.one-split-person{grid-template-columns:minmax(0,1fr) 84px 26px;gap:5px}.one-split-dialog .dialog-body{padding:16px}}
 </style>
@@ -1497,7 +1509,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v10.9.0 LAB</small>
+      <small class="brand-version">v10.10.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -1721,7 +1733,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
   <section class="view" id="view-movements">
     <div class="v7-page-head"><div><div class="v7-eyebrow">MOVIMIENTOS</div><h1>Movimientos</h1><p class="sub">Tu actividad financiera, en orden.</p></div>
-      <div class="v7-page-actions"><button class="btn" id="toggleMovementComposer" type="button">＋ Agregar movimiento</button></div>
+      <div class="v7-page-actions"><button class="btn secondary one-move-repeat-last" id="oneRepeatLastMovement" type="button" hidden>↻ Repetir último</button><button class="btn" id="toggleMovementComposer" type="button">＋ Agregar movimiento</button></div>
     </div>
 
     <section id="goalMovementPreview" class="one-goal-context" hidden aria-label="Transferencias internas de metas"></section>
@@ -1966,10 +1978,18 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v10.9.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v10.10.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
+<dialog id="oneActionSuccessDialog" class="one-action-success-dialog" aria-labelledby="oneActionSuccessTitle" aria-describedby="oneActionSuccessDescription">
+  <div class="one-action-success-content">
+    <div class="one-action-success-icon" aria-hidden="true">✓</div>
+    <h2 id="oneActionSuccessTitle">Registro guardado</h2>
+    <p id="oneActionSuccessDescription"></p>
+    <button type="button" class="btn" id="oneActionSuccessClose">Continuar</button>
+  </div>
+</dialog>
 <dialog id="movementTemplateDialog">
  <div class="dialog-body"><button class="dialog-close" type="button" aria-label="Cerrar">×</button>
   <h2 id="movementTemplateTitle">Programar movimiento</h2>
@@ -4486,7 +4506,8 @@ function oneInitSplitFare(){
    uiState.cobrosDisplayMode="groups";saveUiState();
    document.getElementById("sharedStatementMonth").value=p.date.slice(0,7);
    renderSharedCharges();renderDashboard();
-   alert((created.reused?"Gasto agregado al grupo: ":"Grupo creado: ")+created.charges.length+" cobro(s) en "+p.currency+".");
+   oneActionSaved(created.reused?"Cobros agregados al grupo":"Grupo y cobros creados",
+     created.charges.length+" cobro(s) · "+p.currency+"\nNo se registró un gasto ni ingreso adicional.");
   }catch(error){
    data=JSON.parse(snapshot);
    alert(error.message||"No se pudo registrar el gasto compartido.");
@@ -4923,10 +4944,11 @@ function oneRenderGoalCards(){
   grid.innerHTML=visible.length?visible.map(r=>{
     const balance=reserveBalanceAt(r,today),target=reserveTargetCRC(r),remaining=Math.max(0,target-balance);
     const pct=target>0?Math.min(100,Math.max(0,balance/target*100)):0;
-    const archived=reserveStatus(r)==="archived",monthly=oneGoalMonthlySuggestion(r,today);
+    const archived=reserveStatus(r)==="archived",completed=archived&&r.closedReason==="Meta cumplida",monthly=oneGoalMonthlySuggestion(r,today);
+    const achieved=target>.005&&balance>=target-.005;
     const dateInfo=r.targetDate?(restoreValidDate(r.targetDate)?(r.targetDate<today?"Fecha objetivo pasada · "+dateLabel(r.targetDate):
       "Objetivo: "+dateLabel(r.targetDate)):"Revisá la fecha objetivo"):"Sin fecha límite";
-    const hint=target<=0?"Definí un monto objetivo para ver tu avance.":
+    const hint=completed?"Meta cumplida. El saldo del fondo sigue apartado hasta que lo utilicés.":target<=0?"Definí un monto objetivo para ver tu avance.":
       remaining<=.005?"¡Monto objetivo alcanzado!":
       archived?"La meta está archivada. Conservamos su historial.":
       r.targetDate&&r.targetDate<=today?"Fecha cumplida: revisá el plazo de tu meta.":
@@ -4935,7 +4957,7 @@ function oneRenderGoalCards(){
     const history=(data.reserveMovements||[]).filter(t=>t.reserveId===r.id)
       .sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt).localeCompare(String(a.createdAt)))
       .slice(0,5);
-    const status=archived?'<span class="one-goal-state">Archivada</span>':"";
+    const status=archived?'<span class="one-goal-state'+(completed?' completed':'')+'">'+(completed?'Cumplida':'Archivada')+'</span>':"";
     const linkedBudget=categoryById(oneGoalBudgetCategory(r))?.name||"Sin vincular";
     const ops=history.map(t=>'<div class="one-goal-history-row"><span>'+dateLabel(t.date)+' · '+safe(t.type)+'</span><strong>'+originalMoney(t.amount,t.currency||"CRC")+'</strong></div>').join("");
     return '<article class="one-goal-card">'+
@@ -4954,6 +4976,7 @@ function oneRenderGoalCards(){
       (archived?'<button type="button" class="btn secondary small" data-reactivate-reserve="'+safe(r.id)+'">Reactivar</button>':
         '<button type="button" class="btn secondary small" data-goal-txn="'+safe(r.id)+'" data-goal-type="Retiro a operación">Retirar</button>'+
         '<button type="button" class="btn secondary small" data-goal-txn="'+safe(r.id)+'" data-goal-type="Uso objetivo">Usar objetivo</button>'+
+        (achieved?'<button type="button" class="btn secondary small" data-complete-goal="'+safe(r.id)+'">Marcar cumplida</button>':'')+
         '<button type="button" class="btn secondary small" data-archive-reserve="'+safe(r.id)+'">Archivar</button>')+
       '</div></div></details></article>';
   }).join(""):'<div class="one-goal-empty">No hay metas en esta vista. Podés crear tu primera meta sin salir de One Less One.</div>';
@@ -5480,7 +5503,15 @@ function m2OpenTemplate(source=null){
   document.getElementById("mtAccount").value=source?.account||"";
   document.getElementById("movementTemplateDialog").showModal();
 }
+function m2LastRepeatable(){
+  return [...(data.movements||[])].filter(m=>["Gasto","Ingreso","Pago deuda"].includes(m.type)&&!oneIsLinkedCobroMovement(m)&&
+      categoryIsActive(categoryById(m.categoryId))&&
+      (m.type!=="Pago deuda"||activeDebts().some(d=>d.id===m.debtId)))
+    .sort((a,b)=>num(b.seq)-num(a.seq)||String(b.createdAt||"").localeCompare(String(a.createdAt||"")))[0]||null;
+}
 function m2RenderTemplates(){
+  const repeat=document.getElementById("oneRepeatLastMovement"),last=m2LastRepeatable();
+  if(repeat){repeat.hidden=!last;repeat.title=last?"Preparar "+last.type.toLowerCase()+" sin guardarlo hasta confirmar":"No hay movimientos repetibles";}
   const box=document.getElementById("movementTemplatesList");if(!box)return;
   const items=[...(data.movementTemplates||[])].sort((a,b)=>Number(b.active)-Number(a.active)||String(a.nextDate).localeCompare(String(b.nextDate)));
   const card=document.getElementById("movementTemplatesCard");if(card)card.hidden=items.length===0;
@@ -5491,7 +5522,7 @@ function m2RenderTemplates(){
     return `<div class="m2-template-card">
        <div><strong>${safe(t.name||t.description||"Movimiento programado")}</strong><small>${safe(freq[t.frequency]||"Mensual")}${cls} · ${dateLabel(t.nextDate)} · ${originalMoney(t.amount,t.currency)}</small></div>
        <div class="actions">
-       ${t.active?`<button class="btn small" type="button" data-m2-post-template="${safe(t.id)}">Registrar ahora</button>`:""}
+       ${t.active?`<button class="btn ${isDue?"small":"secondary small"}" type="button" data-m2-post-template="${safe(t.id)}">${isDue?"Revisar y registrar":"Preparar"}</button>`:""}
        <button class="btn secondary small" type="button" data-m2-edit-template="${safe(t.id)}">Editar</button>
        <button class="btn secondary small" type="button" data-m2-toggle-template="${safe(t.id)}">${t.active?"Pausar":"Reactivar"}</button>
        </div></div>`;
@@ -5522,6 +5553,8 @@ function m2SaveTemplate(){
   const index=data.movementTemplates.findIndex(t=>t.id===obj.id);
   if(index<0)data.movementTemplates.push(obj);else data.movementTemplates[index]=obj;
   save();document.getElementById("movementTemplateDialog").close();m2RenderTemplates();
+  oneActionSaved(old?"Programación actualizada":"Movimiento frecuente guardado",
+    obj.name+" · "+originalMoney(obj.amount,obj.currency)+"\nSe registrará únicamente cuando lo confirmés.");
 }
 
 function m2RefreshQuickTypes(){
@@ -5774,6 +5807,10 @@ function bind(){
     save();m2ResetComposer();
     refreshV7MovementCategoryFilter();m2RefreshAccounts();
     renderMovements();renderDashboard();renderPlan();renderReports();m2RenderTemplates();
+    oneActionSaved(existing?"Movimiento actualizado":
+      type==="Ingreso"?"Ingreso registrado":type==="Gasto"?"Gasto registrado":"Pago de deuda registrado",
+      originalMoney(amount,currency)+(obj.description?" · "+obj.description:"")+
+      (obj.scheduleTemplateId?"\nProgramación confirmada; próximo registro pendiente de aprobación.":""));
   });
 
   document.addEventListener("click",e=>{
@@ -5812,6 +5849,18 @@ function bind(){
       }
     }
     const editReserve=e.target.closest("[data-edit-reserve]");if(editReserve)openReserve(data.reserves.find(r=>r.id===editReserve.dataset.editReserve));
+    const markComplete=e.target.closest("[data-complete-goal]");
+    if(markComplete){
+      const r=data.reserves.find(x=>x.id===markComplete.dataset.completeGoal);
+      if(!r||r.type!=="goal"||reserveStatus(r)!=="active")return;
+      const balance=reserveBalanceAt(r,todayIso()),target=reserveTargetCRC(r);
+      if(!(target>.005&&balance>=target-.005))return alert("La meta todavía no alcanzó su monto objetivo.");
+      if(!confirm("¿Marcar “"+r.name+"” como cumplida?\n\nEl saldo "+money(balance)+" seguirá apartado y contará en tu patrimonio hasta registrar un Uso objetivo o Retiro. No se crea ningún ingreso ni gasto."))return;
+      r.status="archived";r.closedAt=todayIso();r.closedReason="Meta cumplida";
+      save();refreshReserveSelect();renderCapital();renderDashboard();renderPlan();
+      oneActionSaved("Meta cumplida",r.name+"\nEl ahorro sigue disponible en su fondo, sin movimientos contables adicionales.");
+      return;
+    }
     const archiveReserve=e.target.closest("[data-archive-reserve]");
     if(archiveReserve){const r=data.reserves.find(x=>x.id===archiveReserve.dataset.archiveReserve);if(r){const bal=reserveBalanceAt(r,todayIso()),reason=prompt(`Motivo para archivar “${r.name}” (por ejemplo: Meta lograda o Meta cancelada):`,"Meta lograda");if(reason!==null&&confirm(`¿Archivar “${r.name}”?${bal?`\n\nEl fondo conserva un saldo de ${money(bal)} y seguirá contando dentro de tu patrimonio hasta que registres un Uso objetivo o Retiro.`:""}`)){r.status="archived";r.closedAt=todayIso();r.closedReason=reason.trim()||"Meta finalizada";save();refreshReserveSelect();renderCapital();renderDashboard();}}}
     const reactivateReserve=e.target.closest("[data-reactivate-reserve]");if(reactivateReserve){const r=data.reserves.find(x=>x.id===reactivateReserve.dataset.reactivateReserve);if(r&&confirm(`¿Reactivar “${r.name}”?`)){r.status="active";r.closedAt="";r.closedReason="";save();refreshReserveSelect();renderCapital();renderDashboard();}}
@@ -5922,6 +5971,9 @@ function bind(){
     document.getElementById("cobroPaymentDialog").close();
     oneRefreshCobroViews();
     if(paymentId)openCobroPaymentHistory(c);
+    oneActionSaved(paymentId?"Abono actualizado":"Abono registrado",
+      originalMoney(result.payment.amount,c.currency)+" · "+(c.person||"Cobro")+
+      (document.getElementById("cpSyncMovement").checked?"\nMovimiento vinculado en tu saldo operativo.":"\nSin movimiento adicional en el saldo operativo."));
   });
   document.getElementById("addSharedGroupBtn").addEventListener("click",()=>openSharedGroup());
   document.getElementById("addSharedChargeBtn").addEventListener("click",()=>openSharedCharge());
@@ -5979,9 +6031,10 @@ function bind(){
     if(fromMovements){
       m2ResetComposer();
       if(!oneModuleEnabled("shared"))oneSetModuleEnabled("shared",true);
-      oneCentralNotify("Cobro de "+originalMoney(obj.amount,obj.currency)+" registrado para "+(obj.person||"la persona indicada")+". No se registró como ingreso; los pagos se controlan desde Cobros.");
       renderMovements();
     }
+    oneActionSaved(cid?"Cobro actualizado":"Cobro pendiente registrado",
+      originalMoney(obj.amount,obj.currency)+" · "+(obj.person||"Persona sin nombre")+"\nEste cobro no crea un ingreso hasta registrar su pago.");
   });
 
   document.getElementById("addReserveBtn").addEventListener("click",()=>openReserve());
@@ -5998,6 +6051,7 @@ function bind(){
     if(!eligibility.ok)return alert(eligibility.error);
     const i=data.reserves.findIndex(r=>r.id===rid);i>=0?data.reserves[i]={...data.reserves[i],...obj}:data.reserves.push(obj);
     save();document.getElementById("reserveDialog").close();refreshReserveSelect();renderCapital();renderDashboard();renderPlan();
+    oneActionSaved(rid?"Meta actualizada":"Meta creada",obj.name);
   });
   document.getElementById("reserveTxnForm").addEventListener("submit",e=>{
     e.preventDefault();const reserveId=document.getElementById("rtReserve").value;if(!reserveId)return alert("Selecciona un fondo.");
@@ -6007,6 +6061,8 @@ function bind(){
     if(!permission.ok)return alert(permission.error);
     data.reserveMovements.push(candidate);
     save();e.target.reset();document.getElementById("rtDate").value=todayIso();document.getElementById("rtCurrency").value=displayCurrency();refreshReserveSelect(reserveId);renderCapital();renderDashboard();renderPlan();
+    oneActionSaved(candidate.type==="Aporte"?"Ahorro registrado":"Movimiento de meta registrado",
+      originalMoney(candidate.amount,candidate.currency)+" · "+fund.name);
   });
   document.getElementById("addDebtBtn").addEventListener("click",()=>openDebt());
   document.getElementById("cancelDebtBtn").addEventListener("click",()=>document.getElementById("debtDialog").close());
@@ -6018,7 +6074,8 @@ function bind(){
     if(status==="archived"){obj.closedAt=old?.closedAt||todayIso();obj.closedReason=old?.closedReason||"Pagada / finalizada"}else{obj.closedAt="";obj.closedReason=""}
     i>=0?data.debts[i]=obj:data.debts.push(obj);
     if(i>=0&&oldName!==obj.name)data.movements.filter(m=>m.debtId===obj.id||(!m.debtId&&m.debt===oldName)).forEach(m=>{m.debtId=obj.id;m.debt=obj.name});
-    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital()
+    save();document.getElementById("debtDialog").close();refreshDebtSelect();renderDebts();renderDashboard();renderCapital();
+    oneActionSaved(did?"Deuda actualizada":"Deuda registrada",obj.name);
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
@@ -6703,6 +6760,11 @@ function oneDebtClassificationWarnings(){
     !(data.debts||[]).some(d=>m.debtId?d.id===m.debtId:d.name===m.debt)).length;
   return {mismatch,orphan};
 }
+function oneDebtDueWhen(date,asOf=todayIso()){
+  if(!date)return "Sin día configurado";
+  const days=Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(asOf+"T00:00:00Z"))/86400000);
+  return days===0?"Vence hoy":days<0?"Venció hace "+Math.abs(days)+" día(s)":"En "+days+" día(s)";
+}
 function oneDebtRenderDueSchedule(asOf=todayIso()){
   const summary=document.getElementById("debtDueSummary"),list=document.getElementById("debtDueList");
   if(!summary||!list)return;
@@ -6714,13 +6776,14 @@ function oneDebtRenderDueSchedule(asOf=todayIso()){
     (unknown?" · "+unknown+" sin datos completos":"")+"</span><strong>"+money(total)+"</strong>";
   const visible=entries.filter(x=>x.date&&x.minimum>0).slice(0,5);
   list.innerHTML=visible.length?visible.map(x=>{
-    const payment=x.paid>0?"Abonos: "+money(x.paid)+" · ":"";
-    const meta=x.state==="review"?payment+"Diferencia con mínimo: "+money(x.minimum)+" · verificar con el banco":
-      x.state==="partial"?payment+"Saldo estimado para esta cuota: "+money(x.minimum):
-      x.state==="past"?"Fecha pasada sin pago vinculado · revisá el estado de cuenta":
-      x.state==="today"?"Programado para hoy":
+    const payment=x.paid>0?"Abonos vinculados: "+money(x.paid)+" · ":"";
+    const when=oneDebtDueWhen(x.date,asOf),scheduled=" · "+dateLabel(x.date);
+    const meta=x.state==="review"?when+scheduled+" · "+payment+"Diferencia estimada: "+money(x.minimum)+" · verificá con el banco":
+      x.state==="partial"?when+scheduled+" · "+payment+"Faltante estimado: "+money(x.minimum):
+      x.state==="past"?when+scheduled+" · sin pago vinculado; revisá el banco":
+      x.state==="today"?"Vence hoy"+scheduled:
       x.coveredThisMonth?"Cuota anterior cubierta · próximo vencimiento "+dateLabel(x.date):
-      "Fecha estimada · "+dateLabel(x.date);
+      "Vencimiento estimado"+scheduled+" · "+when;
     const label=x.state==="review"?"Por verificar":x.state==="partial"?"Saldo estimado":"Cuota / mínimo";
     return '<div class="one-debt-due-row"><div><div class="one-due-name">'+v7SafeText(x.debt.name)+
       '</div><div class="one-due-meta">'+meta+'</div></div><div class="one-due-amount">'+money(x.minimum)+
@@ -6728,6 +6791,8 @@ function oneDebtRenderDueSchedule(asOf=todayIso()){
   }).join(""):'<p class="one-debt-due-note">'+(entries.length?
     "No hay cuotas pendientes con fecha y mínimo configurados.":"Todavía no tenés deudas activas.")+"</p>";
   if(unknown)list.insertAdjacentHTML("beforeend",'<p class="one-debt-due-note">Revisá el día de pago y mínimo de las deudas sin información completa.</p>');
+  if(visible.some(x=>x.paid>0||["past","review"].includes(x.state)))
+    list.insertAdjacentHTML("beforeend",'<p class="one-debt-due-note">Los abonos se asignan al ciclo estimado según su fecha. Un pago tardío o un cambio del mínimo puede requerir verificar el estado de cuenta. No se modifica el historial.</p>');
   const quality=oneDebtClassificationWarnings();
   if(quality.mismatch||quality.orphan)list.insertAdjacentHTML("beforeend",
     '<p class="one-debt-due-note">Revisión de historial: '+quality.mismatch+
@@ -6802,6 +6867,19 @@ function refreshV7MovementCategoryFilter(){
 
 /* Acciones desde Movimientos reutilizan Cobros y reserveMovements; sin ingresos/gastos ficticios. */
 let oneCentralCobroFromMovements=false;
+function oneActionSaved(title,detail=""){
+  // No altera data: invocarlo exclusivamente DESPUÉS de save()/persistencia verificada.
+  const dialog=document.getElementById("oneActionSuccessDialog");
+  if(!dialog)return;
+  document.getElementById("oneActionSuccessTitle").textContent=String(title||"Acción completada");
+  document.getElementById("oneActionSuccessDescription").textContent=String(detail||"Se guardó correctamente.");
+  if(typeof dialog.showModal==="function"&&!dialog.open)dialog.showModal();
+}
+function oneActionSuccessInit(){
+  const dialog=document.getElementById("oneActionSuccessDialog");
+  document.getElementById("oneActionSuccessClose")?.addEventListener("click",()=>dialog?.close());
+  dialog?.addEventListener("click",event=>{if(event.target===dialog)dialog.close()});
+}
 function oneCentralNotify(message){
   const note=document.getElementById("oneCentralFeedback");
   if(!note)return;
@@ -6905,7 +6983,8 @@ function oneCentralSaveGoal(event){
   if(!oneModuleEnabled("capital"))oneSetModuleEnabled("capital",true);
   m2ResetComposer();
   renderMovements();renderDashboard();renderPlan();renderCapital();
-  oneCentralNotify(candidate.type+" de "+originalMoney(amount,candidate.currency)+" guardado en “"+fund.name+"”. No se creó un gasto ni un ingreso ficticio.");
+  oneActionSaved(candidate.type==="Aporte"?"Ahorro registrado":"Movimiento de meta registrado",
+    originalMoney(amount,candidate.currency)+" · "+fund.name+"\nTransferencia interna: no se creó un gasto ni un ingreso ficticio.");
 }
 
 function oneInitPaydayControls(){
@@ -6932,6 +7011,9 @@ function initMovements2(){
   m2RefreshAccounts("");
   m2RenderTemplates();
   document.getElementById("toggleMovementComposer")?.addEventListener("click",()=>m2OpenComposer());
+  document.getElementById("oneRepeatLastMovement")?.addEventListener("click",()=>{
+    const latest=m2LastRepeatable();if(latest)m2OpenComposer(latest,{repeat:true});
+  });
   document.getElementById("closeMovementComposer")?.addEventListener("click",()=>m2ResetComposer());
   const dialog=document.getElementById("movementComposerDialog");
   dialog?.addEventListener("cancel",e=>{e.preventDefault();m2ResetComposer()});
@@ -7095,7 +7177,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="../mobile-pilot/desktop.js"></script>
 </body>
