@@ -82,3 +82,31 @@ test("V11.1: bloquear cambio de estructura con deuda vinculada",()=>{
  assert.equal(w.oneDebtTypeForDebt(read().debts[0]).shape,"card");
  assert.equal(read().debts.find(d=>d.id==="legacy").type,"Tarjeta");
 });
+
+test("V11.1: editar deuda familiar conserva cuota, tasa y día",()=>{
+ const seed=sample();
+ seed.debts.push({id:"family-1",type:"Familiar",name:"Préstamo familiar",usd:0,crc:20000,
+   minimum:5000,minimumCurrency:"CRC",payDay:"14",rate:"1.5",status:"active"});
+ const {w,read,errors}=boot(seed);
+ const get=id=>w.document.getElementById(id);
+ w.openDebt(read().debts.find(x=>x.id==="family-1"));
+ assert.equal(w.document.querySelector('[data-debt-fields="card loan installments family other"]').hidden,false);
+ get("dName").value="Préstamo familiar editado";
+ get("debtForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+ const saved=read().debts.find(x=>x.id==="family-1");
+ assert.equal(saved.name,"Préstamo familiar editado");
+ assert.equal(saved.minimum,5000);
+ assert.equal(saved.rate,"1.5");
+ assert.equal(saved.payDay,"14");
+ assert.deepEqual(errors,[]);
+});
+test("V11.1: la estructura financiera de los tipos predeterminados queda protegida",()=>{
+ const {w,read,errors}=boot(sample());
+ const get=id=>w.document.getElementById(id);
+ get("oneDebtTypeId").value="olo-debt-other";
+ get("oneDebtTypeName").value="Otra deuda";
+ get("oneDebtTypeShape").value="loan";
+ get("oneDebtTypeForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+ assert(errors.some(x=>x.includes("No se puede modificar la estructura")));
+ assert.equal(w.oneDebtTypeForDebt(read().debts[0]).shape,"card");
+});
