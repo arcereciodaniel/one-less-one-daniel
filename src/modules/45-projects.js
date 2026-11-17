@@ -428,6 +428,18 @@ function oneProjectInit(){
  q("oneProjectCancel").addEventListener("click",()=>q("oneProjectDialog").close());
  q("oneProjectBucketCancel").addEventListener("click",()=>q("oneProjectBucketDialog").close());
  q("oneProjectPlanCancel").addEventListener("click",()=>q("oneProjectPlanDialog").close());
+ q("oneProjectReconcileCancel").addEventListener("click",()=>q("oneProjectReconcileDialog").close());
+ q("oneProjectReconcileForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  const p=oneProjectCurrent();
+  const plan=(data.projectPlans||[]).find(x=>x.id===q("oneProjectReconcilePlanId").value&&x.projectId===p?.id);
+  const movementId=q("oneProjectReconcileMovement").value;
+  if(!p||!plan||!movementId)return alert("Seleccioná una previsión y un gasto válidos.");
+  if(!oneProjectCanMatch(p,plan,(data.movements||[]).find(m=>m.id===movementId)))
+   return alert("El gasto no puede asociarse a esta previsión. Revisá su proyecto o concepto.");
+  if(!oneProjectStore(()=>oneProjectMatchMovement(p,plan,movementId)))return;
+  q("oneProjectReconcileDialog").close();renderProjects();
+ });
  q("oneProjectEditBtn").addEventListener("click",()=>oneProjectOpen(oneProjectCurrent()));
  q("oneAddProjectBucket").addEventListener("click",()=>oneProjectOpenBucket());
  q("oneAddProjectPlan").addEventListener("click",()=>oneProjectOpenPlan());
@@ -483,6 +495,8 @@ function oneProjectInit(){
   const name=q("oneProjectPlanName").value.trim(),amount=Number(q("oneProjectPlanAmount").value),dueDate=q("oneProjectPlanDue").value,bucketId=q("oneProjectPlanBucket").value;
   if(!name||!Number.isFinite(amount)||amount<=0||dueDate&&!restoreValidDate(dueDate))return alert("Completá una descripción y un monto previsto válido.");
   if(bucketId&&!p.buckets.some(b=>b.id===bucketId))return alert("El concepto ya no existe.");
+  if(plan&&plan.bucketId!==bucketId&&oneProjectPlanRows(p,plan).some(row=>bucketId&&row.link.bucketId!==bucketId))
+   return alert("Esta previsión tiene gastos conciliados en otro concepto. Quitá sus relaciones antes de cambiar de concepto.");
   if(!oneProjectStore(()=>{
    const next={id:plan?.id||id(),projectId:p.id,name,amount,dueDate,bucketId,status:plan?.status||"pending"};
    if(plan)Object.assign(plan,next);else data.projectPlans.push(next);
@@ -500,9 +514,21 @@ function oneProjectInit(){
   const bucket=event.target.closest("[data-one-edit-bucket]");
   const plan=event.target.closest("[data-one-edit-plan]");
   const toggle=event.target.closest("[data-one-toggle-plan]");
+  const reconcile=event.target.closest("[data-one-reconcile-plan]");
+  const unmatch=event.target.closest("[data-one-unmatch-movement]");
   const unlink=event.target.closest("[data-one-unlink-movement]");
   if(bucket){oneProjectOpenBucket(p.buckets.find(x=>x.id===bucket.dataset.oneEditBucket));return;}
   if(plan){oneProjectOpenPlan(data.projectPlans.find(x=>x.id===plan.dataset.oneEditPlan&&x.projectId===p.id));return;}
+  if(reconcile){
+   const target=(data.projectPlans||[]).find(x=>x.id===reconcile.dataset.oneReconcilePlan&&x.projectId===p.id);
+   oneProjectOpenReconcile(target);return;
+  }
+  if(unmatch){
+   const plan=(data.projectPlans||[]).find(x=>x.id===unmatch.dataset.oneUnmatchPlan&&x.projectId===p.id);
+   if(!plan)return;
+   if(!oneProjectStore(()=>oneProjectUnmatchMovement(p,plan,unmatch.dataset.oneUnmatchMovement)))return;
+   renderProjects();return;
+  }
   if(toggle){
    const target=data.projectPlans.find(x=>x.id===toggle.dataset.oneTogglePlan&&x.projectId===p.id);if(!target)return;
    if(!oneProjectStore(()=>{target.status=target.status==="closed"?"pending":"closed"}))return;
@@ -510,7 +536,7 @@ function oneProjectInit(){
   }
   if(unlink){
    const idValue=unlink.dataset.oneUnlinkMovement;
-   if(!confirm("¿Desvincular este gasto? Se conservará intacto en Movimientos y Presupuesto."))return;
+   if(!confirm("¿Desvincular este gasto? Se conserva en Movimientos. Si estaba conciliado, su importe vuelve a quedar pendiente en la previsión."))return;
    if(!oneProjectStore(()=>{data.projectLinks=data.projectLinks.filter(x=>!(x.projectId===p.id&&x.movementId===idValue))}))return;
    renderProjects();return;
   }
