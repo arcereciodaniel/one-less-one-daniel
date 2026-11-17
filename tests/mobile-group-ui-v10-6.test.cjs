@@ -18,7 +18,7 @@ function boot(){
  Object.defineProperty(w.crypto,"randomUUID",{configurable:true,value:()=> "test-group-entry-abcdefgh123"+n++});
  w.fetch=async(path,opts={})=>{
   if(path==="/api/catalog")return {ok:true,json:async()=>({catalog:{
-    categories:[],debts:[],goals:[],
+    categories:[{id:"cat-g",name:"Supermercado",type:"Gasto"},{id:"cat-i",name:"Ingresos extras",type:"Ingreso"}],debts:[],goals:[],
     groups:[{id:groupId,name:"Viaje a Santa Teresa",people:["Charlie","Cardona","Joshua"]}]
   }})};
   if(path==="/api/inbox"&&opts.method==="POST"){
@@ -84,6 +84,52 @@ test("iPhone permite cobro individual en un grupo sin duplicar otras personas",a
   assert.equal(submitted[0].movement.groupId,groupId);
   assert.equal(submitted[0].movement.person,"Charlie");
   assert.equal(submitted[0].movement.amount,15);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
+
+test("V10.7: iPhone crea grupo y cobro individual sin repartir",async()=>{
+ const x=boot();try{
+  const {w,doc,submitted}=x;await new Promise(r=>setTimeout(r,20));
+  doc.querySelector('[data-type="Cobro"]').click();
+  doc.getElementById("cobroGroup").value="__new__";
+  doc.getElementById("cobroGroup").dispatchEvent(new w.Event("change",{bubbles:true}));
+  assert.equal(doc.getElementById("splitGroupNameField").hidden,false);
+  assert.equal(doc.getElementById("splitFields").hidden,true);
+  doc.getElementById("splitGroupName").value="Mamá";
+  doc.getElementById("person").value="Mamá";
+  doc.getElementById("amount").value="8500";
+  doc.getElementById("description").value="Supermercado";
+  doc.getElementById("entryForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+  await new Promise(r=>setTimeout(r,30));
+  assert.equal(submitted.length,1);
+  assert.equal(submitted[0].movement.type,"Cobro");
+  assert.equal(submitted[0].movement.groupName,"Mamá");
+  assert.equal(submitted[0].movement.groupId,"");
+  assert.equal(submitted[0].movement.person,"Mamá");
+  assert.equal(submitted[0].movement.amount,8500);
+  assert.equal(x.errors.length,0);
+ }finally{x.close()}
+});
+test("V10.7: Ingreso y Gasto envían USD sin convertir",async()=>{
+ const x=boot();try{
+  const {w,doc,submitted}=x;await new Promise(r=>setTimeout(r,20));
+  for(const [type,category,amount] of [["Ingreso","cat-i",120],["Gasto","cat-g",19.75]]){
+   doc.querySelector('[data-type="'+type+'"]').click();
+   assert.equal(doc.getElementById("currencyField").hidden,false);
+   doc.getElementById("currency").value="USD";
+   doc.getElementById("currency").dispatchEvent(new w.Event("change",{bubbles:true}));
+   assert.equal(doc.getElementById("moneySymbol").textContent,"$");
+   doc.getElementById("categoryId").value=category;
+   doc.getElementById("amount").value=String(amount);
+   doc.getElementById("entryForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+   await new Promise(r=>setTimeout(r,30));
+  }
+  assert.equal(submitted.length,2);
+  assert.equal(submitted[0].movement.currency,"USD");
+  assert.equal(submitted[0].movement.amount,120);
+  assert.equal(submitted[1].movement.currency,"USD");
+  assert.equal(submitted[1].movement.amount,19.75);
   assert.equal(x.errors.length,0);
  }finally{x.close()}
 });
