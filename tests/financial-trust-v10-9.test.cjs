@@ -77,6 +77,8 @@ test("V10.9: respaldo informa solicitud, no asegura descarga, y registra fecha s
  const x=boot();try{
   const w=x.w,btn=w.document.getElementById("exportBtn"),initial=x.persisted();
   let clickCount=0;
+  assert.equal(w.getComputedStyle(w.document.getElementById("oneBackupNotice")).display,"none",
+    "El aviso no debe ocupar espacio antes de pedir un respaldo");
   w.URL.createObjectURL=()=>"blob:mock-respaldo";
   w.URL.revokeObjectURL=()=>{};
   w.HTMLAnchorElement.prototype.click=function(){clickCount++};
@@ -85,6 +87,7 @@ test("V10.9: respaldo informa solicitud, no asegura descarga, y registra fecha s
   assert.equal(w.localStorage.getItem(KEY+"_last_backup_requested"),today);
   const note=w.document.getElementById("oneBackupNotice");
   assert.equal(note.hidden,false);
+  assert.notEqual(w.getComputedStyle(note).display,"none");
   assert.match(note.textContent,/Descarga solicitada/);
   assert.match(note.textContent,/Comprobá el archivo JSON/);
   assert(!note.textContent.includes("Descarga confirmada"));
