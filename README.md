@@ -180,3 +180,14 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - Conversión de visualización a moneda del proyecto mediante TC de referencia actual: los movimientos originales conservan su moneda e histórico. Los abonos de Cobros usan su registro financiero original cuando esté vinculado.
 - Los respaldos antiguos sin vínculos siguen siendo compatibles. El validador protege tipos y duplicados; el diagnóstico informa relaciones huérfanas. Daniel y Lab mantienen almacenamiento separado, no se modificó Gloriana ni el piloto móvil, y no se incorpora ningún servicio de pago.
 - Esta beta no permite gastos financiados automáticamente desde metas ni convierte cobros pendientes en efectivo: esas operaciones deben realizarse explícitamente en sus herramientas.
+
+## V11.5 — Simulación financiera en Futuro Beta 1.1
+
+- Panel **Simulá otro camino** dentro de Futuro, cerrado por defecto para mantener la interfaz minimalista. Compara visualmente una proyección base con un escenario hipotético a 30, 60 o 90 días.
+- Tres controles: **porcentaje de reducción de gasto ordinario pendiente (0–50%)**, **aporte extra mensual a ahorro** y **abono extra mensual a deuda**, en CRC o USD. Todos comienzan en 0 y la simulación puede restablecerse.
+- El recorte se aplica solamente a presupuestos aún no gastados de categorías ordinarias de `Gasto`. NO altera movimientos futuros ya confirmados, categorías de ahorro, aportes a metas vinculadas, ni cuotas de préstamo. Se muestra el total de gasto que se evitaría.
+- Ahorro adicional: resta efectivo hipotético del saldo operativo y lo muestra por separado como monto apartado. No crea ni financia ninguna Meta real y es **adicional** a los aportes ya presupuestados.
+- Abono de deuda adicional: resta efectivo hipotético en la fecha del segundo día de pago mensual configurado, con tope al saldo de deuda observado menos mínimos estimados anteriores. **No** recalcula amortización, intereses, penalidades ni vencimientos de deuda; se conservan las cuotas base y se advierte esta limitación.
+- El motor usa `oneFutureForecast` (V11.3) como fuente de una sola verdad y aplica cambios en memoria exclusivamente; no invoca `save`, ni escribe en localStorage, no actualiza Movimientos, Deudas, Cobros, Metas, Proyectos ni el piloto móvil. Los controles se restablecen tras recargar; jamás se exportan como transacciones.
+- El cambio de CRC/USD para los controles conserva montos canónicos en CRC y utiliza el TC actual de venta únicamente para estimación visual. Los saldos del escenario se expresan según la moneda de visualización de OLO.
+- Pruebas automatizadas de cálculo, rangos, doble conteo, ausencia de deudas, cambio de moneda y conservación exacta del respaldo original. Daniel y Lab conservan la separación de datos. Gloriana permanece sin cambios; no se añadieron servicios de pago.
