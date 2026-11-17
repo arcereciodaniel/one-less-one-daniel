@@ -47,7 +47,7 @@ test("El mismo grupo acumula hotel $180 y cena $20 de Charlie; Joshua queda excl
   const people=x.api.oneGroupPersonLedger(first.group.id);
   const charlie=people.find(p=>p.name==="Charlie"),cardona=people.find(p=>p.name==="Cardona"),joshua=people.find(p=>p.name==="Joshua");
   assert.equal(charlie.charges.length,2);
-  assert.deepEqual(charlie.charges.map(c=>[c.description,c.amount]),[["Hotel",180],["Cena",20]]);
+  assert.equal(JSON.stringify(charlie.charges.map(c=>[c.description,c.amount])),JSON.stringify([["Hotel",180],["Cena",20]]));
   assert.equal(charlie.currencies.USD.charged,20000);
   assert.equal(charlie.currencies.USD.pending,20000);
   assert.equal(cardona.currencies.USD.charged,20000);
