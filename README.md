@@ -160,3 +160,14 @@ El despliegue sigue incluyendo únicamente los HTML y recursos públicos necesar
 - Los proyectos archivados conservan presupuestos, previsiones y gastos vinculados; pueden reactivarse sin migración.
 - Respaldos y restauraciones incluyen `projects`, `projectLinks` y `projectPlans`, con validación de referencias, monedas y duplicados. Diagnóstico no destructivo añadido para vínculos huérfanos o duplicados.
 - Sin base de datos nueva, endpoints, cargas del teléfono ni cambios en Cloudflare. **V11.3 — Futuro** queda como siguiente beta.
+
+## V11.3 — Futuro Beta 1.0
+
+- Herramienta opcional en `+` para visualizar el saldo operativo **estimado** a **30, 60 y 90 días**, con eje diario y hitos financieros; se mantiene apagada inicialmente.
+- Parte de `actualBalanceAt(hoy)` y respeta conciliaciones, movimientos históricos y transferencias reales a metas. Este saldo puede ser aproximado sin conciliación.
+- Ingresos: únicamente se incorporan presupuestos de categorías de ingreso con automatización **y fechas concretas** de cobro; los ingresos manuales/irregulares sin fecha no se inventan. Los ingresos ya registrados a futuro en su fecha se descuentan del monto proyectado para no duplicar.
+- Gastos: presupuesto restante por categoría de tipo `Gasto`, menos gastos ya registrados y aportes a metas vinculados; se prorratea por día hasta el fin del período, sin atribuir fechas bancarias inexistentes. Los movimientos con fecha futura se muestran por separado y descuentan el importe del presupuesto pendiente.
+- Deudas: vencimientos y pagos mínimos estimados desde la información existente en Deudas; una cuota ya abonada se reduce y se prioriza frente al presupuesto de `Pago deuda`. Solo se agrega el **excedente** del presupuesto cuando supera las cuotas estimadas, evitando duplicar el mismo compromiso.
+- Cobros pendientes y previsiones de Proyectos no se incorporan al flujo por no constituir operaciones financieras confirmadas y por riesgo de duplicación; tampoco se suma el patrimonio protegido como liquidez.
+- La proyección señala períodos sin presupuesto, ingresos sin fecha, deudas sin día/cuota y saldos sin conciliación. No pronostica intereses, comisiones, inflación ni TC futuros y no sustituye la consulta bancaria.
+- No se crea ningún movimiento ni registro financiero al visualizar/cambiar de ventana; la configuración del módulo está separada en preferencias locales UI. Daniel y Lab continúan aislados, Gloriana no se modifica, sin backend nuevo ni costo añadido.
