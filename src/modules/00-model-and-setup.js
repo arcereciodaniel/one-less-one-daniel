@@ -656,11 +656,28 @@ function restoreValidate(raw){
     if(link.bucketId&&!(project.buckets||[]).some(b=>b.id===link.bucketId))
       throw Error("Un gasto está vinculado a un concepto de proyecto inexistente.");
   }
+  const planIds=new Set();
   for(const plan of raw.projectPlans||[]){
-    if(!plan.id||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
+    if(!plan.id||planIds.has(plan.id)||!projectIds.has(plan.projectId)||typeof plan.name!=="string"||!plan.name.trim()||
        !restoreValidMoney(plan.amount)||Number(plan.amount)<=0||
        (plan.dueDate&&!restoreValidDate(plan.dueDate)))
       throw Error("Hay gastos previstos inválidos.");
+    if(plan.bucketId){
+      const project=raw.projects.find(p=>p.id===plan.projectId);
+      if(!(project?.buckets||[]).some(b=>b.id===plan.bucketId))
+        throw Error("Un gasto previsto se refiere a un concepto inexistente.");
+    }
+    planIds.add(plan.id);
+  }
+  // V11.6: cada vínculo puede señalar una previsión del MISMO proyecto.
+  // No se permite utilizar el mismo movimiento en varias previsiones.
+  for(const link of raw.projectLinks||[]){
+    if(!link.planId)continue; // Los respaldos anteriores no necesitan migración.
+    const plan=(raw.projectPlans||[]).find(x=>x.id===link.planId);
+    if(!plan||plan.projectId!==link.projectId)
+      throw Error("Hay una conciliación de Proyecto que apunta a una previsión inexistente o ajena.");
+    if(plan.bucketId&&plan.bucketId!==link.bucketId)
+      throw Error("La conciliación usa un concepto distinto al de la previsión.");
   }
   return raw;
 }
