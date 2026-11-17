@@ -2971,6 +2971,81 @@ function oneStorageGuardInit(){
  const btn=document.getElementById("exportBtn");
  if(btn&&last)btn.title="Guardar respaldo JSON · último respaldo solicitado: "+last;
 }
+// V10.9: diagnóstico conservador y de solo lectura; nunca repara ni modifica transacciones.
+function oneHealthCheck(raw){
+ const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
+ const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
+ for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations"]){
+  const seen=new Set();let duplicate=0;
+  for(const item of get(kind)){
+   const recordId=kind==="periods"?(item.key||""):item.id;
+   if(!recordId)continue;
+   if(seen.has(recordId))duplicate++;else seen.add(recordId);
+  }
+  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.");
+ }
+ const cats=new Set(get("categories").map(c=>c.id)),funds=new Set(get("reserves").map(r=>r.id)),
+  groups=new Set(get("sharedChargeGroups").map(g=>g.id)),debts=new Set(get("debts").map(d=>d.id));
+ let orphanCategory=0,orphanDebt=0,orphanGoal=0,orphanGroup=0,badAmount=0,badDate=0,missingUsdRate=0;
+ for(const m of get("movements")){
+  if(m.categoryId&&!cats.has(m.categoryId))orphanCategory++;
+  for(const split of Array.isArray(m.splits)?m.splits:[]){if(split.categoryId&&!cats.has(split.categoryId))orphanCategory++}
+  if(m.debtId&&!debts.has(m.debtId))orphanDebt++;
+  if(!restoreValidDate(m.date))badDate++;
+  if(!Number.isFinite(Number(m.amount))||Number(m.amount)<0)badAmount++;
+  if(m.currency==="USD"&&!(Number(m.fxBuy)>0&&Number(m.fxSell)>0))missingUsdRate++;
+ }
+ for(const t of get("reserveMovements")){
+  if(t.reserveId&&!funds.has(t.reserveId))orphanGoal++;
+  if(!restoreValidDate(t.date))badDate++;
+  if(!Number.isFinite(Number(t.amount))||Number(t.amount)<0)badAmount++;
+ }
+ for(const c of get("sharedCharges")){
+  if(c.groupId&&!groups.has(c.groupId))orphanGroup++;
+  if(!restoreValidDate(c.date))badDate++;
+  if(!Number.isFinite(Number(c.amount))||Number(c.amount)<0)badAmount++;
+ }
+ countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.");
+ countIssue(orphanDebt,"referencia(s) a deudas inexistentes.");
+ countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.");
+ countIssue(orphanGroup,"cobro(s) vinculados a grupos inexistentes.");
+ countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
+ countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
+ countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ return {issues,checked:get("movements").length+get("reserveMovements").length+get("sharedCharges").length};
+}
+function oneRenderDataHealth(){
+ const slot=document.getElementById("oneDataHealthReport");
+ if(!slot)return null;
+ const report=oneHealthCheck(data),date=todayIso();
+ const status=document.createElement("p");status.className="one-health-status";
+ status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
+ status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
+  oneStorageConflict?"Otro cambio detectado: recargá antes de modificar":
+  report.issues.length?report.issues.length+" tipo(s) de aviso para revisar":
+  "Sin anomalías detectadas en esta comprobación básica";
+ slot.replaceChildren(status);
+ if(report.issues.length){
+  const ul=document.createElement("ul");ul.className="one-health-issues";
+  for(const item of report.issues.slice(0,10)){
+   const li=document.createElement("li");li.textContent=item.count+" "+item.message;ul.append(li);
+  }
+  slot.append(ul);
+ }
+ const last=(()=>{
+  try{return localStorage.getItem(STORAGE_KEY+"_last_backup_requested")||""}catch{return ""}
+ })();
+ const valid=restoreValidDate(last),days=valid?Math.max(0,Math.floor((Date.parse(date+"T00:00:00Z")-Date.parse(last+"T00:00:00Z"))/86400000)):null;
+ const p=document.createElement("p");p.className="one-health-note";
+ const age=days===null?"No consta una descarga solicitada en este navegador":
+  days===0?"Se solicitó una descarga de respaldo hoy":
+  "Última descarga solicitada: hace "+days+" día(s)";
+ p.textContent=age+". "+(days===null||days>30?"Conviene solicitar y comprobar un respaldo JSON. ":"")+
+  "La aplicación no puede verificar si guardaste el archivo descargado: comprobalo en Descargas y conservá otra copia fuera de este navegador. "+
+  "Se revisaron "+report.checked+" registros. Esta verificación no sustituye un respaldo ni una conciliación real.";
+ slot.append(p);
+ return report;
+}
 function restoreSafely(raw){
   const prepared=restorePrepare(raw),serialized=JSON.stringify(prepared);
   oneStorageAssertCurrent();
@@ -3704,10 +3779,15 @@ function openReconcile(){
 }
 function updateReconcilePreview(){
   const date=document.getElementById("rDate").value||todayIso();
-  const calculated=actualBalanceAt(date), entered=document.getElementById("rAmount").value,currency=document.getElementById("rCurrency").value;
+  const calculated=actualBalanceAt(date),entered=document.getElementById("rAmount").value,currency=document.getElementById("rCurrency").value;
   document.getElementById("rCalculated").value=money(calculated);
-  const enteredCRC=entered===""?null:currentToCRC(entered,currency,"receive");
-  document.getElementById("rDifference").value=enteredCRC===null?"":money(enteredCRC-calculated);
+  const enteredCRC=entered===""?null:currentToCRC(entered,currency,"receive"),diff=enteredCRC===null?null:enteredCRC-calculated;
+  document.getElementById("rDifference").value=diff===null?"":money(diff);
+  const note=document.getElementById("oneReconcileExplanation");
+  if(note)note.textContent=diff===null?"Ingresá el saldo real para revisar cómo cambiaría el cálculo.":
+    Math.abs(diff)<.005?"El saldo real coincide con el calculado. No se generará una diferencia.":
+    "El saldo operativo calculado "+(diff>0?"aumentará":"disminuirá")+" en "+money(Math.abs(diff))+
+    ". Es una conciliación, no un ingreso, gasto ni pago de deuda.";
 }
 function categoryTable(rows){
   return `<table><thead><tr><th>Categoría</th><th>Presupuesto</th><th>Real</th><th>Disponible</th><th>Uso</th></tr></thead><tbody>${
@@ -5621,7 +5701,9 @@ function bind(){
   document.getElementById("reconcileForm").addEventListener("submit",e=>{
     e.preventDefault();
     const date=document.getElementById("rDate").value, amount=num(document.getElementById("rAmount").value),currency=normalizeCurrency(document.getElementById("rCurrency").value);
-    const p=periodForDate(date);if(!p)return alert("La fecha no pertenece a un periodo configurado.");
+    const p=periodForDate(date);
+    if(!restoreValidDate(date)||date>todayIso()||!p||date>periodEndDate(p))
+      return alert("La fecha debe ser válida, no futura y pertenecer a un período presupuestario.");
     const calculatedBefore=actualBalanceAt(date);
     data.reconciliations.push({id:id(),date,amount,currency,...currentFxSnapshot(),afterSeq:num(data.movementSeq),calculatedBefore,note:document.getElementById("rNote").value.trim(),createdAt:new Date().toISOString()});
     save();document.getElementById("reconcileDialog").close();syncQuarterSelectors();renderDashboard();renderPlan();
@@ -6950,6 +7032,9 @@ function initV7(){
   const advancedDetails=document.getElementById("dashboardAdvancedDetails");
   advancedDetails?.addEventListener("toggle",()=>{
     if(advancedDetails.open&&document.getElementById("view-dashboard")?.classList.contains("active"))renderDashboard();
+  });
+  document.getElementById("oneDataHealthDetails")?.addEventListener("toggle",event=>{
+    if(event.target.open)oneRenderDataHealth();
   });
   document.getElementById("movementSearch")?.addEventListener("input",renderMovements);
   document.getElementById("movementCategoryFilter")?.addEventListener("change",renderMovements);
