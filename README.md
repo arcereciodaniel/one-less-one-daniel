@@ -80,3 +80,11 @@ Desde **One Less One Móvil → Cobro** también podés elegir un grupo vigente,
 En Cobro móvil se distingue entre **Sin grupo**, **+ Crear grupo nuevo** y **un grupo existente**. Se puede crear «Mamá» con su primer cobro individual sin activar Dividir gasto. Crear el grupo y el cobro se confirma en un único guardado local, sin duplicarlos por reintentos. El reparto V10.6 permanece intacto.
 
 El teléfono solo recibe el catálogo mínimo (categorías, grupos, nombres), nunca el historial de gastos, saldos ni respaldos. El tipo de cambio utilizado es el disponible en Daniel **al sincronizar**, no necesariamente el del día en que el iPhone capturó la operación si se sincronizó después. Cloudflare continúa siendo exclusivo de Daniel; Gloriana no se modifica.
+
+## V10.8 — Sincronización entendible y TC histórico
+
+El registro de **Gasto, Ingreso y Cobro** del iPhone conserva CRC/USD originales. Al importar USD, Daniel utiliza una tasa **verificable y registrada** en `settings.fxHistory` o en la cotización confirmada actual: primero la de la fecha del movimiento; si no existe, la más reciente **anterior, con máximo siete días de antigüedad** para fines de semana y feriados. **Nunca se aplica una cotización posterior al registro**. La instantánea compra/venta y la fecha seleccionada quedan guardadas en cada movimiento o cobro, incluso en el reparto compartido. Ingresos usan compra y gastos venta. Sin tasa adecuada, el registro continúa en D1 como pendiente hasta añadir la tasa y volver a sincronizar. Los registros históricos ya guardados no se recalculan.
+
+La configuración **Movimientos → Registro desde iPhone** muestra las incidencias por operación en un detalle desplegable: fecha, tipo, descripción y error con acceso a la pantalla pertinente. No se modifican respaldos, historial ni saldos del teléfono y se mantiene la importación idempotente. El formulario móvil añade una breve explicación solo al seleccionar USD y conserva la fecha cuando vuelve a estar visible en Safari.
+
+**Despliegue:** V10.8 aplica a Daniel y Lab con almacenamiento independiente. Gloriana permanece sin cambios. Las pruebas automáticas verifican TC exacto/anterior, cobros compartidos, falta de histórico, corrección de incidencias y reintentos tras fallos de confirmación. No sustituye la comprobación manual en el iPhone de pantalla bloqueada, Safari, teclado y Atajos.
