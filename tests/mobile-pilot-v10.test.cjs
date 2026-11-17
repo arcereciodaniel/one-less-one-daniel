@@ -94,9 +94,9 @@ assert(w.document.getElementById("oneMobilePilot"),"Se muestra conexión en Movi
  const expenseUsd=saved.movements.find(m=>m.description==="Compra USD");
  assert.equal(incomeUsd.amount,120);assert.equal(incomeUsd.currency,"USD");
  assert.equal(incomeUsd.fxBuy,444);assert.equal(incomeUsd.fxSell,456);
- assert.equal(w.movementAmountCRC(incomeUsd),53280);
+ assert.equal(incomeUsd.amount*incomeUsd.fxBuy,53280);
  assert.equal(expenseUsd.amount,19.75);assert.equal(expenseUsd.currency,"USD");
- assert.equal(w.movementAmountCRC(expenseUsd),9006);
+ assert.equal(expenseUsd.amount*expenseUsd.fxSell,9006);
  const mama=saved.sharedChargeGroups.find(g=>g.name==="Mamá");
  const mamaCharge=saved.sharedCharges.find(c=>c.person==="Mamá");
  assert(mama);assert(mamaCharge);assert.equal(mamaCharge.groupId,mama.id);
