@@ -329,6 +329,8 @@ function migrateData(raw){
     p.status=p.status==="archived"?"archived":"active";
     p.currency=normalizeCurrency(p.currency||"CRC");
     p.buckets=Array.isArray(p.buckets)?p.buckets:[];
+    p.goalId=typeof p.goalId==="string"?p.goalId:"";
+    p.cobroGroupId=typeof p.cobroGroupId==="string"?p.cobroGroupId:"";
     p.budget=Number.isFinite(Number(p.budget))?Math.max(0,Number(p.budget)):0;
   });
   raw.reserves=Array.isArray(raw.reserves)?raw.reserves:[];
@@ -628,7 +630,7 @@ function restoreValidate(raw){
     if(typeof cat.name!=="string"||!cat.name.trim()||typeof cat.type!=="string"||!cat.type.trim())
       throw Error("Hay categorías incompletas.");
   }
-  const projectIds=new Set();
+  const projectIds=new Set(),projectGoals=new Set(),projectCobroGroups=new Set();
   for(const p of raw.projects||[]){
     if(typeof p.id!=="string"||!p.id.trim()||projectIds.has(p.id)||
       typeof p.name!=="string"||!p.name.trim()||!restoreValidMoney(p.budget)||Number(p.budget)<0||
@@ -636,6 +638,10 @@ function restoreValidate(raw){
       throw Error("Hay proyectos con datos incompletos o identificadores duplicados.");
     if((p.startDate&&!restoreValidDate(p.startDate))||(p.endDate&&!restoreValidDate(p.endDate))||
       (p.startDate&&p.endDate&&p.endDate<p.startDate))throw Error("Hay fechas de proyecto inválidas.");
+    if(p.goalId!==undefined&&typeof p.goalId!=="string")throw Error("Una referencia a Meta en Proyectos es inválida.");
+    if(p.cobroGroupId!==undefined&&typeof p.cobroGroupId!=="string")throw Error("Una referencia a Cobros en Proyectos es inválida.");
+    if(p.goalId){if(projectGoals.has(p.goalId))throw Error("Una Meta está vinculada a varios proyectos.");projectGoals.add(p.goalId);}
+    if(p.cobroGroupId){if(projectCobroGroups.has(p.cobroGroupId))throw Error("Un grupo de Cobros está vinculado a varios proyectos.");projectCobroGroups.add(p.cobroGroupId);}
     if(p.buckets!==undefined&&(!Array.isArray(p.buckets)||p.buckets.some(b=>!restoreIsRecord(b)||
        !b.id||typeof b.name!=="string"||!b.name.trim()||!restoreValidMoney(b.budget)||Number(b.budget)<0)))
       throw Error("Hay conceptos de presupuesto de proyecto inválidos.");
