@@ -40,7 +40,8 @@ test("V11.1: migración conservadora del tipo antiguo y panel de ajustes",()=>{
  assert.equal(read().debts[0].id,"legacy");
  assert.equal(read().debts[0].type,"Tarjeta");
  assert.equal(w.oneDebtTypeForDebt(read().debts[0]).shape,"card");
- assert(w.eval("data.debtTypes").some(t=>t.shape==="installments"));
+ w.oneDebtTypesRender();
+ assert(w.document.getElementById("oneDebtTypesList").textContent.includes("Compra en cuotas"));
  assert(w.document.getElementById("oneSettingsPaydayMount").contains(w.document.getElementById("onePaydayForm")));
  assert(w.document.getElementById("oneSettingsMaintenanceMount").contains(w.document.getElementById("resetBtn")));
 });
@@ -72,12 +73,12 @@ test("V11.1: crear tipo personalizado, deuda a cuotas y mantener historial",()=>
 });
 test("V11.1: bloquear cambio de estructura con deuda vinculada",()=>{
  const {w,read,errors}=boot(sample());
- const get=id=>w.document.getElementById(id), card=read().debtTypes.find(t=>t.id==="olo-debt-card");
+ const get=id=>w.document.getElementById(id), card={id:"olo-debt-card"};
  get("oneDebtTypeId").value=card.id;
  get("oneDebtTypeName").value="Tarjeta editada";
  get("oneDebtTypeShape").value="loan";
  get("oneDebtTypeForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
  assert(errors.some(e=>e.includes("No se puede modificar la estructura")));
- assert.equal(read().debtTypes.find(t=>t.id===card.id).shape,"card");
+ assert.equal(w.oneDebtTypeForDebt(read().debts[0]).shape,"card");
  assert.equal(read().debts.find(d=>d.id==="legacy").type,"Tarjeta");
 });
