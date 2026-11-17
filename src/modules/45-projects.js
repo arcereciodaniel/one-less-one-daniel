@@ -1,4 +1,4 @@
-/* V11.4 · Proyectos Beta 1.1. Capa de presupuesto sobre movimientos reales.
+/* V11.6 · Proyectos Beta 1.2. Capa de presupuesto sobre movimientos reales.
    No se crean movimientos contables al planificar, asociar ni archivar. */
 let oneProjectSelectedId="";
 function oneProjectById(idValue){return (data.projects||[]).find(p=>p&&p.id===idValue)||null}
@@ -29,9 +29,30 @@ function oneProjectSpent(p,bucketId=null){
  return oneProjectMovementRows(p).filter(x=>bucketId===null||x.link.bucketId===bucketId)
   .reduce((sum,x)=>sum+oneProjectExpenseValue(p,x.m),0);
 }
+/* V11.6: una previsión puede conciliarse con uno o más gastos reales.
+   projectLinks.planId es opcional; jamás representa un segundo asiento. */
+function oneProjectPlanRows(p,plan){
+ return oneProjectMovementRows(p).filter(x=>x.link.planId===plan.id);
+}
+function oneProjectPlanSummary(p,plan){
+ const rows=oneProjectPlanRows(p,plan),planned=Math.max(0,num(plan.amount));
+ const actual=rows.reduce((sum,x)=>sum+oneProjectExpenseValue(p,x.m),0);
+ const remaining=plan.status==="closed"?0:Math.max(0,planned-actual);
+ const status=plan.status==="closed"?"closed":actual>=planned-.005?"covered":actual>.005?"partial":"pending";
+ return {planned,actual,remaining,delta:actual-planned,rows,status};
+}
 function oneProjectPending(p,bucketId=null){
- return (data.projectPlans||[]).filter(x=>x.projectId===p.id&&x.status!=="closed"&&(bucketId===null||x.bucketId===bucketId))
-  .reduce((sum,x)=>sum+Math.max(0,num(x.amount)),0);
+ return (data.projectPlans||[]).filter(x=>x.projectId===p.id&&(bucketId===null||x.bucketId===bucketId))
+  .reduce((sum,x)=>sum+oneProjectPlanSummary(p,x).remaining,0);
+}
+function oneProjectPlanTotals(p){
+ const plans=(data.projectPlans||[]).filter(x=>x.projectId===p.id);
+ const summaries=plans.map(plan=>oneProjectPlanSummary(p,plan));
+ return {planned:summaries.reduce((sum,x)=>sum+x.planned,0),
+  matched:summaries.reduce((sum,x)=>sum+x.actual,0),
+  pending:summaries.reduce((sum,x)=>sum+x.remaining,0),
+  count:plans.length,covered:summaries.filter(x=>x.status==="covered"||x.status==="closed").length,
+  partial:summaries.filter(x=>x.status==="partial").length};
 }
 function oneProjectMoney(p,amount){return originalMoney(amount,p.currency)}
 function oneProjectStore(mutator){
@@ -106,10 +127,35 @@ function oneProjectReadMovementSelection(type,existing){
 }
 function oneProjectAssignMovement(movementId,projectId,bucketId=""){
  const old=oneProjectLinkForMovement(movementId);
- if(old){
-  data.projectLinks=data.projectLinks.filter(x=>x.movementId!==movementId);
- }
- if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId});
+ const oldPlan=(data.projectPlans||[]).find(x=>x.id===old?.planId&&x.projectId===projectId);
+ const keepPlanId=old?.projectId===projectId&&oldPlan&&
+  (!oldPlan.bucketId||oldPlan.bucketId===bucketId)?oldPlan.id:"";
+ if(old)data.projectLinks=data.projectLinks.filter(x=>x.movementId!==movementId);
+ if(projectId)data.projectLinks.push({id:old?.id||id(),projectId,movementId,bucketId,
+  ...(keepPlanId?{planId:keepPlanId}:{})});
+}
+function oneProjectCanMatch(p,plan,m){
+ if(!m||m.type!=="Gasto")return false;
+ const old=oneProjectLinkForMovement(m.id);
+ if(old&&(old.projectId!==p.id||old.planId))return false;
+ if(old&&plan.bucketId&&old.bucketId&&old.bucketId!==plan.bucketId)return false;
+ return true;
+}
+function oneProjectMatchMovement(p,plan,movementId){
+ if(!p||!oneProjectEnabled(p)||!plan||plan.projectId!==p.id)throw Error("La previsión no pertenece a un proyecto activo.");
+ const m=(data.movements||[]).find(x=>x.id===movementId);
+ if(!oneProjectCanMatch(p,plan,m))throw Error("El gasto ya pertenece a otra previsión, proyecto o concepto.");
+ const old=oneProjectLinkForMovement(movementId);
+ const bucketId=old?.bucketId||plan.bucketId||"";
+ if(!old||bucketId!==old.bucketId)oneProjectAssignMovement(movementId,p.id,bucketId);
+ const link=oneProjectLinkForMovement(movementId);
+ if(!link||link.planId)throw Error("El gasto no puede conciliarse con esta previsión.");
+ link.planId=plan.id;
+}
+function oneProjectUnmatchMovement(p,plan,movementId){
+ const link=oneProjectLinkForMovement(movementId);
+ if(!link||link.projectId!==p.id||link.planId!==plan.id)throw Error("No existe esta conciliación.");
+ delete link.planId; // El movimiento sigue en el proyecto y conserva su asiento contable.
 }
 
 /* V11.4: estas relaciones son vistas de solo lectura sobre Metas y Cobros.
