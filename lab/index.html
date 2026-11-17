@@ -1647,6 +1647,42 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 .one-project-connection-values strong{color:var(--text);font-size:.9rem;font-variant-numeric:tabular-nums}
 .one-project-connection .muted{font-size:.74rem;line-height:1.6;margin:8px 0 0}
 @media(max-width:760px){.one-project-connections{grid-template-columns:1fr}}
+
+
+/* V11.5 · Escenarios: comparación en Futuro, misma geometría claro/oscuro. */
+.one-scenario-panel{margin:0 0 15px}
+.one-scenario-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer;list-style:none}
+.one-scenario-panel>summary::-webkit-details-marker{display:none}
+.one-scenario-panel>summary>span:first-child{display:grid;gap:5px}
+.one-scenario-panel>summary strong{font-size:.97rem}
+.one-scenario-panel>summary small{font-size:.74rem;color:var(--muted);line-height:1.5}
+.one-scenario-expand{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.one-scenario-panel[open] .one-scenario-expand{display:none}
+.one-scenario-body{margin-top:19px;border-top:1px solid var(--border);padding-top:17px}
+.one-scenario-body>.muted{font-size:.79rem;line-height:1.6}
+.one-scenario-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:18px 0 12px}
+.one-scenario-field{display:grid;gap:9px;align-content:start;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:13px;min-width:0}
+.one-scenario-field label{font-size:.78rem;font-weight:650}
+.one-scenario-field input[type="number"]{width:100%;min-width:0}
+.one-scenario-field small{font-size:.7rem;color:var(--muted);line-height:1.55}
+.one-scenario-cut-row{display:flex;align-items:center;gap:9px;min-height:33px}
+.one-scenario-cut-row input[type="range"]{flex:1;min-width:0;accent-color:var(--text)}
+.one-scenario-cut-row strong{min-width:34px;text-align:right;font-size:.9rem;font-variant-numeric:tabular-nums}
+.one-scenario-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0}
+.one-scenario-toolbar label{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+.one-scenario-toolbar select{min-width:104px}
+.one-scenario-currency-note{font-size:.73rem;margin:9px 0 13px}
+.one-scenario-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:16px 0 4px;font-size:.74rem;color:var(--muted)}
+.one-scenario-legend span{display:flex;align-items:center;gap:7px}
+.one-scenario-legend i{display:inline-block;width:24px;height:0;border-top:3px solid var(--text)}
+.one-scenario-legend .one-scenario-legend-base{border-top-style:dashed;opacity:.55}
+.one-scenario-base-line{stroke:var(--muted);stroke-width:2.5;stroke-dasharray:7 5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.one-scenario-change-line{stroke:var(--text);stroke-width:2.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.one-scenario-breakdown{margin:17px 0 8px}
+.one-scenario-warnings{padding-left:20px;color:var(--muted);font-size:.76rem;line-height:1.65;margin:10px 0}
+.one-scenario-disclaimer{border-top:1px solid var(--border);padding-top:13px;font-size:.73rem;margin-bottom:0}
+@media(max-width:940px){.one-scenario-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.one-scenario-controls{grid-template-columns:1fr}.one-scenario-panel>summary{align-items:flex-start;flex-direction:column;gap:8px}.one-scenario-toolbar{align-items:flex-start;flex-wrap:wrap}.one-scenario-toolbar label{flex-wrap:wrap}}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -1656,7 +1692,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.4.0 LAB</small>
+      <small class="brand-version">v11.5.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -2151,7 +2187,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 
   <section class="view" id="view-future" aria-labelledby="oneFutureTitle">
     <div class="v7-page-head">
-      <div><div class="v7-eyebrow">FUTURO · BETA 1.0</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
+      <div><div class="v7-eyebrow">FUTURO · BETA 1.1</div><h1 id="oneFutureTitle">Tu dinero, hacia adelante</h1>
         <p class="sub">Visualizá cómo podría evolucionar tu saldo operativo, sin cambiar tus registros.</p></div>
       <div class="one-future-selector" role="group" aria-label="Horizonte de la proyección">
         <button type="button" data-one-future-days="30" class="active" aria-pressed="true">30 días</button>
@@ -2168,6 +2204,42 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <p id="oneFutureMinimum" class="one-future-minimum"></p>
       <p id="oneFutureStatus" class="one-future-status" role="status"></p>
     </section>
+    <details class="v7-card one-scenario-panel" id="oneScenarioPanel">
+      <summary><span><strong>Simulá otro camino</strong><small>V11.5 · Escenarios Beta 1.0 · Cambios hipotéticos, nunca registros reales</small></span><span class="one-scenario-expand">Abrir simulador</span></summary>
+      <div class="one-scenario-body">
+        <p class="muted">Modificá tres decisiones y compará cómo cambiaría tu saldo operativo. Todo queda únicamente en esta sesión; no guardamos el escenario ni tocamos tus finanzas.</p>
+        <div class="one-scenario-controls">
+          <div class="one-scenario-field">
+            <label for="oneScenarioCut">Reducir gastos ordinarios pendientes</label>
+            <div class="one-scenario-cut-row"><input id="oneScenarioCut" type="range" min="0" max="50" step="5" value="0"><strong id="oneScenarioCutValue">0%</strong></div>
+            <small>Solo presupuestos de gastos aún no registrados. No recorta deudas ni aportes a metas.</small>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneScenarioSave">Ahorrar adicional cada mes</label>
+            <input id="oneScenarioSave" type="number" min="0" max="100000000" step="any" value="0" inputmode="decimal">
+            <small>Dinero hipotéticamente apartado de la liquidez, adicional al ahorro ya presupuestado.</small>
+          </div>
+          <div class="one-scenario-field">
+            <label for="oneScenarioDebt">Abonar adicional a deudas cada mes</label>
+            <input id="oneScenarioDebt" type="number" min="0" max="100000000" step="any" value="0" inputmode="decimal">
+            <small>Un pago extra hipotético, limitado por el saldo de deuda, sin estimar intereses.</small>
+          </div>
+        </div>
+        <div class="one-scenario-toolbar"><label for="oneScenarioCurrency">Ingresar montos en <select id="oneScenarioCurrency"><option value="CRC">CRC ₡</option><option value="USD">USD $</option></select></label>
+          <button type="button" class="btn secondary small" id="oneScenarioReset" disabled>Restablecer</button></div>
+        <p class="muted one-scenario-currency-note">Los montos se expresan en <span id="oneScenarioMoneyUnit">colones (CRC)</span>. Los abonos y aportes se ubican en el segundo día de pago mensual configurado.</p>
+        <div id="oneScenarioResults">
+          <div class="one-scenario-legend" aria-hidden="true"><span><i class="one-scenario-legend-base"></i> Proyección base</span><span><i class="one-scenario-legend-sim"></i> Escenario hipotético</span></div>
+          <div id="oneScenarioChart" class="one-future-chart-wrap"></div>
+          <div id="oneScenarioSummary" class="one-future-stats"></div>
+          <p id="oneScenarioSummaryText" class="muted"></p>
+          <p id="oneScenarioBalanceNote" class="one-future-minimum"></p>
+          <div class="one-scenario-breakdown" id="oneScenarioBreakdown"></div>
+          <ul class="one-scenario-warnings" id="oneScenarioWarnings"></ul>
+          <p class="muted one-scenario-disclaimer">La proyección base mantiene sus gastos y vencimientos; una amortización real podría modificar cuotas o intereses. No es una recomendación de pago ni una garantía de liquidez.</p>
+        </div>
+      </div>
+    </details>
     <div class="one-future-columns">
       <section class="v7-card one-future-panel">
         <h2>¿Qué compone la proyección?</h2>
@@ -2207,7 +2279,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.4.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v11.5.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2300,7 +2372,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <label class="one-module-item"><input type="checkbox" id="moduleCollectionsToggle"><span><strong>Cobros · Beta 2.1</strong><small>Personas, abonos parciales, grupos, recurrencias y recordatorios en Inicio.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleGoalsToggle"><span><strong>Metas · Beta 1.0</strong><small>Metas de ahorro, aportes e historial.</small></span></label>
   <label class="one-module-item"><input type="checkbox" id="moduleProjectsToggle"><span><strong>Proyectos · Beta 1.1</strong><small>Presupuestos de viajes y planes, vinculados a gastos reales.</small></span></label>
-  <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.0</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
+  <label class="one-module-item"><input type="checkbox" id="moduleFutureToggle"><span><strong>Futuro · Beta 1.1</strong><small>Estimación del saldo operativo a 30, 60 o 90 días, sin modificar datos reales.</small></span></label>
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
@@ -5378,16 +5450,25 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // Gastos ordinarios: lo que falta para completar el presupuesto del período,
   // después de descontar gastos efectivos (incluidos futuros ya registrados)
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
-  let ordinary=0;
+  let ordinary=0,plannedSavings=0;
+  const savingsCategoryIds=new Set([
+   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+   ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
   for(const c of budgetCategories("Gasto",p)){
    const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
    const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
    const goals=oneBudgetSavingsActual(p,c.id,end);
-   ordinary+=Math.max(0,amount-paid-goals);
+   const remaining=Math.max(0,amount-paid-goals);
+   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
    for(const date of wholeDates)add(date,daily,"budget","Gastos presupuestados","Presupuesto distribuido");
+  }
+  if(plannedSavings>.005){
+   const daily=-plannedSavings/count;
+   for(const date of wholeDates)add(date,daily,"budget-savings","Ahorro presupuestado","Presupuesto distribuido");
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
@@ -5424,7 +5505,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   points,items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
   coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,
   recurringIncome:byKind("income"),scheduledDebt:byKind("debt"),
-  budgetExpense:byKind("budget")+byKind("budget-debt")};
+  budgetExpense:byKind("budget")+byKind("budget-savings")+byKind("budget-debt")};
 }
 function oneFutureChart(points){
  const width=760,height=245,pad={left:110,right:18,top:20,bottom:40};
@@ -5488,6 +5569,7 @@ function renderFuture(){
   const li=document.createElement("li");li.textContent=message;warnings.appendChild(li);
  }
  q("oneFutureCoverage").textContent=forecast.coverageDays+" de "+horizon+" días tienen períodos de presupuesto.";
+ oneScenarioRender(forecast);
 }
 function oneFutureInit(){
  document.querySelectorAll("[data-one-future-days]").forEach(button=>button.addEventListener("click",()=>{
@@ -5496,6 +5578,192 @@ function oneFutureInit(){
   oneFutureWindow=next;
   if(document.getElementById("view-future")?.classList.contains("active"))renderFuture();
  }));
+}
+/* V11.5 · Escenarios Beta 1.0.
+   Simulador sin escrituras: no modifica data, localStorage, Presupuesto,
+   movimientos, cobros, metas, deuda ni importes originalmente registrados. */
+const ONE_SCENARIO_MAX_MONTHLY_CRC=100000000;
+let oneScenarioState={cutPercent:0,monthlySavingsCRC:0,monthlyDebtCRC:0,currency:"CRC"};
+let oneScenarioLastForecast=null;
+function oneScenarioNonNegative(value,max=ONE_SCENARIO_MAX_MONTHLY_CRC){
+ const n=Number(value);
+ return Number.isFinite(n)?Math.min(max,Math.max(0,n)):0;
+}
+function oneScenarioNormalize(raw={}){
+ return {
+  cutPercent:Math.round(oneScenarioNonNegative(raw.cutPercent,50)),
+  monthlySavingsCRC:oneScenarioNonNegative(raw.monthlySavingsCRC),
+  monthlyDebtCRC:oneScenarioNonNegative(raw.monthlyDebtCRC)
+ };
+}
+function oneScenarioDates(forecast){
+ const dates=[],day=onePayDays(data.settings).second;
+ for(let month=forecast.asOf.slice(0,7);month<=forecast.until.slice(0,7);month=oneMonthShift(month,1)){
+  const date=oneDateMonthDay(month,day);
+  if(date>forecast.asOf&&date<=forecast.until)dates.push(date);
+ }
+ return dates;
+}
+function oneScenarioEvaluate(forecast,options={}){
+ if(!forecast||!ONE_FUTURE_WINDOWS.includes(forecast.days))throw Error("Proyección de Futuro inválida.");
+ const config=oneScenarioNormalize(options);
+ const daily=new Map(forecast.points.slice(1).map(p=>[p.date,0]));
+ const scheduled=[],warnings=[];
+ let avoided=0,extraSavings=0,extraDebt=0,simulatedDebtBalance=Math.max(0,activeDebtTotal());
+ // Solo gastos ordinarios AÚN NO registrados. No toca ahorro ya presupuestado,
+ // cuotas mínimas, movimientos futuros confirmados ni transferencias reales.
+ for(const item of forecast.items){
+  if(item.kind!=="budget"||item.amount>=0)continue;
+  const adjustment=(-item.amount)*config.cutPercent/100;
+  if(adjustment>.00001&&daily.has(item.date)){
+   daily.set(item.date,daily.get(item.date)+adjustment);
+   avoided+=adjustment;
+  }
+ }
+ for(const date of oneScenarioDates(forecast)){
+  if(config.monthlySavingsCRC>.005){
+   const amount=config.monthlySavingsCRC;
+   daily.set(date,daily.get(date)-amount);
+   extraSavings+=amount;
+   scheduled.push({date,type:"goal",amount});
+  }
+  if(config.monthlyDebtCRC>.005){
+   // Se descuentan las cuotas base fechadas hasta este día del saldo restante
+   // estimado antes de calcular pagos adicionales. No se promete ahorro de
+   // intereses ni se suprimen cuotas futuras de la proyección base.
+   const baseDue=forecast.items.filter(x=>x.kind==="debt"&&x.date<=date)
+    .reduce((sum,x)=>sum+Math.max(0,-x.amount),0);
+   const debtCapacity=Math.max(0,simulatedDebtBalance-baseDue);
+   const amount=Math.min(config.monthlyDebtCRC,debtCapacity);
+   if(amount>.005){
+    daily.set(date,daily.get(date)-amount);
+    extraDebt+=amount;
+    simulatedDebtBalance-=amount;
+    scheduled.push({date,type:"debt",amount});
+   }
+  }
+ }
+ if(config.cutPercent>0&&avoided<=.005)
+  warnings.push("No hay gastos ordinarios pendientes para aplicar este recorte. No se reducen aportes a metas ni cuotas de deuda.");
+ if(config.monthlyDebtCRC>.005&&activeDebtTotal()<=.005)
+  warnings.push("No hay saldo de deuda activo para simular abonos adicionales.");
+ if(config.monthlyDebtCRC>.005&&extraDebt+.005<config.monthlyDebtCRC*oneScenarioDates(forecast).length)
+  warnings.push("Los abonos extra se limitaron al saldo estimado de deuda; las cuotas futuras no se recalculan.");
+ if(config.monthlyDebtCRC>.005)
+  warnings.push("No se simulan intereses, penalizaciones, liquidaciones anticipadas ni cambios de cuota. Los pagos extra son hipotéticos y se mantienen las cuotas base.");
+ if(extraSavings>.005)
+  warnings.push("El aporte adicional se aparta hipotéticamente de la liquidez. No se suma a ninguna Meta hasta registrarlo realmente.");
+ if(forecast.warnings.length)
+  warnings.push("La comparación hereda las advertencias y períodos sin datos de Futuro.");
+ const points=[];
+ let difference=0,lowest=forecast.base,lowestDate=forecast.asOf;
+ for(const p of forecast.points){
+  if(p.date!==forecast.asOf)difference+=(daily.get(p.date)||0);
+  const balance=p.balance+difference;
+  points.push({date:p.date,balance,baseline:p.balance,change:difference});
+  if(balance<lowest){lowest=balance;lowestDate=p.date}
+ }
+ return {
+  ...config,baseline:forecast,balance:points.at(-1).balance,
+  difference:points.at(-1).balance-forecast.balance,
+  lowest,lowestDate,points,
+  avoided,extraSavings,extraDebt,scheduled,warnings
+ };
+}
+function oneScenarioChart(scenario){
+ const width=760,height=245,pad={left:110,right:18,top:20,bottom:40};
+ const rows=scenario.points,all=rows.flatMap(p=>[p.balance,p.baseline,0]);
+ const min=Math.min(...all),max=Math.max(...all),gap=max-min||1,lo=min-gap*.12,hi=max+gap*.12;
+ const x=i=>pad.left+i*(width-pad.left-pad.right)/Math.max(1,rows.length-1);
+ const y=v=>pad.top+(hi-v)/(hi-lo)*(height-pad.top-pad.bottom);
+ const line=field=>rows.map((p,i)=>x(i).toFixed(2)+","+y(p[field]).toFixed(2)).join(" ");
+ const ticks=[min,(min+max)/2,max].map(value=>
+  '<line class="one-future-gridline" x1="'+pad.left+'" x2="'+(width-pad.right)+
+  '" y1="'+y(value).toFixed(2)+'" y2="'+y(value).toFixed(2)+'"/>'+
+  '<text class="one-future-tick" x="'+(pad.left-9)+'" y="'+(y(value)+4).toFixed(2)+
+  '" text-anchor="end">'+safe(money(value))+'</text>').join("");
+ const last=rows.length-1,indices=[0,Math.round(last/2),last];
+ const dates=indices.map(i=>'<text class="one-future-tick" x="'+x(i).toFixed(2)+
+  '" y="'+(height-13)+'" text-anchor="middle">'+safe(i?" "+dateLabel(rows[i].date):"Hoy")+'</text>').join("");
+ return '<svg class="one-future-chart" viewBox="0 0 760 245" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Comparación del saldo operativo base y el saldo simulado a lo largo del tiempo">'+
+ ticks+'<line class="one-future-zero" x1="'+pad.left+'" x2="'+(width-pad.right)+
+ '" y1="'+y(0).toFixed(2)+'" y2="'+y(0).toFixed(2)+'"/>'+
+ '<polyline class="one-scenario-base-line" points="'+line("baseline")+'"/>'+
+ '<polyline class="one-scenario-change-line" points="'+line("balance")+'"/>'+
+ dates+'</svg>';
+}
+function oneScenarioFormatInput(crc,currency){
+ const rates=currentRates(),n=currency==="USD"?(rates.sell>0?crc/rates.sell:0):crc;
+ return String(Number(n.toFixed(currency==="USD"?2:0)));
+}
+function oneScenarioSyncControls(){
+ const q=id=>document.getElementById(id),currency=oneScenarioState.currency;
+ q("oneScenarioCurrency").value=currency;
+ q("oneScenarioCut").value=oneScenarioState.cutPercent;
+ q("oneScenarioSave").value=oneScenarioFormatInput(oneScenarioState.monthlySavingsCRC,currency);
+ q("oneScenarioDebt").value=oneScenarioFormatInput(oneScenarioState.monthlyDebtCRC,currency);
+ q("oneScenarioCutValue").textContent=oneScenarioState.cutPercent+"%";
+ q("oneScenarioMoneyUnit").textContent=currency==="USD"?"dólares (USD)":"colones (CRC)";
+}
+function oneScenarioRender(forecast=null){
+ const slot=document.getElementById("oneScenarioResults");if(!slot)return;
+ oneScenarioLastForecast=forecast||oneScenarioLastForecast||oneFutureForecast(todayIso(),oneFutureWindow);
+ const result=oneScenarioEvaluate(oneScenarioLastForecast,oneScenarioState);
+ const q=id=>document.getElementById(id);
+ const changed=result.cutPercent>0||result.monthlySavingsCRC>0||result.monthlyDebtCRC>0;
+ q("oneScenarioChart").innerHTML=oneScenarioChart(result);
+ q("oneScenarioSummary").innerHTML=[
+  ["Saldo base",result.baseline.balance],
+  ["Saldo simulado",result.balance],
+  ["Diferencia",result.difference],
+  ["Mínimo simulado",result.lowest]
+ ].map(([name,value])=>'<div class="one-future-stat"><span>'+safe(name)+'</span><strong>'+
+  safe(money(value))+'</strong></div>').join("");
+ q("oneScenarioBreakdown").innerHTML=[
+  ["Gasto ordinario que evitarías",result.avoided],
+  ["Aporte adicional hipotético",-result.extraSavings],
+  ["Pago anticipado hipotético",-result.extraDebt]
+ ].map(([label,value])=>'<div class="one-future-breakdown-row"><span>'+safe(label)+'</span><strong>'+
+  safe((value>0?"+":"")+money(value))+'</strong></div>').join("");
+ q("oneScenarioSummaryText").textContent=changed?
+  "Escenario hipotético · "+oneScenarioState.cutPercent+"% menos gastos ordinarios; "+
+  money(result.extraSavings)+" en ahorro extra y "+money(result.extraDebt)+
+  " en abonos adicionales durante "+result.baseline.days+" días.":
+  "Mové un control para comparar con el plan actual. Sin cambios, las dos líneas coinciden.";
+ q("oneScenarioBalanceNote").textContent="El saldo mínimo simulado sería "+money(result.lowest)+
+  " el "+dateLabel(result.lowestDate)+
+  (result.lowest<0?" y podría quedar negativo.":".");
+ const warnings=q("oneScenarioWarnings");warnings.replaceChildren();
+ for(const message of result.warnings){
+  const item=document.createElement("li");item.textContent=message;warnings.appendChild(item);
+ }
+ q("oneScenarioReset").disabled=!changed;
+}
+function oneScenarioInit(){
+ const q=id=>document.getElementById(id);
+ oneScenarioState.currency=displayCurrency();
+ oneScenarioSyncControls();
+ const update=()=>{
+  oneScenarioState.cutPercent=oneScenarioNonNegative(q("oneScenarioCut").value,50);
+  oneScenarioState.monthlySavingsCRC=oneScenarioNonNegative(toCRC(q("oneScenarioSave").value,oneScenarioState.currency,"pay"));
+  oneScenarioState.monthlyDebtCRC=oneScenarioNonNegative(toCRC(q("oneScenarioDebt").value,oneScenarioState.currency,"pay"));
+  q("oneScenarioCutValue").textContent=oneScenarioState.cutPercent+"%";
+  oneScenarioRender();
+ };
+ for(const name of ["oneScenarioCut","oneScenarioSave","oneScenarioDebt"])
+  q(name).addEventListener("input",update);
+ q("oneScenarioCurrency").addEventListener("change",()=>{
+  oneScenarioState.currency=normalizeCurrency(q("oneScenarioCurrency").value);
+  oneScenarioSyncControls();
+  oneScenarioRender();
+ });
+ q("oneScenarioReset").addEventListener("click",()=>{
+  oneScenarioState={cutPercent:0,monthlySavingsCRC:0,monthlyDebtCRC:0,currency:oneScenarioState.currency};
+  oneScenarioSyncControls();oneScenarioRender();
+ });
+ q("oneScenarioPanel").addEventListener("toggle",()=>{
+  if(q("oneScenarioPanel").open)oneScenarioRender();
+ });
 }
 function oneGoalBudgetCategory(r){
   if(!r)return "";
@@ -8395,7 +8663,7 @@ function initDebtBalanceReconciliation(){
  save();close();renderDebts();renderDashboard();renderCapital();renderPlan();
  });
 }
-bind();oneProjectInit();oneFutureInit();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
+bind();oneProjectInit();oneFutureInit();oneScenarioInit();oneActionSuccessInit();oneInitSplitFare();initDebtBalanceReconciliation();bindReportStudio();initV7();initR8();initMovements2();initGoalsBeta();initUiPreferences();initLiquidityChartInteraction();initModulesBeta();oneStorageGuardInit();initDataIntegrityNotice();navigate(uiState.activeView||"dashboard");updateCurrencyHeader();oneFxAutoUpdate();
 </script>
 <script src="../mobile-pilot/desktop.js"></script>
 </body>
