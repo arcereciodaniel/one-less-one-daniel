@@ -45,3 +45,17 @@ test("V10.2: marca oficial y fecha robusta para Safari",()=>{
  assert.doesNotMatch(html,/CRC · Colones costarricenses/);
  assert.doesNotMatch(html,/Un registro menos por recordar/);
 });
+
+
+test("V11.8: proyecto y concepto opcionales aparecen solo en gasto; se preserva borrador",()=>{
+ assert.match(html,/id="projectField"[^>]*hidden/);
+ assert.match(html,/id="projectBucketField"[^>]*hidden/);
+ assert.match(html,/id="projectId"/);
+ assert.match(html,/id="projectBucketId"/);
+ assert.match(script,/kind!=="Gasto"\|\|!rows\.length/);
+ assert.match(script,/if\(kind==="Gasto"&&selectedProject\(\)\)/);
+ assert.match(script,/if\(p\.type==="Gasto"&&p\.projectId\)/);
+ assert.match(script,/fillProjectBuckets\(p\.projectBucketId\|\|""\)/);
+ assert.match(script,/m\.projectBucketId=\$\("projectBucketId"\)\.value/, "La asociación del concepto se envía solo si está seleccionado");
+ assert.match(script,/if\(!pending\)setType/);
+});
