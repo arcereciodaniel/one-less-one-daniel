@@ -73,9 +73,13 @@ jobs:
           set -euo pipefail
           url="https://one-less-one-mobile-daniel.one-less-one-rastro.workers.dev"
           for attempt in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 20 "$url/api/health" | grep -q '"ok":true'; then
+            # Evitar curl | grep -q bajo pipefail: grep cierra el pipe temprano
+            # y curl puede terminar con error 23 aunque el Worker responda bien.
+            if curl --fail --silent --show-error --max-time 20 "$url/api/health" -o "$RUNNER_TEMP/one-less-one-mobile-health.json" &&
+               grep -q '"ok":true' "$RUNNER_TEMP/one-less-one-mobile-health.json"; then
               echo "El Worker responde correctamente." >> "$GITHUB_STEP_SUMMARY"
-              curl --fail --silent --show-error --max-time 20 "$url/" | grep -q "One Less One"
+              curl --fail --silent --show-error --max-time 20 "$url/" -o "$RUNNER_TEMP/one-less-one-mobile-index.html"
+              grep -q "One Less One" "$RUNNER_TEMP/one-less-one-mobile-index.html"
               echo "El formulario movil esta disponible." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
