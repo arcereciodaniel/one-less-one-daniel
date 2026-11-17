@@ -34,7 +34,7 @@ function bind(){
     if(!name||!Object.hasOwn(ONE_DEBT_SHAPES,shape))return;
     if(data.debtTypes.some(t=>t.id!==typeId&&t.active&&t.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es")))return alert("Ya existe un tipo de deuda activo con ese nombre.");
     const current=data.debtTypes.find(t=>t.id===typeId);
-    if(current&&current.shape!==shape&&oneDebtTypeUsage(current)>0)return alert("No se puede modificar la estructura de un tipo que ya tiene deudas. Podés cambiar su nombre o crear otro tipo.");
+    if(current&&current.shape!==shape&&(current.builtin||oneDebtTypeUsage(current)>0))return alert("No se puede modificar la estructura de este tipo. Podés cambiar su nombre o crear otro tipo nuevo.");
     const snapshot=clone(data.debtTypes);
     if(current){current.name=name;current.shape=shape}
     else data.debtTypes.push({id:id(),name,shape,active:true,builtin:false});
@@ -461,20 +461,21 @@ function bind(){
     const shape=selectedType.shape,field=fieldName=>document.getElementById(fieldName).value,is=key=>shape===key;
     const obj={...(previous||{}),id:did||id(),type:ONE_DEBT_SHAPES[shape],typeId:selectedType.id,name:field("dName").trim(),status,
       usd:num(field("dUsd")),crc:num(field("dCrc")),fx:currentRates().sell,
-      limit:is("card")?num(field("dLimit")):0,limitCurrency:normalizeCurrency(field("dLimitCurrency")),
-      minimum:["card","loan","installments"].includes(shape)?num(field("dMinimum")):0,
+      limit:is("card")?num(field("dLimit")):(previous?.type===ONE_DEBT_SHAPES[shape]?num(previous.limit):0),limitCurrency:normalizeCurrency(field("dLimitCurrency")),
+      minimum:num(field("dMinimum")),
       minimumCurrency:normalizeCurrency(field("dMinimumCurrency")),
-      payDay:shape==="other"?"":field("dPayDay").trim(),
-      rate:["card","loan","installments"].includes(shape)?field("dRate").trim():"",
+      payDay:field("dPayDay").trim(),
+      rate:field("dRate").trim(),
       closeDay:is("card")?num(field("dCloseDay")):0,
       fullPayment:is("card")?num(field("dFullPayment")):0,
+      fullPaymentCurrency:normalizeCurrency(field("dFullPaymentCurrency")),
       lender:["loan","installments","family"].includes(shape)?field("dLender").trim():"",
       endDate:["loan","installments"].includes(shape)?field("dEndDate"):"",
       installmentsTotal:is("installments")?num(field("dInstallmentsTotal")):0,
       installmentsLeft:is("installments")?num(field("dInstallmentsLeft")):0,
       priority:num(field("dPriority")),goal:field("dGoal").trim(),notes:field("dNotes").trim()};
     if(!obj.name)return alert("Ingresá un nombre para la deuda.");
-    if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay))return alert("El día de pago debe estar entre 1 y 31.");
+    if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay)&&obj.payDay!==previous?.payDay)return alert("El día de pago debe estar entre 1 y 31.");
     if(is("card")&&obj.closeDay&&(obj.closeDay<1||obj.closeDay>31))return alert("El día de corte debe estar entre 1 y 31.");
     if(is("installments")&&obj.installmentsTotal&&obj.installmentsLeft>obj.installmentsTotal)return alert("Las cuotas restantes no pueden superar las cuotas totales.");
     const i=data.debts.findIndex(d=>d.id===did),old=i>=0?data.debts[i]:null,oldName=old?.name||"";
