@@ -602,18 +602,54 @@ function openCategory(c=null){
   fillIncomeConfigForm(c?.type==="Ingreso"?c:null);updateIncomeConfigVisibility();document.getElementById("categoryDialog").showModal();
 }
 
+function oneDebtTypeForDebt(d){
+ const byId=(data.debtTypes||[]).find(t=>t.id===d?.typeId);
+ if(byId)return byId;
+ const presetId=({Tarjeta:"olo-debt-card","Préstamo":"olo-debt-loan",Familiar:"olo-debt-family",Otra:"olo-debt-other"})[d?.type]||"olo-debt-other";
+ return (data.debtTypes||[]).find(t=>t.id===presetId)||ONE_DEBT_TYPE_PRESETS.find(t=>t.id===presetId);
+}
+function oneDebtTypeName(d){return d?.typeId?(data.debtTypes||[]).find(t=>t.id===d.typeId)?.name||d.type||"Otra":d?.type||"Otra"}
+function oneDebtTypeUsage(t){return (data.debts||[]).filter(d=>d.typeId===t.id||(!d.typeId&&oneDebtTypeForDebt(d)?.id===t.id)).length}
+function oneDebtTypeFormReset(){
+ document.getElementById("oneDebtTypeId").value="";
+ document.getElementById("oneDebtTypeName").value="";
+ document.getElementById("oneDebtTypeShape").value="loan";
+}
+function oneDebtTypesRender(){
+ const target=document.getElementById("oneDebtTypesList");if(!target)return;
+ target.innerHTML=(data.debtTypes||[]).map(t=>{
+  const count=oneDebtTypeUsage(t);
+  return '<div class="one-debt-type-row '+(t.active?"":"is-archived")+'"><div><strong>'+safe(t.name)+'</strong><small>'+
+   safe(({card:"Tarjeta",loan:"Préstamo",installments:"Cuotas",family:"Familiar",other:"Otra"})[t.shape]||"Otra")+
+   ' · '+count+' deuda(s) · '+(t.active?"Activo":"Archivado")+'</small></div>'+
+   '<div class="one-debt-type-actions"><button type="button" class="btn secondary small" data-edit-debt-type="'+safe(t.id)+'">Editar</button>'+
+   '<button type="button" class="btn secondary small" data-toggle-debt-type="'+safe(t.id)+'">'+(t.active?"Archivar":"Reactivar")+'</button></div></div>';
+ }).join("");
+}
+function oneRefreshDebtTypeSelect(d=null){
+ const select=document.getElementById("dType"),current=d?oneDebtTypeForDebt(d)?.id:"";
+ const choices=(data.debtTypes||[]).filter(t=>t.active||t.id===current);
+ fillObjectSelect(select,choices.map(t=>({value:t.id,label:t.name+(t.active?"":" (archivado)")})),current||choices[0]?.id||"");
+}
+function oneDebtFormUpdate(){
+ const t=(data.debtTypes||[]).find(x=>x.id===document.getElementById("dType").value);
+ const shape=t?.shape||"other";
+ document.querySelectorAll("#debtForm [data-debt-fields]").forEach(el=>{el.hidden=!el.dataset.debtFields.split(" ").includes(shape)});
+ document.getElementById("dMinimumLabel").textContent=shape==="card"?"Pago mínimo":"Cuota mensual";
+}
 function openDebt(d=null){
-  const dialog=document.getElementById("debtDialog");
-  document.getElementById("debtDialogTitle").textContent=d?"Editar deuda":"Agregar deuda";
-  ["Id","Type","Name","Status","Usd","Crc","Limit","Minimum","PayDay","Rate","Priority","Goal","Notes"].forEach(k=>{
-    const el=document.getElementById("d"+k);if(!el)return;
-    const map={Id:"id",Type:"type",Name:"name",Status:"status",Usd:"usd",Crc:"crc",Limit:"limit",Minimum:"minimum",PayDay:"payDay",Rate:"rate",Priority:"priority",Goal:"goal",Notes:"notes"};
-    el.value=d?.[map[k]]??({Status:"active",Usd:0,Crc:0,Limit:0,Minimum:0,Priority:activeDebts().length+1}[k]??"")
-  });
-  document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
-  document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
-  const rates=currentRates();document.getElementById("dFxPreview").value=`Venta actual: ₡${rates.sell.toFixed(2)}`;
-  dialog.showModal();
+ const dialog=document.getElementById("debtDialog");
+ document.getElementById("debtDialogTitle").textContent=d?"Editar deuda":"Agregar deuda";
+ ["Id","Name","Status","Usd","Crc","Limit","Minimum","PayDay","Rate","Priority","Goal","Notes","CloseDay","FullPayment","Lender","EndDate","InstallmentsTotal","InstallmentsLeft"].forEach(k=>{
+  const el=document.getElementById("d"+k);if(!el)return;
+  const map={Id:"id",Name:"name",Status:"status",Usd:"usd",Crc:"crc",Limit:"limit",Minimum:"minimum",PayDay:"payDay",Rate:"rate",Priority:"priority",Goal:"goal",Notes:"notes",CloseDay:"closeDay",FullPayment:"fullPayment",Lender:"lender",EndDate:"endDate",InstallmentsTotal:"installmentsTotal",InstallmentsLeft:"installmentsLeft"};
+  el.value=d?.[map[k]]??({Status:"active",Usd:0,Crc:0,Limit:0,Minimum:0,Priority:activeDebts().length+1}[k]??"");
+ });
+ document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
+ document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
+ oneRefreshDebtTypeSelect(d);oneDebtFormUpdate();
+ const rates=currentRates();document.getElementById("dFxPreview").value="Venta actual: ₡"+rates.sell.toFixed(2);
+ dialog.showModal();
 }
 
 
