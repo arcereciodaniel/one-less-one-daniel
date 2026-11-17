@@ -36,25 +36,27 @@ function checkPayload(p){
  const type=clean(p.type,24),date=clean(p.date,10),amount=Number(p.amount);
  if(!TYPES.has(type)||!validDate(date)||!Number.isFinite(amount)||amount<=0||amount>1e9||Math.abs(Math.round(amount*100)-amount*100)>1e-5)
    throw Error("Tipo, fecha o monto inválidos");
- // CRC para movimientos contables; Cobros admite CRC/USD sin duplicar el pago del gasto.
- if(p.currency!=="CRC"&&!(["Cobro","Cobro dividido"].includes(type)&&p.currency==="USD"))
-  throw Error("Solamente Cobros permite USD en este piloto.");
+ // CRC/USD en Gasto, Ingreso y Cobro; el monto original se conserva hasta importarlo.
+ if(p.currency!=="CRC"&&!(["Gasto","Ingreso","Cobro","Cobro dividido"].includes(type)&&p.currency==="USD"))
+  throw Error("USD solo está disponible para Gasto, Ingreso y Cobro.");
  const now=new Date(),today=now.toISOString().slice(0,10),earliest=new Date(now.getTime()-366*864e5).toISOString().slice(0,10);
  if(date>today||date<earliest)throw Error("Fecha fuera del período permitido");
  const categoryId=clean(p.categoryId,80),debtId=clean(p.debtId,80),reserveId=clean(p.reserveId,80);
- const person=clean(p.person,120),description=clean(p.description,200),groupId=clean(p.groupId,80);
+ const person=clean(p.person,120),description=clean(p.description,200),groupId=clean(p.groupId,80),groupName=clean(p.groupName,120);
  const dueDate=clean(p.dueDate,10);
  if((type==="Gasto"||type==="Ingreso")&&!categoryId)throw Error("Elegí una categoría");
  if(type==="Pago deuda"&&!debtId)throw Error("Elegí la deuda");
  if(type==="Aporte"&&!reserveId)throw Error("Elegí la meta");
  if(type==="Cobro"&&!person)throw Error("Indicá la persona");
+ if(type==="Cobro"&&groupId&&groupName)throw Error("No podés elegir y crear un grupo a la vez.");
+ if(type==="Cobro"&&p.groupName!==undefined&&!groupId&&!groupName)throw Error("Indicá el nombre del grupo nuevo.");
  if(type==="Cobro dividido"){
   const result=globalThis.OneSplitFare.normalize(p);
   if(result.dueDate&&!validDate(result.dueDate))throw Error("Fecha esperada inválida");
   return result;
  }
  if(dueDate&&!validDate(dueDate))throw Error("Fecha esperada inválida");
- return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate,groupId};
+ return {type,date,amount,currency:p.currency,categoryId,debtId,reserveId,person,description,dueDate,groupId,...(type==="Cobro"&&groupName?{groupName}:{})};
 }
 async function body(request){
  const size=Number(request.headers.get("Content-Length")||0);
@@ -119,6 +121,8 @@ export default {
      if((type==="Cobro"||type==="Cobro dividido")&&cleanPayload.groupId&&
        !(catalog.groups||[]).some(g=>g.id===cleanPayload.groupId))
        return json({error:"El grupo no está disponible. Abrí Daniel, sincronizá y actualizá el catálogo del iPhone."},409,headers);
+     if(type==="Cobro"&&cleanPayload.groupName&&(catalog.groups||[]).some(g=>g.name.toLocaleLowerCase("es")===cleanPayload.groupName.toLocaleLowerCase("es")))
+       return json({error:"Ya existe un grupo con ese nombre. Seleccionalo en el iPhone."},409,headers);
      await env.DB.prepare("INSERT OR IGNORE INTO pilot_inbox(id,payload,created_at,status) VALUES(?,?,datetime('now'),'pending')").bind(submission.id,JSON.stringify(cleanPayload)).run();
      return json({ok:true,id:submission.id,received:true},200,headers);
     }
