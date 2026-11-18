@@ -316,7 +316,20 @@
             <button class="btn secondary small" type="button" id="addMovementSplit">＋ Agregar categoría</button>
             <div class="m2-status" id="movementSplitStatus" aria-live="polite"></div>
           </section>
-          <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
+          <div class="field wide one-finance-source" id="mPaymentSourceField" hidden>
+             <label for="mPaymentSource">¿Cómo pagaste este gasto?</label>
+             <select id="mPaymentSource"><option value="operating">Desde mi dinero disponible</option><option value="credit">Con tarjeta de crédito</option></select>
+           </div>
+           <div class="field wide one-finance-card" id="mFinancedDebtField" hidden>
+             <label for="mFinancedDebt">Tarjeta utilizada</label><select id="mFinancedDebt"><option value="">Seleccioná una tarjeta activa</option></select>
+             <small class="muted">La compra cuenta en el presupuesto y aumenta la deuda de la tarjeta, pero no descuenta efectivo hoy. El dinero saldrá al registrar el pago de la tarjeta.</small>
+           </div>
+           <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
+           <div class="field wide one-debt-principal" id="mPrincipalField" hidden>
+             <label for="mPrincipalAmount">Capital amortizado (opcional, misma moneda del pago)</label>
+             <input type="number" id="mPrincipalAmount" min="0" step="0.01" inputmode="decimal" placeholder="Sin desglosar">
+             <small class="muted">Si tu cuota incluye intereses o seguros, anotá únicamente cuánto redujo el capital. El total pagado siempre sale de tu saldo operativo. Si no conocés el capital, el saldo de deuda seguirá siendo aproximado.</small>
+           </div>
           <div class="field wide"><label for="mDescription">Descripción (opcional)</label><input id="mDescription" placeholder="¿En qué gastaste?"></div>
           <div class="one-move-project-fields wide" id="oneMovementProjectField" hidden>
             <div class="field"><label for="mProject">Proyecto (opcional)</label><select id="mProject"><option value="">Sin proyecto</option></select></div>

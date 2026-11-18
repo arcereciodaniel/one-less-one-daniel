@@ -2041,7 +2041,20 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
             <button class="btn secondary small" type="button" id="addMovementSplit">＋ Agregar categoría</button>
             <div class="m2-status" id="movementSplitStatus" aria-live="polite"></div>
           </section>
-          <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
+          <div class="field wide one-finance-source" id="mPaymentSourceField" hidden>
+             <label for="mPaymentSource">¿Cómo pagaste este gasto?</label>
+             <select id="mPaymentSource"><option value="operating">Desde mi dinero disponible</option><option value="credit">Con tarjeta de crédito</option></select>
+           </div>
+           <div class="field wide one-finance-card" id="mFinancedDebtField" hidden>
+             <label for="mFinancedDebt">Tarjeta utilizada</label><select id="mFinancedDebt"><option value="">Seleccioná una tarjeta activa</option></select>
+             <small class="muted">La compra cuenta en el presupuesto y aumenta la deuda de la tarjeta, pero no descuenta efectivo hoy. El dinero saldrá al registrar el pago de la tarjeta.</small>
+           </div>
+           <div class="field" id="mDebtField"><label for="mDebt">¿Qué préstamo o tarjeta vas a pagar?</label><select id="mDebt"></select><small class="r8-debt-field-help">La categoría de pago se asigna automáticamente.</small></div>
+           <div class="field wide one-debt-principal" id="mPrincipalField" hidden>
+             <label for="mPrincipalAmount">Capital amortizado (opcional, misma moneda del pago)</label>
+             <input type="number" id="mPrincipalAmount" min="0" step="0.01" inputmode="decimal" placeholder="Sin desglosar">
+             <small class="muted">Si tu cuota incluye intereses o seguros, anotá únicamente cuánto redujo el capital. El total pagado siempre sale de tu saldo operativo. Si no conocés el capital, el saldo de deuda seguirá siendo aproximado.</small>
+           </div>
           <div class="field wide"><label for="mDescription">Descripción (opcional)</label><input id="mDescription" placeholder="¿En qué gastaste?"></div>
           <div class="one-move-project-fields wide" id="oneMovementProjectField" hidden>
             <div class="field"><label for="mProject">Proyecto (opcional)</label><select id="mProject"><option value="">Sin proyecto</option></select></div>
@@ -3419,6 +3432,20 @@ function restoreValidate(raw){
     if(m.currency!==undefined&&!["CRC","USD"].includes(String(m.currency).toUpperCase()))
       throw Error("Un movimiento tiene una moneda inválida.");
   }
+  // V12.1: los vínculos nuevos son opcionales y no se aplican a datos heredados.
+  const cardIds=new Set((raw.debts||[]).filter(d=>{
+    const kind=(raw.debtTypes||[]).find(t=>t.id===d.typeId)?.shape;
+    return kind==="card"||d.type==="Tarjeta"||d.typeId==="olo-debt-card";
+  }).map(d=>d.id));
+  for(const m of raw.movements){
+    if(m.financedDebtId&&
+      (m.type!=="Gasto"||typeof m.financedDebtId!=="string"||!cardIds.has(m.financedDebtId)))
+      throw Error("El respaldo contiene un gasto vinculado a una tarjeta inexistente o incompatible.");
+    if(m.principalAmount!==undefined&&m.principalAmount!==null&&
+      (m.type!=="Pago deuda"||!restoreValidMoney(m.principalAmount)||
+        Number(m.principalAmount)<0||Number(m.principalAmount)>Number(m.amount)))
+      throw Error("El respaldo contiene un capital amortizado inválido.");
+  }
   for(const d of raw.debts){
     if(typeof d.name!=="string"||!d.name.trim())
       throw Error("Hay deudas sin nombre identificable.");
@@ -3991,8 +4018,10 @@ function movementAmountCRC(m){
   const intent=m.type==="Ingreso"||oneIsCobroReimbursement(m)?"receive":(m.type==="Gasto"||m.type==="Pago deuda")?"pay":"neutral";
   return recordToCRC(m,intent);
 }
+function oneIsFinancedCardExpense(m){return m?.type==="Gasto"&&!!m.financedDebtId}
 function signedMovement(m){
   if(m.type==="Ingreso"||oneIsCobroReimbursement(m))return movementAmountCRC(m);
+  if(oneIsFinancedCardExpense(m))return 0; // El gasto es real, pero no salió efectivo.
   if(m.type==="Gasto"||m.type==="Pago deuda")return -movementAmountCRC(m);
   return 0;
 }
@@ -4226,10 +4255,43 @@ function debtPaymentsSinceAdjustment(d,a){
   }
   return Math.max(0,debtPayments(d)-num(a.paidAtAdjustment));
 }
+// V12.1: el total pagado y el capital aplicado no siempre son iguales.
+function debtPrincipalPaymentCRC(m){
+ if(m?.type!=="Pago deuda")return 0;
+ const original=Number(m.principalAmount);
+ const hasVerified=m.principalAmount!==undefined&&m.principalAmount!==null&&m.principalAmount!==""&&
+   Number.isFinite(original)&&original>=0&&original<=num(m.amount);
+ return hasVerified?recordToCRC({...m,amount:original},"pay"):movementAmountCRC(m);
+}
+function debtPrincipalPayments(d){return debtLinkedPayments(d).reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0)}
+function debtPrincipalPaymentsSinceAdjustment(d,a){
+ const linked=debtLinkedPayments(d).filter(m=>String(m.date||"")>=String(a.date||""));
+ if(a.afterSeq!==undefined&&a.afterSeq!==null&&Number.isFinite(Number(a.afterSeq)))
+   return linked.filter(m=>num(m.seq)>num(a.afterSeq)).reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0);
+ if(a.createdAt)return linked.filter(m=>String(m.createdAt||"")>String(a.createdAt))
+   .reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0);
+ return Math.max(0,debtPrincipalPayments(d)-num(a.paidAtAdjustment));
+}
+function debtFinancedPurchases(d,a=null){
+ return (data.movements||[]).filter(m=>oneIsFinancedCardExpense(m)&&m.financedDebtId===d.id&&
+   (!a||movementAfterReconciliation(m,a)))
+   .reduce((s,m)=>s+movementAmountCRC(m),0);
+}
+function debtPaymentsNeedReconciliation(d){
+ return debtLinkedPayments(d).some(m=>m.principalAmount===undefined||m.principalAmount===null||m.principalAmount==="");
+}
 function debtEquivalent(d){return currentToCRC(d.usd,"USD","pay")+num(d.crc)}
 function debtLatestAdjustment(d){const a=d?.balanceAdjustments;return Array.isArray(a)&&a.length?a[a.length-1]:null}
-function debtOutstanding(d){const a=debtLatestAdjustment(d);return Math.max(0,a?currentToCRC(num(a.amount),normalizeCurrency(a.currency||"CRC"),"pay")-debtPaymentsSinceAdjustment(d,a):debtEquivalent(d)-debtPayments(d))}
-function debtProgressPercent(d){const base=debtEquivalent(d);return debtLatestAdjustment(d)?null:base?Math.max(0,Math.min(100,debtPayments(d)/base*100)):0}
+function debtOutstanding(d){
+ const a=debtLatestAdjustment(d),opening=a?currentToCRC(num(a.amount),normalizeCurrency(a.currency||"CRC"),"pay"):debtEquivalent(d);
+ const charges=debtFinancedPurchases(d,a),principal=a?debtPrincipalPaymentsSinceAdjustment(d,a):debtPrincipalPayments(d);
+ return Math.max(0,opening+charges-principal);
+}
+function debtProgressPercent(d){
+ const base=debtEquivalent(d);
+ return debtLatestAdjustment(d)||debtFinancedPurchases(d)>0?null:base?
+   Math.max(0,Math.min(100,debtPrincipalPayments(d)/base*100)):0;
+}
 function debtLimitCRC(d){return currentToCRC(d.limit,d.limitCurrency||"USD","pay")}
 function debtMinimumCRC(d){return currentToCRC(d.minimum,d.minimumCurrency||"CRC","pay")}
 function debtUtil(d){const limit=debtLimitCRC(d);return limit?debtOutstanding(d)/limit:0}
@@ -7101,6 +7163,7 @@ function m2FilteredMovementRows(){
 }
 function m2SameMovement(a,b){
   return a.date===b.date&&a.type===b.type&&a.categoryId===b.categoryId&&
+    (a.financedDebtId||"")===(b.financedDebtId||"")&&
     normalizeCurrency(a.currency)===normalizeCurrency(b.currency)&&Math.abs(num(a.amount)-num(b.amount))<.005&&
     (a.account||"")===(b.account||"")&&(a.debtId||"")===(b.debtId||"");
 }
@@ -7197,6 +7260,23 @@ function m2SetSplitMode(enabled,{createRows=true}={}){
   updateMovementFields();
   m2SplitMessage();
 }
+/* V12.1: seleccionar tarjeta solo para un Gasto, sin afectar el método histórico. */
+function oneV121SyncPaymentFields(){
+ const type=document.getElementById("mType")?.value||"";
+ const source=document.getElementById("mPaymentSource"),card=document.getElementById("mFinancedDebt");
+ const sourceField=document.getElementById("mPaymentSourceField"),cardField=document.getElementById("mFinancedDebtField");
+ const principalField=document.getElementById("mPrincipalField");
+ if(!source||!card)return;
+ sourceField.hidden=type!=="Gasto";
+ cardField.hidden=type!=="Gasto"||source.value!=="credit";
+ principalField.hidden=type!=="Pago deuda";
+ const edited=(data.movements||[]).find(m=>m.id===document.getElementById("mEditId")?.value);
+ const eligible=(data.debts||[]).filter(d=>oneDebtTypeForDebt(d)?.shape==="card"&&
+   (debtStatus(d)==="active"||d.id===edited?.financedDebtId));
+ const previous=card.value||edited?.financedDebtId||"";
+ fillObjectSelect(card,[{value:"",label:"Seleccioná una tarjeta"},...eligible.map(d=>({value:d.id,label:d.name+(debtStatus(d)==="archived"?" (archivada)":"") }))],previous);
+ card.required=!cardField.hidden;
+}
 function m2ResetComposer(close=true){
   const form=document.getElementById("movementForm");form?.reset();
   document.getElementById("mEditId").value="";
@@ -7240,6 +7320,9 @@ function m2OpenComposer(m=null,{repeat=false,scheduledId=""}={}){
     document.getElementById("mAmount").value=m.amount;
     document.getElementById("mCurrency").value=normalizeCurrency(m.currency);
     document.getElementById("mPaymentMethod").value=m.paymentMethod||"";
+    document.getElementById("mPaymentSource").value=m.financedDebtId?"credit":"operating";
+    document.getElementById("mFinancedDebt").value=m.financedDebtId||"";
+    document.getElementById("mPrincipalAmount").value=m.principalAmount??"";
     if((m.splits||[]).length){
       m.splits.forEach(x=>m2AddSplitRow(x.categoryId,x.amount));
       m2SetSplitMode(true,{createRows:false});
@@ -7381,6 +7464,7 @@ function updateMovementFields(){
     const suggested=suggestDebtCategoryId(d);
     if(suggested&&categorySelect&&!document.getElementById("mEditId")?.value&&!document.getElementById("mScheduledId")?.value)categorySelect.value=suggested;
   }else if(debtSelect){debtSelect.value="";}
+  oneV121SyncPaymentFields();
 }
 function refreshMovementCategorySelect(selected=""){
   const el=document.getElementById("mCategory");if(!el)return;
@@ -7624,6 +7708,7 @@ function bind(){
   document.querySelectorAll("[data-report-tab]").forEach(btn=>btn.addEventListener("click",()=>{reportActiveTab=btn.dataset.reportTab||"overview";renderReports()}));
   document.getElementById("movementTypeFilter").addEventListener("change",renderMovements);
   document.getElementById("mType").addEventListener("change",()=>{refreshMovementCategorySelect();refreshDebtSelect();updateMovementFields()});
+  document.getElementById("mPaymentSource").addEventListener("change",oneV121SyncPaymentFields);
   document.getElementById("mDebt").addEventListener("change",()=>{
     const d=data.debts.find(x=>x.id===document.getElementById("mDebt").value);
     if(d&&document.getElementById("mType").value==="Pago deuda"){
@@ -7662,6 +7747,17 @@ function bind(){
     const amount=Number(document.getElementById("mAmount").value);
     if(!Number.isFinite(amount)||amount<=0)return alert("El monto debe ser mayor que cero.");
     const currency=normalizeCurrency(document.getElementById("mCurrency").value);
+    const financedChoice=type==="Gasto"&&document.getElementById("mPaymentSource").value==="credit"?
+      document.getElementById("mFinancedDebt").value:"";
+    const financedCard=(data.debts||[]).find(d=>d.id===financedChoice&&oneDebtTypeForDebt(d)?.shape==="card");
+    if(financedChoice&&(!financedCard||(debtStatus(financedCard)!=="active"&&existing?.financedDebtId!==financedChoice)))
+      return alert("Seleccioná una tarjeta de crédito activa para vincular el gasto.");
+    if(type==="Gasto"&&document.getElementById("mPaymentSource").value==="credit"&&!financedCard)
+      return alert("Elegí una tarjeta. Podés crearla en Deudas antes de registrar esta compra.");
+    const principalRaw=type==="Pago deuda"?document.getElementById("mPrincipalAmount").value.trim():"";
+    const principal=principalRaw===""?undefined:Number(principalRaw);
+    if(principal!==undefined&&(!Number.isFinite(principal)||principal<0||principal>amount))
+      return alert("El capital aplicado debe estar entre 0 y el total pagado, en la misma moneda.");
     const distribution=type==="Gasto"?m2GetSplits():{splits:[],error:""};
     if(distribution.error)return alert(distribution.error);
     const splits=distribution.splits;
@@ -7689,8 +7785,9 @@ function bind(){
       createdAt:existing?.createdAt||new Date().toISOString(),date,type,categoryId,
       category:category.name,
       splits,debtId:type==="Pago deuda"?(debtObj?.id||""):"",debt:type==="Pago deuda"?(debtObj?.name||""):"",
+      financedDebtId:financedCard?.id||"",principalAmount:principal,
       account:document.getElementById("mAccount").value,
-      paymentMethod:document.getElementById("mPaymentMethod").value,
+      paymentMethod:financedCard?"Tarjeta de crédito":document.getElementById("mPaymentMethod").value,
       description:document.getElementById("mDescription").value.trim(),amount,currency,
       ...(existing&&normalizeCurrency(existing.currency)===currency?{fxBuy:existing.fxBuy,fxSell:existing.fxSell,fxRef:existing.fxRef,fxDate:existing.fxDate}:currentFxSnapshot()),
       period:periodKey(p),quarter:budgetQuarter(p)};
@@ -8803,14 +8900,15 @@ renderDebts=function(){
 
   document.getElementById("debtTotal").textContent=`Activas: ${active.length} · saldo estimado ${money(total)} · archivadas ${archived.length}`;
   document.getElementById("debtList").innerHTML=rows.length?rows.map(d=>{
-    const archivedDebt=debtStatus(d)==="archived",base=debtEquivalent(d),paid=debtPayments(d),out=debtOutstanding(d),pct=debtProgressPercent(d)??0,next=oneDebtDueEntry(d);
+    const archivedDebt=debtStatus(d)==="archived",base=debtEquivalent(d),paid=debtPayments(d),out=debtOutstanding(d),actualPct=debtProgressPercent(d),pct=actualPct??0,next=oneDebtDueEntry(d);
+    const financed=debtFinancedPurchases(d),needsCheck=debtPaymentsNeedReconciliation(d);
     const actions=archivedDebt
       ? `<button class="btn secondary small" data-reactivate-debt="${safe(d.id)}">Reactivar</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button>`
       : `<button class="btn secondary small" data-pay-debt="${safe(d.id)}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${safe(d.id)}">Actualizar saldo real</button><button class="btn secondary small" data-simulate-debt="${safe(d.id)}">Simular</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button><button class="btn secondary small" data-archive-debt="${safe(d.id)}">Archivar</button>`;
     return `<div class="v7-debt-card ${archivedDebt?"archived":""}">
       <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(oneDebtTypeName(d))}${archivedDebt?" · archivada":""}</span></div></div>
-      <div class="v7-debt-cell"><span>Saldo pendiente</span><strong>${money(out)}</strong></div>
-      <div class="v7-debt-cell">${debtLatestAdjustment(d)?`<span>Saldo conciliado · ${debtLatestAdjustment(d).date}</span><strong>${money(out)}</strong><span>Pagos históricos: ${money(paid)}</span>`:`<span>${pct.toFixed(0)}% pagado</span><div class="progress"><span style="width:${pct}%"></span></div><span>${money(paid)} de ${money(base)}</span>`}</div>
+      <div class="v7-debt-cell"><span>Saldo pendiente estimado</span><strong>${money(out)}</strong>${financed?'<span>Compras con tarjeta: '+money(financed)+'</span>':""}${needsCheck?'<span>Cuotas sin capital desglosado · verificá con el banco</span>':""}</div>
+      <div class="v7-debt-cell">${debtLatestAdjustment(d)?`<span>Saldo conciliado · ${debtLatestAdjustment(d).date}</span><strong>${money(out)}</strong><span>Pagos históricos: ${money(paid)}</span>`:`<span>${actualPct===null?"Saldo variable · conciliar con el banco":pct.toFixed(0)+"% de capital amortizado"}</span>${actualPct===null?"":`<div class="progress"><span style="width:${pct}%"></span></div>`}<span>Pagos registrados: ${money(paid)} · base: ${money(base)}</span>`}</div>
       <div class="v7-debt-cell"><span>Fecha de cuota estimada</span><strong>${next?.date?dateLabel(next.date):"—"}</strong></div>
       <div class="v7-debt-cell"><span>Pago mínimo</span><strong>${money(debtMinimumCRC(d))}</strong></div>
       <div class="v7-debt-actions">${actions}</div>

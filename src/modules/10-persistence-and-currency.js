@@ -470,8 +470,10 @@ function movementAmountCRC(m){
   const intent=m.type==="Ingreso"||oneIsCobroReimbursement(m)?"receive":(m.type==="Gasto"||m.type==="Pago deuda")?"pay":"neutral";
   return recordToCRC(m,intent);
 }
+function oneIsFinancedCardExpense(m){return m?.type==="Gasto"&&!!m.financedDebtId}
 function signedMovement(m){
   if(m.type==="Ingreso"||oneIsCobroReimbursement(m))return movementAmountCRC(m);
+  if(oneIsFinancedCardExpense(m))return 0; // El gasto es real, pero no salió efectivo.
   if(m.type==="Gasto"||m.type==="Pago deuda")return -movementAmountCRC(m);
   return 0;
 }
@@ -705,10 +707,43 @@ function debtPaymentsSinceAdjustment(d,a){
   }
   return Math.max(0,debtPayments(d)-num(a.paidAtAdjustment));
 }
+// V12.1: el total pagado y el capital aplicado no siempre son iguales.
+function debtPrincipalPaymentCRC(m){
+ if(m?.type!=="Pago deuda")return 0;
+ const original=Number(m.principalAmount);
+ const hasVerified=m.principalAmount!==undefined&&m.principalAmount!==null&&m.principalAmount!==""&&
+   Number.isFinite(original)&&original>=0&&original<=num(m.amount);
+ return hasVerified?recordToCRC({...m,amount:original},"pay"):movementAmountCRC(m);
+}
+function debtPrincipalPayments(d){return debtLinkedPayments(d).reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0)}
+function debtPrincipalPaymentsSinceAdjustment(d,a){
+ const linked=debtLinkedPayments(d).filter(m=>String(m.date||"")>=String(a.date||""));
+ if(a.afterSeq!==undefined&&a.afterSeq!==null&&Number.isFinite(Number(a.afterSeq)))
+   return linked.filter(m=>num(m.seq)>num(a.afterSeq)).reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0);
+ if(a.createdAt)return linked.filter(m=>String(m.createdAt||"")>String(a.createdAt))
+   .reduce((s,m)=>s+debtPrincipalPaymentCRC(m),0);
+ return Math.max(0,debtPrincipalPayments(d)-num(a.paidAtAdjustment));
+}
+function debtFinancedPurchases(d,a=null){
+ return (data.movements||[]).filter(m=>oneIsFinancedCardExpense(m)&&m.financedDebtId===d.id&&
+   (!a||movementAfterReconciliation(m,a)))
+   .reduce((s,m)=>s+movementAmountCRC(m),0);
+}
+function debtPaymentsNeedReconciliation(d){
+ return debtLinkedPayments(d).some(m=>m.principalAmount===undefined||m.principalAmount===null||m.principalAmount==="");
+}
 function debtEquivalent(d){return currentToCRC(d.usd,"USD","pay")+num(d.crc)}
 function debtLatestAdjustment(d){const a=d?.balanceAdjustments;return Array.isArray(a)&&a.length?a[a.length-1]:null}
-function debtOutstanding(d){const a=debtLatestAdjustment(d);return Math.max(0,a?currentToCRC(num(a.amount),normalizeCurrency(a.currency||"CRC"),"pay")-debtPaymentsSinceAdjustment(d,a):debtEquivalent(d)-debtPayments(d))}
-function debtProgressPercent(d){const base=debtEquivalent(d);return debtLatestAdjustment(d)?null:base?Math.max(0,Math.min(100,debtPayments(d)/base*100)):0}
+function debtOutstanding(d){
+ const a=debtLatestAdjustment(d),opening=a?currentToCRC(num(a.amount),normalizeCurrency(a.currency||"CRC"),"pay"):debtEquivalent(d);
+ const charges=debtFinancedPurchases(d,a),principal=a?debtPrincipalPaymentsSinceAdjustment(d,a):debtPrincipalPayments(d);
+ return Math.max(0,opening+charges-principal);
+}
+function debtProgressPercent(d){
+ const base=debtEquivalent(d);
+ return debtLatestAdjustment(d)||debtFinancedPurchases(d)>0?null:base?
+   Math.max(0,Math.min(100,debtPrincipalPayments(d)/base*100)):0;
+}
 function debtLimitCRC(d){return currentToCRC(d.limit,d.limitCurrency||"USD","pay")}
 function debtMinimumCRC(d){return currentToCRC(d.minimum,d.minimumCurrency||"CRC","pay")}
 function debtUtil(d){const limit=debtLimitCRC(d);return limit?debtOutstanding(d)/limit:0}

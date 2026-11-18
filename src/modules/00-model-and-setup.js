@@ -600,6 +600,20 @@ function restoreValidate(raw){
     if(m.currency!==undefined&&!["CRC","USD"].includes(String(m.currency).toUpperCase()))
       throw Error("Un movimiento tiene una moneda inválida.");
   }
+  // V12.1: los vínculos nuevos son opcionales y no se aplican a datos heredados.
+  const cardIds=new Set((raw.debts||[]).filter(d=>{
+    const kind=(raw.debtTypes||[]).find(t=>t.id===d.typeId)?.shape;
+    return kind==="card"||d.type==="Tarjeta"||d.typeId==="olo-debt-card";
+  }).map(d=>d.id));
+  for(const m of raw.movements){
+    if(m.financedDebtId&&
+      (m.type!=="Gasto"||typeof m.financedDebtId!=="string"||!cardIds.has(m.financedDebtId)))
+      throw Error("El respaldo contiene un gasto vinculado a una tarjeta inexistente o incompatible.");
+    if(m.principalAmount!==undefined&&m.principalAmount!==null&&
+      (m.type!=="Pago deuda"||!restoreValidMoney(m.principalAmount)||
+        Number(m.principalAmount)<0||Number(m.principalAmount)>Number(m.amount)))
+      throw Error("El respaldo contiene un capital amortizado inválido.");
+  }
   for(const d of raw.debts){
     if(typeof d.name!=="string"||!d.name.trim())
       throw Error("Hay deudas sin nombre identificable.");

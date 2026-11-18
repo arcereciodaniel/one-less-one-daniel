@@ -270,6 +270,7 @@ function m2FilteredMovementRows(){
 }
 function m2SameMovement(a,b){
   return a.date===b.date&&a.type===b.type&&a.categoryId===b.categoryId&&
+    (a.financedDebtId||"")===(b.financedDebtId||"")&&
     normalizeCurrency(a.currency)===normalizeCurrency(b.currency)&&Math.abs(num(a.amount)-num(b.amount))<.005&&
     (a.account||"")===(b.account||"")&&(a.debtId||"")===(b.debtId||"");
 }
@@ -366,6 +367,23 @@ function m2SetSplitMode(enabled,{createRows=true}={}){
   updateMovementFields();
   m2SplitMessage();
 }
+/* V12.1: seleccionar tarjeta solo para un Gasto, sin afectar el método histórico. */
+function oneV121SyncPaymentFields(){
+ const type=document.getElementById("mType")?.value||"";
+ const source=document.getElementById("mPaymentSource"),card=document.getElementById("mFinancedDebt");
+ const sourceField=document.getElementById("mPaymentSourceField"),cardField=document.getElementById("mFinancedDebtField");
+ const principalField=document.getElementById("mPrincipalField");
+ if(!source||!card)return;
+ sourceField.hidden=type!=="Gasto";
+ cardField.hidden=type!=="Gasto"||source.value!=="credit";
+ principalField.hidden=type!=="Pago deuda";
+ const edited=(data.movements||[]).find(m=>m.id===document.getElementById("mEditId")?.value);
+ const eligible=(data.debts||[]).filter(d=>oneDebtTypeForDebt(d)?.shape==="card"&&
+   (debtStatus(d)==="active"||d.id===edited?.financedDebtId));
+ const previous=card.value||edited?.financedDebtId||"";
+ fillObjectSelect(card,[{value:"",label:"Seleccioná una tarjeta"},...eligible.map(d=>({value:d.id,label:d.name+(debtStatus(d)==="archived"?" (archivada)":"") }))],previous);
+ card.required=!cardField.hidden;
+}
 function m2ResetComposer(close=true){
   const form=document.getElementById("movementForm");form?.reset();
   document.getElementById("mEditId").value="";
@@ -409,6 +427,9 @@ function m2OpenComposer(m=null,{repeat=false,scheduledId=""}={}){
     document.getElementById("mAmount").value=m.amount;
     document.getElementById("mCurrency").value=normalizeCurrency(m.currency);
     document.getElementById("mPaymentMethod").value=m.paymentMethod||"";
+    document.getElementById("mPaymentSource").value=m.financedDebtId?"credit":"operating";
+    document.getElementById("mFinancedDebt").value=m.financedDebtId||"";
+    document.getElementById("mPrincipalAmount").value=m.principalAmount??"";
     if((m.splits||[]).length){
       m.splits.forEach(x=>m2AddSplitRow(x.categoryId,x.amount));
       m2SetSplitMode(true,{createRows:false});
@@ -550,6 +571,7 @@ function updateMovementFields(){
     const suggested=suggestDebtCategoryId(d);
     if(suggested&&categorySelect&&!document.getElementById("mEditId")?.value&&!document.getElementById("mScheduledId")?.value)categorySelect.value=suggested;
   }else if(debtSelect){debtSelect.value="";}
+  oneV121SyncPaymentFields();
 }
 function refreshMovementCategorySelect(selected=""){
   const el=document.getElementById("mCategory");if(!el)return;

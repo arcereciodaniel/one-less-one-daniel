@@ -105,6 +105,7 @@ function bind(){
   document.querySelectorAll("[data-report-tab]").forEach(btn=>btn.addEventListener("click",()=>{reportActiveTab=btn.dataset.reportTab||"overview";renderReports()}));
   document.getElementById("movementTypeFilter").addEventListener("change",renderMovements);
   document.getElementById("mType").addEventListener("change",()=>{refreshMovementCategorySelect();refreshDebtSelect();updateMovementFields()});
+  document.getElementById("mPaymentSource").addEventListener("change",oneV121SyncPaymentFields);
   document.getElementById("mDebt").addEventListener("change",()=>{
     const d=data.debts.find(x=>x.id===document.getElementById("mDebt").value);
     if(d&&document.getElementById("mType").value==="Pago deuda"){
@@ -143,6 +144,17 @@ function bind(){
     const amount=Number(document.getElementById("mAmount").value);
     if(!Number.isFinite(amount)||amount<=0)return alert("El monto debe ser mayor que cero.");
     const currency=normalizeCurrency(document.getElementById("mCurrency").value);
+    const financedChoice=type==="Gasto"&&document.getElementById("mPaymentSource").value==="credit"?
+      document.getElementById("mFinancedDebt").value:"";
+    const financedCard=(data.debts||[]).find(d=>d.id===financedChoice&&oneDebtTypeForDebt(d)?.shape==="card");
+    if(financedChoice&&(!financedCard||(debtStatus(financedCard)!=="active"&&existing?.financedDebtId!==financedChoice)))
+      return alert("Seleccioná una tarjeta de crédito activa para vincular el gasto.");
+    if(type==="Gasto"&&document.getElementById("mPaymentSource").value==="credit"&&!financedCard)
+      return alert("Elegí una tarjeta. Podés crearla en Deudas antes de registrar esta compra.");
+    const principalRaw=type==="Pago deuda"?document.getElementById("mPrincipalAmount").value.trim():"";
+    const principal=principalRaw===""?undefined:Number(principalRaw);
+    if(principal!==undefined&&(!Number.isFinite(principal)||principal<0||principal>amount))
+      return alert("El capital aplicado debe estar entre 0 y el total pagado, en la misma moneda.");
     const distribution=type==="Gasto"?m2GetSplits():{splits:[],error:""};
     if(distribution.error)return alert(distribution.error);
     const splits=distribution.splits;
@@ -170,8 +182,9 @@ function bind(){
       createdAt:existing?.createdAt||new Date().toISOString(),date,type,categoryId,
       category:category.name,
       splits,debtId:type==="Pago deuda"?(debtObj?.id||""):"",debt:type==="Pago deuda"?(debtObj?.name||""):"",
+      financedDebtId:financedCard?.id||"",principalAmount:principal,
       account:document.getElementById("mAccount").value,
-      paymentMethod:document.getElementById("mPaymentMethod").value,
+      paymentMethod:financedCard?"Tarjeta de crédito":document.getElementById("mPaymentMethod").value,
       description:document.getElementById("mDescription").value.trim(),amount,currency,
       ...(existing&&normalizeCurrency(existing.currency)===currency?{fxBuy:existing.fxBuy,fxSell:existing.fxSell,fxRef:existing.fxRef,fxDate:existing.fxDate}:currentFxSnapshot()),
       period:periodKey(p),quarter:budgetQuarter(p)};
