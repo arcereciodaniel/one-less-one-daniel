@@ -7,7 +7,7 @@
   <meta name="application-name" content="One Less One">
   <meta name="description" content="One Less One: organizá ingresos, gastos, presupuestos y tu saldo real en un solo lugar.">
   <title>One Less One · by rastro.</title>
-  <link rel="manifest" href="./site.webmanifest?v=812">
+  <link rel="manifest" href="./site.webmanifest?v=1200">
   <meta name="apple-mobile-web-app-title" content="One Less One">
   <link rel="icon" href="data:,">
   <!-- ONE_LESS_ONE_STYLES -->
@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.10.0</small>
+      <small class="brand-version">v12.0.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -641,7 +641,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.10.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v12.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -957,7 +957,10 @@
       <div class="field one-debt-field" data-debt-fields="loan installments"><label>Fecha de finalización (opcional)</label><input id="dEndDate" type="date"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas totales</label><input id="dInstallmentsTotal" type="number" min="1" max="600" step="1"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas restantes</label><input id="dInstallmentsLeft" type="number" min="0" max="600" step="1"></div>
-      <div class="field one-debt-field" data-debt-fields="card loan installments family other"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label for="dRateCRC">Tasa anual en colones (%)</label><input id="dRateCRC" inputmode="decimal" placeholder="Ej. 36.48"></div>
+       <div class="field one-debt-field" data-debt-fields="card"><label for="dRateUSD">Tasa anual en dólares (%)</label><input id="dRateUSD" inputmode="decimal" placeholder="Ej. 30.11"></div>
+       <div class="field wide one-debt-field" data-debt-fields="card"><small class="muted">Usá las tasas nominales de tu contrato o estado de cuenta, no los topes generales. Si desconocés una tasa, dejala en blanco; no se asumirá igual a la otra moneda.</small></div>
+       <div class="field one-debt-field" data-debt-fields="loan installments family other"><label for="dRate">Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
       <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
       <div class="field wide"><label>Meta</label><input id="dGoal"></div>
       <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>

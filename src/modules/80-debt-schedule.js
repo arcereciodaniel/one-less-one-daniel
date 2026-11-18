@@ -129,18 +129,18 @@ renderDebts=function(){
     return `<div class="v7-debt-progress-row"><div class="name">${v7SafeText(d.name)}</div><div class="v7-debt-track"><span style="width:${pct}%"></span></div><div class="pct">${debtLatestAdjustment(d)?"Saldo conciliado":`${pct.toFixed(0)}% pagado`}</div></div>`
   }).join(""):`<div class="empty">No hay deuda activa para graficar.</div>`;
 
-  const rated=active.map(d=>({d,rate:parseFloat(String(d.rate||"").replace(",", "."))||0})).sort((a,b)=>b.rate-a.rate||num(a.d.priority)-num(b.d.priority));
+  const rated=active.map(d=>({d,rate:oneDebtEffectiveRate(d)??0})).sort((a,b)=>b.rate-a.rate||num(a.d.priority)-num(b.d.priority));
   const priority=rated[0]?.d||active.slice().sort((a,b)=>num(a.priority)-num(b.priority))[0];
   document.getElementById("debtStrategy").innerHTML=priority
-    ? `<div class="v7-insight-icon">◎</div><div class="v7-eyebrow" style="margin-bottom:8px;color:var(--success)">PRIORIDAD SUGERIDA</div><h3>Enfocate primero en ${v7SafeText(priority.name)}</h3><p>${parseFloat(String(priority.rate||"").replace(",", "."))?`Tiene una tasa registrada de ${v7SafeText(priority.rate)} y un saldo estimado de ${money(debtOutstanding(priority))}.`:`Es la deuda con mayor prioridad configurada y mantiene un saldo estimado de ${money(debtOutstanding(priority))}.`} Un pago adicional ahí puede acelerar tu estrategia.</p>`
+    ? `<div class="v7-insight-icon">◎</div><div class="v7-eyebrow" style="margin-bottom:8px;color:var(--success)">PRIORIDAD SUGERIDA</div><h3>Enfocate primero en ${v7SafeText(priority.name)}</h3><p>${oneDebtEffectiveRate(priority)!==null?`La tasa anual correspondiente es ${oneDebtEffectiveRate(priority)}% y el saldo estimado es ${money(debtOutstanding(priority))}.`:`Es la deuda con mayor prioridad configurada y mantiene un saldo estimado de ${money(debtOutstanding(priority))}.`} Un pago adicional ahí puede acelerar tu estrategia.</p>`
     : `<div class="v7-insight-icon">✓</div><h3>Sin estrategia pendiente</h3><p>No hay deudas activas para priorizar.</p>`;
 
   document.getElementById("debtTotal").textContent=`Activas: ${active.length} · saldo estimado ${money(total)} · archivadas ${archived.length}`;
   document.getElementById("debtList").innerHTML=rows.length?rows.map(d=>{
     const archivedDebt=debtStatus(d)==="archived",base=debtEquivalent(d),paid=debtPayments(d),out=debtOutstanding(d),pct=debtProgressPercent(d)??0,next=oneDebtDueEntry(d);
     const actions=archivedDebt
-      ? `<button class="btn secondary small" data-reactivate-debt="${d.id}">Reactivar</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button>`
-      : `<button class="btn secondary small" data-pay-debt="${d.id}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${d.id}">Actualizar saldo real</button><button class="btn secondary small" data-simulate-debt="${d.id}">Simular</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button><button class="btn secondary small" data-archive-debt="${d.id}">Archivar</button>`;
+      ? `<button class="btn secondary small" data-reactivate-debt="${safe(d.id)}">Reactivar</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button>`
+      : `<button class="btn secondary small" data-pay-debt="${safe(d.id)}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${safe(d.id)}">Actualizar saldo real</button><button class="btn secondary small" data-simulate-debt="${safe(d.id)}">Simular</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button><button class="btn secondary small" data-archive-debt="${safe(d.id)}">Archivar</button>`;
     return `<div class="v7-debt-card ${archivedDebt?"archived":""}">
       <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(oneDebtTypeName(d))}${archivedDebt?" · archivada":""}</span></div></div>
       <div class="v7-debt-cell"><span>Saldo pendiente</span><strong>${money(out)}</strong></div>

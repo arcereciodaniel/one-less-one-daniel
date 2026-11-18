@@ -7,7 +7,7 @@
   <meta name="application-name" content="One Less One">
   <meta name="description" content="One Less One: organizá ingresos, gastos, presupuestos y tu saldo real en un solo lugar.">
   <title>One Less One · by rastro.</title>
-  <link rel="manifest" href="./site.webmanifest?v=812">
+  <link rel="manifest" href="./site.webmanifest?v=1200">
   <meta name="apple-mobile-web-app-title" content="One Less One">
   <link rel="icon" href="data:,">
   <style>
@@ -1744,7 +1744,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v11.10.0 LAB</small>
+      <small class="brand-version">v12.0.0 LAB</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -2366,7 +2366,7 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v11.10.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v12.0.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2682,7 +2682,10 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
       <div class="field one-debt-field" data-debt-fields="loan installments"><label>Fecha de finalización (opcional)</label><input id="dEndDate" type="date"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas totales</label><input id="dInstallmentsTotal" type="number" min="1" max="600" step="1"></div>
       <div class="field one-debt-field" data-debt-fields="installments"><label>Cuotas restantes</label><input id="dInstallmentsLeft" type="number" min="0" max="600" step="1"></div>
-      <div class="field one-debt-field" data-debt-fields="card loan installments family other"><label>Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
+      <div class="field one-debt-field" data-debt-fields="card"><label for="dRateCRC">Tasa anual en colones (%)</label><input id="dRateCRC" inputmode="decimal" placeholder="Ej. 36.48"></div>
+       <div class="field one-debt-field" data-debt-fields="card"><label for="dRateUSD">Tasa anual en dólares (%)</label><input id="dRateUSD" inputmode="decimal" placeholder="Ej. 30.11"></div>
+       <div class="field wide one-debt-field" data-debt-fields="card"><small class="muted">Usá las tasas nominales de tu contrato o estado de cuenta, no los topes generales. Si desconocés una tasa, dejala en blanco; no se asumirá igual a la otra moneda.</small></div>
+       <div class="field one-debt-field" data-debt-fields="loan installments family other"><label for="dRate">Tasa anual (%)</label><input id="dRate" inputmode="decimal" placeholder="Ej. 15.5"></div>
       <div class="field"><label>Prioridad</label><input id="dPriority" type="number" min="1" step="1" value="1"></div>
       <div class="field wide"><label>Meta</label><input id="dGoal"></div>
       <div class="field wide"><label>Notas</label><textarea id="dNotes"></textarea></div>
@@ -3756,7 +3759,11 @@ function currentFxSnapshot(){const r=currentRates();return {fxBuy:r.buy,fxSell:r
 function recordToCRC(rec,intent="neutral"){return toCRC(rec?.amount,rec?.currency||"CRC",intent,ratesFromRecord(rec))}
 function currentToCRC(amount,currency,intent="neutral"){return toCRC(amount,currency,intent,currentRates())}
 function dateLabel(s){if(!s)return"";return new Intl.DateTimeFormat("es-CR",{day:"2-digit",month:"short",year:"numeric",timeZone:"UTC"}).format(new Date(s+"T00:00:00Z"))}
-function csvEscape(v){const s=String(v??"");return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s}
+function csvEscape(v){
+ const raw=String(v??"");
+ const s=typeof v==="string"&&/^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(raw)?"'"+raw:raw;
+ return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s;
+}
 function download(name,text,type="text/plain"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)
 }
@@ -5939,10 +5946,9 @@ function oneDebtAmortize({balance,minimum,annualRate,once=0,monthlyExtra=0,maxMo
     interestSaved:comparable?oneDebtSimRound(Math.max(0,baseline.interest-accelerated.interest)):null};
 }
 function oneDebtSimReadRate(d){
-  const raw=String(d?.rate??"").trim().replace(",",".");
-  if(!/^\d+(?:\.\d+)?$/.test(raw))return null;
-  const value=Number(raw);
-  return Number.isFinite(value)&&value>=0&&value<=200?value:null;
+  if(oneDebtTypeForDebt(d)?.shape!=="card")return oneDebtRateLiteral(d?.rate);
+  if(num(d?.usd)>.005&&num(d?.crc)>.005)return null;
+  return oneDebtCurrencyRate(d,num(d?.usd)>.005?"USD":"CRC");
 }
 function oneDebtSimPayoffDate(d,months,asOf=todayIso()){
   if(months===0)return asOf;
@@ -5952,13 +5958,14 @@ function oneDebtSimPayoffDate(d,months,asOf=todayIso()){
   return oneDebtMonthlyDueIso(d,oneDebtShiftMonth(month,months-1));
 }
 function oneDebtSimulate(d,options={},asOf=todayIso()){
-  const warnings=[],rate=oneDebtSimReadRate(d);
+  const warnings=[];
   if(!d||debtStatus(d)!=="active")return {valid:false,warnings:["Elegí una deuda activa para simular."]};
   const balance=debtOutstanding(d),minimum=debtMinimumCRC(d);
   if(balance<=.005)return {valid:false,warnings:["Esta deuda no tiene saldo estimado pendiente."]};
   if(num(d.usd)>.005&&num(d.crc)>.005)
     return {valid:false,warnings:["La deuda combina saldos en CRC y USD con una sola tasa. Separá las condiciones por moneda para una simulación confiable."]};
-  if(rate===null)return {valid:false,warnings:["Falta una tasa anual válida (0 a 200%). Completala en Editar deuda antes de estimar intereses o ahorros."]};
+  const rate=oneDebtSimReadRate(d);
+  if(rate===null)return {valid:false,warnings:["Falta la tasa anual de la moneda correspondiente. Ingresá la tasa CRC o USD en Editar deuda."]};
   if(!(minimum>.005))return {valid:false,warnings:["Falta la cuota o pago mínimo mensual. Configuralo en Editar deuda."]};
   const once=Number(options.onceCRC??0),monthly=Number(options.monthlyCRC??0);
   if(!Number.isFinite(once)||!Number.isFinite(monthly)||once<0||monthly<0||once>ONE_DEBT_SIM_MAX_EXTRA||monthly>ONE_DEBT_SIM_MAX_EXTRA)
@@ -6001,7 +6008,10 @@ function oneDebtSimRender(syncInputs=false){
   const d=rows.find(row=>row.id===oneDebtSimState.debtId),result=oneDebtSimulate(d,oneDebtSimState);
   q("oneDebtSimSettings").textContent=d?
     "Saldo aproximado: "+money(debtOutstanding(d))+" · cuota: "+money(debtMinimumCRC(d))+
-    " · tasa anual: "+(oneDebtSimReadRate(d)===null?"sin configurar":oneDebtSimReadRate(d)+"%"):
+    (oneDebtTypeForDebt(d)?.shape==="card"?
+      " · tasas CRC: "+(oneDebtCurrencyRate(d,"CRC")===null?"sin configurar":oneDebtCurrencyRate(d,"CRC")+"%")+
+      " / USD: "+(oneDebtCurrencyRate(d,"USD")===null?"sin configurar":oneDebtCurrencyRate(d,"USD")+"%"):
+      " · tasa anual: "+(oneDebtSimReadRate(d)===null?"sin configurar":oneDebtSimReadRate(d)+"%")):
     "Agregá una deuda desde Deudas para comparar escenarios.";
   const warnings=q("oneDebtSimWarnings");warnings.replaceChildren();
   result.warnings.forEach(message=>{const li=document.createElement("li");li.textContent=message;warnings.appendChild(li)});
@@ -7432,6 +7442,30 @@ function oneDebtTypeForDebt(d){
  return (data.debtTypes||[]).find(t=>t.id===presetId)||ONE_DEBT_TYPE_PRESETS.find(t=>t.id===presetId);
 }
 function oneDebtTypeName(d){return d?.typeId?(data.debtTypes||[]).find(t=>t.id===d.typeId)?.name||d.type||"Otra":d?.type||"Otra"}
+/* V12: la tasa antigua se interpreta solo si la tarjeta tenía una moneda. */
+function oneDebtRateLiteral(raw){
+ if(raw===undefined||raw===null)return null;
+ const text=String(raw).trim().replace(",",".");
+ if(!/^\d+(?:\.\d+)?$/.test(text))return null;
+ const rate=Number(text);return Number.isFinite(rate)&&rate>=0&&rate<=200?rate:null;
+}
+function oneDebtCurrencyRate(d,currency){
+ if(!d)return null;
+ const key=currency==="USD"?"rateUSD":"rateCRC";
+ if(Object.prototype.hasOwnProperty.call(d,key))return oneDebtRateLiteral(d[key]);
+ if(Object.prototype.hasOwnProperty.call(d,"rateCRC")||Object.prototype.hasOwnProperty.call(d,"rateUSD"))return null;
+ const old=oneDebtRateLiteral(d.rate),crc=num(d.crc)>.005,usd=num(d.usd)>.005;
+ if(old===null||crc&&usd)return null;
+ return currency==="USD"?(usd?old:null):(!usd?old:null);
+}
+function oneDebtEffectiveRate(d){
+ if(oneDebtTypeForDebt(d)?.shape!=="card")return oneDebtRateLiteral(d?.rate);
+ const currencies=[...(num(d.crc)>.005?["CRC"]:[]),...(num(d.usd)>.005?["USD"]:[])];
+ if(!currencies.length)return null;
+ const rates=currencies.map(c=>oneDebtCurrencyRate(d,c));
+ return rates.some(r=>r===null)?null:Math.max(...rates);
+}
+
 function oneDebtTypeUsage(t){return (data.debts||[]).filter(d=>d.typeId===t.id||(!d.typeId&&oneDebtTypeForDebt(d)?.id===t.id)).length}
 function oneDebtTypeFormReset(){
  document.getElementById("oneDebtTypeId").value="";
@@ -7471,6 +7505,8 @@ function openDebt(d=null){
  document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
  document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
  document.getElementById("dFullPaymentCurrency").value=normalizeCurrency(d?.fullPaymentCurrency||"CRC");
+ document.getElementById("dRateCRC").value=oneDebtCurrencyRate(d,"CRC")??"";
+ document.getElementById("dRateUSD").value=oneDebtCurrencyRate(d,"USD")??"";
  oneRefreshDebtTypeSelect(d);oneDebtFormUpdate();
  const rates=currentRates();document.getElementById("dFxPreview").value="Venta actual: ₡"+rates.sell.toFixed(2);
  dialog.showModal();
@@ -7971,7 +8007,9 @@ function bind(){
       minimum:num(field("dMinimum")),
       minimumCurrency:normalizeCurrency(field("dMinimumCurrency")),
       payDay:field("dPayDay").trim(),
-      rate:field("dRate").trim(),
+      rate:is("card")?String(previous?.rate??""):field("dRate").trim().replace(",","."),
+      rateCRC:is("card")?field("dRateCRC").trim().replace(",","."):previous?.rateCRC,
+      rateUSD:is("card")?field("dRateUSD").trim().replace(",","."):previous?.rateUSD,
       closeDay:is("card")?num(field("dCloseDay")):0,
       fullPayment:is("card")?num(field("dFullPayment")):0,
       fullPaymentCurrency:normalizeCurrency(field("dFullPaymentCurrency")),
@@ -7981,6 +8019,9 @@ function bind(){
       installmentsLeft:is("installments")?num(field("dInstallmentsLeft")):0,
       priority:num(field("dPriority")),goal:field("dGoal").trim(),notes:field("dNotes").trim()};
     if(!obj.name)return alert("Ingresá un nombre para la deuda.");
+    const rateValid=t=>t===""||oneDebtRateLiteral(t)!==null;
+    if(is("card")?(!rateValid(obj.rateCRC)||!rateValid(obj.rateUSD)):!rateValid(obj.rate))
+      return alert("La tasa anual debe estar entre 0 y 200% o quedar vacía si se desconoce.");
     if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay)&&obj.payDay!==previous?.payDay)return alert("El día de pago debe estar entre 1 y 31.");
     if(is("card")&&obj.closeDay&&(obj.closeDay<1||obj.closeDay>31))return alert("El día de corte debe estar entre 1 y 31.");
     if(is("installments")&&obj.installmentsTotal&&obj.installmentsLeft>obj.installmentsTotal)return alert("Las cuotas restantes no pueden superar las cuotas totales.");
@@ -8754,18 +8795,18 @@ renderDebts=function(){
     return `<div class="v7-debt-progress-row"><div class="name">${v7SafeText(d.name)}</div><div class="v7-debt-track"><span style="width:${pct}%"></span></div><div class="pct">${debtLatestAdjustment(d)?"Saldo conciliado":`${pct.toFixed(0)}% pagado`}</div></div>`
   }).join(""):`<div class="empty">No hay deuda activa para graficar.</div>`;
 
-  const rated=active.map(d=>({d,rate:parseFloat(String(d.rate||"").replace(",", "."))||0})).sort((a,b)=>b.rate-a.rate||num(a.d.priority)-num(b.d.priority));
+  const rated=active.map(d=>({d,rate:oneDebtEffectiveRate(d)??0})).sort((a,b)=>b.rate-a.rate||num(a.d.priority)-num(b.d.priority));
   const priority=rated[0]?.d||active.slice().sort((a,b)=>num(a.priority)-num(b.priority))[0];
   document.getElementById("debtStrategy").innerHTML=priority
-    ? `<div class="v7-insight-icon">◎</div><div class="v7-eyebrow" style="margin-bottom:8px;color:var(--success)">PRIORIDAD SUGERIDA</div><h3>Enfocate primero en ${v7SafeText(priority.name)}</h3><p>${parseFloat(String(priority.rate||"").replace(",", "."))?`Tiene una tasa registrada de ${v7SafeText(priority.rate)} y un saldo estimado de ${money(debtOutstanding(priority))}.`:`Es la deuda con mayor prioridad configurada y mantiene un saldo estimado de ${money(debtOutstanding(priority))}.`} Un pago adicional ahí puede acelerar tu estrategia.</p>`
+    ? `<div class="v7-insight-icon">◎</div><div class="v7-eyebrow" style="margin-bottom:8px;color:var(--success)">PRIORIDAD SUGERIDA</div><h3>Enfocate primero en ${v7SafeText(priority.name)}</h3><p>${oneDebtEffectiveRate(priority)!==null?`La tasa anual correspondiente es ${oneDebtEffectiveRate(priority)}% y el saldo estimado es ${money(debtOutstanding(priority))}.`:`Es la deuda con mayor prioridad configurada y mantiene un saldo estimado de ${money(debtOutstanding(priority))}.`} Un pago adicional ahí puede acelerar tu estrategia.</p>`
     : `<div class="v7-insight-icon">✓</div><h3>Sin estrategia pendiente</h3><p>No hay deudas activas para priorizar.</p>`;
 
   document.getElementById("debtTotal").textContent=`Activas: ${active.length} · saldo estimado ${money(total)} · archivadas ${archived.length}`;
   document.getElementById("debtList").innerHTML=rows.length?rows.map(d=>{
     const archivedDebt=debtStatus(d)==="archived",base=debtEquivalent(d),paid=debtPayments(d),out=debtOutstanding(d),pct=debtProgressPercent(d)??0,next=oneDebtDueEntry(d);
     const actions=archivedDebt
-      ? `<button class="btn secondary small" data-reactivate-debt="${d.id}">Reactivar</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button>`
-      : `<button class="btn secondary small" data-pay-debt="${d.id}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${d.id}">Actualizar saldo real</button><button class="btn secondary small" data-simulate-debt="${d.id}">Simular</button><button class="btn secondary small" data-edit-debt="${d.id}">Editar</button><button class="btn secondary small" data-archive-debt="${d.id}">Archivar</button>`;
+      ? `<button class="btn secondary small" data-reactivate-debt="${safe(d.id)}">Reactivar</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button>`
+      : `<button class="btn secondary small" data-pay-debt="${safe(d.id)}">Registrar pago</button><button class="btn secondary small" data-adjust-debt="${safe(d.id)}">Actualizar saldo real</button><button class="btn secondary small" data-simulate-debt="${safe(d.id)}">Simular</button><button class="btn secondary small" data-edit-debt="${safe(d.id)}">Editar</button><button class="btn secondary small" data-archive-debt="${safe(d.id)}">Archivar</button>`;
     return `<div class="v7-debt-card ${archivedDebt?"archived":""}">
       <div class="v7-debt-name"><div class="icon">▭</div><div><strong>${v7SafeText(d.name)}</strong><span>${v7SafeText(oneDebtTypeName(d))}${archivedDebt?" · archivada":""}</span></div></div>
       <div class="v7-debt-cell"><span>Saldo pendiente</span><strong>${money(out)}</strong></div>

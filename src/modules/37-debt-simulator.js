@@ -39,10 +39,9 @@ function oneDebtAmortize({balance,minimum,annualRate,once=0,monthlyExtra=0,maxMo
     interestSaved:comparable?oneDebtSimRound(Math.max(0,baseline.interest-accelerated.interest)):null};
 }
 function oneDebtSimReadRate(d){
-  const raw=String(d?.rate??"").trim().replace(",",".");
-  if(!/^\d+(?:\.\d+)?$/.test(raw))return null;
-  const value=Number(raw);
-  return Number.isFinite(value)&&value>=0&&value<=200?value:null;
+  if(oneDebtTypeForDebt(d)?.shape!=="card")return oneDebtRateLiteral(d?.rate);
+  if(num(d?.usd)>.005&&num(d?.crc)>.005)return null;
+  return oneDebtCurrencyRate(d,num(d?.usd)>.005?"USD":"CRC");
 }
 function oneDebtSimPayoffDate(d,months,asOf=todayIso()){
   if(months===0)return asOf;
@@ -52,13 +51,14 @@ function oneDebtSimPayoffDate(d,months,asOf=todayIso()){
   return oneDebtMonthlyDueIso(d,oneDebtShiftMonth(month,months-1));
 }
 function oneDebtSimulate(d,options={},asOf=todayIso()){
-  const warnings=[],rate=oneDebtSimReadRate(d);
+  const warnings=[];
   if(!d||debtStatus(d)!=="active")return {valid:false,warnings:["Elegí una deuda activa para simular."]};
   const balance=debtOutstanding(d),minimum=debtMinimumCRC(d);
   if(balance<=.005)return {valid:false,warnings:["Esta deuda no tiene saldo estimado pendiente."]};
   if(num(d.usd)>.005&&num(d.crc)>.005)
     return {valid:false,warnings:["La deuda combina saldos en CRC y USD con una sola tasa. Separá las condiciones por moneda para una simulación confiable."]};
-  if(rate===null)return {valid:false,warnings:["Falta una tasa anual válida (0 a 200%). Completala en Editar deuda antes de estimar intereses o ahorros."]};
+  const rate=oneDebtSimReadRate(d);
+  if(rate===null)return {valid:false,warnings:["Falta la tasa anual de la moneda correspondiente. Ingresá la tasa CRC o USD en Editar deuda."]};
   if(!(minimum>.005))return {valid:false,warnings:["Falta la cuota o pago mínimo mensual. Configuralo en Editar deuda."]};
   const once=Number(options.onceCRC??0),monthly=Number(options.monthlyCRC??0);
   if(!Number.isFinite(once)||!Number.isFinite(monthly)||once<0||monthly<0||once>ONE_DEBT_SIM_MAX_EXTRA||monthly>ONE_DEBT_SIM_MAX_EXTRA)
@@ -101,7 +101,10 @@ function oneDebtSimRender(syncInputs=false){
   const d=rows.find(row=>row.id===oneDebtSimState.debtId),result=oneDebtSimulate(d,oneDebtSimState);
   q("oneDebtSimSettings").textContent=d?
     "Saldo aproximado: "+money(debtOutstanding(d))+" · cuota: "+money(debtMinimumCRC(d))+
-    " · tasa anual: "+(oneDebtSimReadRate(d)===null?"sin configurar":oneDebtSimReadRate(d)+"%"):
+    (oneDebtTypeForDebt(d)?.shape==="card"?
+      " · tasas CRC: "+(oneDebtCurrencyRate(d,"CRC")===null?"sin configurar":oneDebtCurrencyRate(d,"CRC")+"%")+
+      " / USD: "+(oneDebtCurrencyRate(d,"USD")===null?"sin configurar":oneDebtCurrencyRate(d,"USD")+"%"):
+      " · tasa anual: "+(oneDebtSimReadRate(d)===null?"sin configurar":oneDebtSimReadRate(d)+"%")):
     "Agregá una deuda desde Deudas para comparar escenarios.";
   const warnings=q("oneDebtSimWarnings");warnings.replaceChildren();
   result.warnings.forEach(message=>{const li=document.createElement("li");li.textContent=message;warnings.appendChild(li)});

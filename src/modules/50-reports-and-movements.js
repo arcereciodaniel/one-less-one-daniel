@@ -611,6 +611,30 @@ function oneDebtTypeForDebt(d){
  return (data.debtTypes||[]).find(t=>t.id===presetId)||ONE_DEBT_TYPE_PRESETS.find(t=>t.id===presetId);
 }
 function oneDebtTypeName(d){return d?.typeId?(data.debtTypes||[]).find(t=>t.id===d.typeId)?.name||d.type||"Otra":d?.type||"Otra"}
+/* V12: la tasa antigua se interpreta solo si la tarjeta tenía una moneda. */
+function oneDebtRateLiteral(raw){
+ if(raw===undefined||raw===null)return null;
+ const text=String(raw).trim().replace(",",".");
+ if(!/^\d+(?:\.\d+)?$/.test(text))return null;
+ const rate=Number(text);return Number.isFinite(rate)&&rate>=0&&rate<=200?rate:null;
+}
+function oneDebtCurrencyRate(d,currency){
+ if(!d)return null;
+ const key=currency==="USD"?"rateUSD":"rateCRC";
+ if(Object.prototype.hasOwnProperty.call(d,key))return oneDebtRateLiteral(d[key]);
+ if(Object.prototype.hasOwnProperty.call(d,"rateCRC")||Object.prototype.hasOwnProperty.call(d,"rateUSD"))return null;
+ const old=oneDebtRateLiteral(d.rate),crc=num(d.crc)>.005,usd=num(d.usd)>.005;
+ if(old===null||crc&&usd)return null;
+ return currency==="USD"?(usd?old:null):(!usd?old:null);
+}
+function oneDebtEffectiveRate(d){
+ if(oneDebtTypeForDebt(d)?.shape!=="card")return oneDebtRateLiteral(d?.rate);
+ const currencies=[...(num(d.crc)>.005?["CRC"]:[]),...(num(d.usd)>.005?["USD"]:[])];
+ if(!currencies.length)return null;
+ const rates=currencies.map(c=>oneDebtCurrencyRate(d,c));
+ return rates.some(r=>r===null)?null:Math.max(...rates);
+}
+
 function oneDebtTypeUsage(t){return (data.debts||[]).filter(d=>d.typeId===t.id||(!d.typeId&&oneDebtTypeForDebt(d)?.id===t.id)).length}
 function oneDebtTypeFormReset(){
  document.getElementById("oneDebtTypeId").value="";
@@ -650,6 +674,8 @@ function openDebt(d=null){
  document.getElementById("dLimitCurrency").value=normalizeCurrency(d?.limitCurrency||"USD");
  document.getElementById("dMinimumCurrency").value=normalizeCurrency(d?.minimumCurrency||"CRC");
  document.getElementById("dFullPaymentCurrency").value=normalizeCurrency(d?.fullPaymentCurrency||"CRC");
+ document.getElementById("dRateCRC").value=oneDebtCurrencyRate(d,"CRC")??"";
+ document.getElementById("dRateUSD").value=oneDebtCurrencyRate(d,"USD")??"";
  oneRefreshDebtTypeSelect(d);oneDebtFormUpdate();
  const rates=currentRates();document.getElementById("dFxPreview").value="Venta actual: ₡"+rates.sell.toFixed(2);
  dialog.showModal();

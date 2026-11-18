@@ -488,7 +488,9 @@ function bind(){
       minimum:num(field("dMinimum")),
       minimumCurrency:normalizeCurrency(field("dMinimumCurrency")),
       payDay:field("dPayDay").trim(),
-      rate:field("dRate").trim(),
+      rate:is("card")?String(previous?.rate??""):field("dRate").trim().replace(",","."),
+      rateCRC:is("card")?field("dRateCRC").trim().replace(",","."):previous?.rateCRC,
+      rateUSD:is("card")?field("dRateUSD").trim().replace(",","."):previous?.rateUSD,
       closeDay:is("card")?num(field("dCloseDay")):0,
       fullPayment:is("card")?num(field("dFullPayment")):0,
       fullPaymentCurrency:normalizeCurrency(field("dFullPaymentCurrency")),
@@ -498,6 +500,9 @@ function bind(){
       installmentsLeft:is("installments")?num(field("dInstallmentsLeft")):0,
       priority:num(field("dPriority")),goal:field("dGoal").trim(),notes:field("dNotes").trim()};
     if(!obj.name)return alert("Ingresá un nombre para la deuda.");
+    const rateValid=t=>t===""||oneDebtRateLiteral(t)!==null;
+    if(is("card")?(!rateValid(obj.rateCRC)||!rateValid(obj.rateUSD)):!rateValid(obj.rate))
+      return alert("La tasa anual debe estar entre 0 y 200% o quedar vacía si se desconoce.");
     if(obj.payDay&&!/^(?:[1-9]|[12][0-9]|3[01])$/.test(obj.payDay)&&obj.payDay!==previous?.payDay)return alert("El día de pago debe estar entre 1 y 31.");
     if(is("card")&&obj.closeDay&&(obj.closeDay<1||obj.closeDay>31))return alert("El día de corte debe estar entre 1 y 31.");
     if(is("installments")&&obj.installmentsTotal&&obj.installmentsLeft>obj.installmentsTotal)return alert("Las cuotas restantes no pueden superar las cuotas totales.");

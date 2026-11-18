@@ -238,7 +238,11 @@ function currentFxSnapshot(){const r=currentRates();return {fxBuy:r.buy,fxSell:r
 function recordToCRC(rec,intent="neutral"){return toCRC(rec?.amount,rec?.currency||"CRC",intent,ratesFromRecord(rec))}
 function currentToCRC(amount,currency,intent="neutral"){return toCRC(amount,currency,intent,currentRates())}
 function dateLabel(s){if(!s)return"";return new Intl.DateTimeFormat("es-CR",{day:"2-digit",month:"short",year:"numeric",timeZone:"UTC"}).format(new Date(s+"T00:00:00Z"))}
-function csvEscape(v){const s=String(v??"");return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s}
+function csvEscape(v){
+ const raw=String(v??"");
+ const s=typeof v==="string"&&/^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(raw)?"'"+raw:raw;
+ return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s;
+}
 function download(name,text,type="text/plain"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)
 }
