@@ -70,9 +70,16 @@ test("V12.1: conciliación absorbe compras anteriores sin duplicarlas",()=>{
   {id:"payment",seq:2,type:"Pago deuda",date:"2026-11-16",categoryId:"p",debtId:"card",amount:12000,principalAmount:9000,currency:"CRC"}];
  s.movementSeq=2;
  s.debts[0].balanceAdjustments=[{id:"r",date:"2026-11-16",afterSeq:2,createdAt:"2026-11-16T22:00:00Z",amount:21000,currency:"CRC",paidAtAdjustment:12000}];
- const {w}=boot(s),d=w.activeDebts()[0];
+ const {w,get,errors}=boot(s),d=w.activeDebts()[0];
  assert.equal(w.debtOutstanding(d),21000);
- w.eval('data.movementSeq=3;data.movements.push({id:"second",seq:3,type:"Gasto",date:"2026-11-17",categoryId:"g",amount:8000,currency:"CRC",financedDebtId:"card"});');
+ w.m2OpenComposer();
+ get("mDate").value="2026-11-17";w.refreshMovementCategorySelect("g");get("mCategory").value="g";
+ get("mAmount").value="8000";get("mCurrency").value="CRC";
+ get("mPaymentSource").value="credit";
+ get("mPaymentSource").dispatchEvent(new w.Event("change",{bubbles:true}));
+ get("mFinancedDebt").value="card";
+ get("movementForm").dispatchEvent(new w.Event("submit",{bubbles:true,cancelable:true}));
+ assert.deepEqual(errors,[]);
  assert.equal(w.debtOutstanding(d),29000);
 });
 test("V12.1: pagos heredados siguen aplicando el total a capital estimado",()=>{
