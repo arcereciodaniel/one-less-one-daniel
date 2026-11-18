@@ -9,7 +9,7 @@ const {labFromDaniel} = require("../scripts/build-lab.cjs");
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root,file),"utf8");
 
-test("V11: los trece módulos componen exactamente el archivo de Daniel",()=>{
+test("V12: los trece módulos componen exactamente el archivo de Daniel",()=>{
  assert.equal(PARTS.length,14);
  const generated=buildApp();
  assert.equal(generated,read("index.html"));
@@ -19,7 +19,7 @@ test("V11: los trece módulos componen exactamente el archivo de Daniel",()=>{
  assert.doesNotThrow(()=>new vm.Script(inline),"La composición mantiene JavaScript válido");
 });
 
-test("V11: las fuentes están aisladas de los archivos públicos y no son runtime externos",()=>{
+test("V12: las fuentes están aisladas de los archivos públicos y no son runtime externos",()=>{
  const template=read("src/app-shell.html");
  assert.equal(template.split(CSS_TOKEN).length,2);
  assert.equal(template.split(SCRIPT_TOKEN).length,2);
@@ -33,7 +33,7 @@ test("V11: las fuentes están aisladas de los archivos públicos y no son runtim
  assert(publish.includes("node scripts/build-app.cjs --check"));
 });
 
-test("V11: claves de datos intactas, Lab separado y móvil sin migración",()=>{
+test("V12: claves de datos intactas, Lab separado y móvil sin migración",()=>{
  const main=buildApp(),lab=labFromDaniel(main);
  assert(main.includes('const STORAGE_KEY = "daniel_finanzas_local_v1";'));
  assert(lab.includes('const STORAGE_KEY = "rastro_lab_v7_1_data_v1";'));
@@ -41,6 +41,6 @@ test("V11: claves de datos intactas, Lab separado y móvil sin migración",()=>{
  assert(lab.includes('const UI_STORAGE_KEY = "rastro_lab_v7_1_ui_v1";'));
  assert(main.includes('src="mobile-pilot/desktop.js"'));
  assert(lab.includes('src="../mobile-pilot/desktop.js"'));
- assert(main.includes('<small class="brand-version">v11.10.0</small>'));
- assert(lab.includes('<small class="brand-version">v11.10.0 LAB</small>'));
+ assert(main.includes('<small class="brand-version">v12.0.0</small>'));
+ assert(lab.includes('<small class="brand-version">v12.0.0 LAB</small>'));
 });

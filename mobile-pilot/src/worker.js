@@ -29,6 +29,13 @@ function validDate(s){
  const date=new Date(s+"T00:00:00Z");
  return !Number.isNaN(+date)&&date.toISOString().slice(0,10)===s;
 }
+// El iPhone puede estar en una fecha civil adelantada respecto a UTC al viajar a Asia.
+export function oneMobileValidCaptureDate(value,now=new Date()){
+ if(!validDate(value))return false;
+ const maximum=new Date(now.getTime()+86400000).toISOString().slice(0,10);
+ const minimum=new Date(now.getTime()-367*86400000).toISOString().slice(0,10);
+ return value>=minimum&&value<=maximum;
+}
 function validId(v){return typeof v==="string"&&/^[a-zA-Z0-9_-]{16,80}$/.test(v)}
 function clean(v,max=160){return typeof v==="string"?v.trim().slice(0,max):""}
 function checkPayload(p){
@@ -39,8 +46,7 @@ function checkPayload(p){
  // CRC/USD en Gasto, Ingreso y Cobro; el monto original se conserva hasta importarlo.
  if(p.currency!=="CRC"&&!(["Gasto","Ingreso","Cobro","Cobro dividido"].includes(type)&&p.currency==="USD"))
   throw Error("USD solo está disponible para Gasto, Ingreso y Cobro.");
- const now=new Date(),today=now.toISOString().slice(0,10),earliest=new Date(now.getTime()-366*864e5).toISOString().slice(0,10);
- if(date>today||date<earliest)throw Error("Fecha fuera del período permitido");
+ if(!oneMobileValidCaptureDate(date))throw Error("Fecha fuera del período permitido");
  const categoryId=clean(p.categoryId,80),debtId=clean(p.debtId,80),reserveId=clean(p.reserveId,80);
  const person=clean(p.person,120),description=clean(p.description,200),groupId=clean(p.groupId,80),groupName=clean(p.groupName,120);
  const dueDate=clean(p.dueDate,10);

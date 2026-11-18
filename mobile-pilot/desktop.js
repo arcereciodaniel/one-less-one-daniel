@@ -121,7 +121,10 @@
       (data.sharedCharges||[]).some(m=>m.mobilePilotId===id)||
       (data.sharedChargeGroups||[]).some(g=>g.mobilePilotId===id);
   }
-  function validDate(date){return restoreValidDate(date)&&date<=todayIso();}
+  function validDate(date){
+    // La fecha civil de Japón puede ser el día siguiente en Costa Rica.
+    return restoreValidDate(date)&&date<=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  }
   // Solo tasas verificadas de la fecha del registro o de los siete días previos
   // (para fines de semana/feriados). Nunca usar una cotización posterior.
   function fxForMobileDate(date,currency){

@@ -233,3 +233,12 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - Esta simulación es **independiente** del escenario V11.5 de liquidez de 30/60/90 días. No se suman dos veces las cuotas ni se alteran los flujos pronosticados; para confirmar un pago real hay que registrarlo explícitamente en Movimientos.
 - Los controles viven solo en memoria; el simulador no llama a guardar datos financieros ni toca Movimientos, Deudas, Proyectos, Cobros, Metas, respaldos o Cloudflare. Daniel y Lab comparten código y mantienen almacenamiento separado. Gloriana queda sin cambios.
 - Se añadieron pruebas para matemática, falta de datos, USD, navegación desde Deudas y ausencia de escritura financiera a la batería y compuerta de GitHub Pages.
+
+## V12.0.0 — tasas de tarjetas por moneda y confiabilidad (17 de noviembre de 2026)
+
+- V12 inicia la nueva versión principal. El almacenamiento local financiero sigue separado entre Daniel y Lab; el repositorio de Gloriana no se modifica.
+- Las tarjetas de crédito permiten registrar **tasa nominal anual CRC** y **tasa nominal anual USD**, de manera independiente. Las demás deudas conservan su tasa única. La tasa `rate` antigua se preserva y solo se interpreta para una tarjeta histórica con saldo en una sola moneda; nunca se copia a ambos campos en deudas mixtas.
+- El simulador de Futuro utiliza la tasa de la moneda que corresponde. No promete un ahorro conjunto para una tarjeta con saldos CRC y USD, porque requiere condiciones de cuota y amortización por moneda.
+- El formulario móvil reconoce la fecha civil legítima durante viajes a zonas horarias adelantadas, sin admitir fechas arbitrariamente futuras. El escritorio aplica la misma tolerancia al importar.
+- Se neutralizan textos que parecen fórmulas en CSV y se escapan los ID de deudas al generar atributos HTML.
+- No se cambian movimientos, saldos, respaldos ni datos financieros existentes al actualizar.
