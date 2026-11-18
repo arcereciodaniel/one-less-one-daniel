@@ -10,7 +10,7 @@ const DAY="2026-11-17",P="trip-2026",B="other-2026",HOTEL="bucket-hotel-2026",TR
 const PLAN="plan-hotel-2026",PLAN2="plan-taxi-2026";
 function seed(){
  return {version:6.2,categorySchemaVersion:1,incomeSchemaVersion:1,
-  settings:{fx:495,fxBuy:490,fxSell:500,fxDate:DAY,fxCheckedOn:DAY,displayCurrency:"CRC"},
+  settings:{fx:495,fxBuy:490,fxSell:500,fxDate:DAY,fxCheckedOn:new Date().toISOString().slice(0,10),displayCurrency:"CRC"},
   periods:[{key:"2026-T4-11-2",quarter:"2026-T4",n:2,budgetMonth:"2026-11",fortnight:2,date:"2026-11-14",
    opening:700000,openingCurrency:"CRC",categoryBudgets:{},budgets:{}}],
   categories:[{id:"cat-g",name:"Viajes",type:"Gasto",active:true,budgetable:true,group:"Otros",sort:1}],

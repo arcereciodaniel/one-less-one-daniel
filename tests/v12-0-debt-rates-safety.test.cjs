@@ -8,7 +8,7 @@ function boot(debts=[]){
  w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLCanvasElement.prototype.getContext=function(){return new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}})};
  w.alert=s=>alerts.push(String(s));w.confirm=()=>true;w.prompt=()=>null;w.fetch=async()=>{throw Error("offline")};
  w.localStorage.setItem("daniel_finanzas_local_v1",JSON.stringify({version:6.2,categorySchemaVersion:1,incomeSchemaVersion:1,
- settings:{fx:500,fxBuy:490,fxSell:510,fxDate:"2026-11-17",displayCurrency:"CRC"},
+ settings:{fx:500,fxBuy:490,fxSell:510,fxDate:"2026-11-17",fxCheckedOn:new Date().toISOString().slice(0,10),displayCurrency:"CRC"},
  periods:[{key:"p1",date:"2026-11-14",budgetMonth:"2026-11",fortnight:2,quarter:"2026-T4",n:2,opening:1000000,categoryBudgets:{},budgets:{}}],
  movements:[],categories:[],debts,reconciliations:[],reserves:[],reserveMovements:[],sharedCharges:[],sharedChargeGroups:[],receivableRecurring:[],projects:[],projectLinks:[],projectPlans:[]}));
  w.eval(js);return {w,alerts,get:id=>w.document.getElementById(id),read:()=>JSON.parse(w.localStorage.getItem("daniel_finanzas_local_v1"))};
