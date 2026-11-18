@@ -242,3 +242,12 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - El formulario móvil reconoce la fecha civil legítima durante viajes a zonas horarias adelantadas, sin admitir fechas arbitrariamente futuras. El escritorio aplica la misma tolerancia al importar.
 - Se neutralizan textos que parecen fórmulas en CSV y se escapan los ID de deudas al generar atributos HTML.
 - No se cambian movimientos, saldos, respaldos ni datos financieros existentes al actualizar.
+
+## V12.1.0 — compras con tarjeta, capital amortizado y barra de utilidades
+
+- Los gastos nuevos pueden marcarse como pagados **desde dinero operativo** o **con una tarjeta de crédito activa**. Una compra vinculada a tarjeta cuenta en el presupuesto pero no se descuenta de la liquidez hasta el pago; incrementa el saldo estimado de la deuda.
+- En pagos de deuda es posible registrar **capital amortizado** (opcional, en la misma moneda que la cuota). El total de la cuota siempre disminuye la liquidez, pero solo el capital comprobado reduce la deuda. Si se deja vacío, se conserva el método histórico aproximado de imputar todo el pago a capital y se señala la necesidad de conciliar con el banco. No se calculan intereses bancarios nuevos automáticamente.
+- Una conciliación de saldo real absorbe las compras y amortizaciones existentes al momento de conciliar; las posteriores se computan desde ese saldo. No se duplican operaciones en el histórico.
+- Los movimientos anteriores y los registros del iPhone que no contienen vínculo explícito a tarjeta conservan su tratamiento original. One Less One Móvil mantiene la captura actual y el importador sigue siendo compatible.
+- Barra superior rediseñada: apariencia, moneda, tipo de cambio con compra/venta legibles, respaldar, restaurar y configuración; mismas dimensiones estructurales en temas claro y oscuro, responsive.
+- Fuentes unificadas en Daniel y Lab, claves de almacenamiento originales intactas; Gloriana no se modifica.

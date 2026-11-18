@@ -7,7 +7,7 @@
   <meta name="application-name" content="One Less One">
   <meta name="description" content="One Less One: organizá ingresos, gastos, presupuestos y tu saldo real en un solo lugar.">
   <title>One Less One · by rastro.</title>
-  <link rel="manifest" href="./site.webmanifest?v=1200">
+  <link rel="manifest" href="./site.webmanifest?v=1210">
   <meta name="apple-mobile-web-app-title" content="One Less One">
   <link rel="icon" href="data:,">
   <!-- ONE_LESS_ONE_STYLES -->
@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v12.0.0</small>
+      <small class="brand-version">v12.1.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -32,20 +32,31 @@
       <button data-view="future" data-optional-module="future"><span class="nav-icon" aria-hidden="true">↗</span><span>Futuro <span class="one-beta-tag">BETA</span></span></button>
       <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
     </nav>
-    <div class="header-actions">
+    <div class="header-actions one-utility-bar" role="group" aria-label="Preferencias y datos">
+      <div class="one-utility-group one-utility-preferences" aria-label="Apariencia">
         <div class="ui-switch" aria-label="Tema">
-        <button type="button" data-theme-choice="light" title="Tema claro">☀</button>
-        <button type="button" data-theme-choice="dark" title="Tema oscuro">☾</button>
+          <button type="button" data-theme-choice="light" title="Tema claro" aria-label="Tema claro">☼</button>
+          <button type="button" data-theme-choice="dark" title="Tema oscuro" aria-label="Tema oscuro">☾</button>
+        </div>
       </div>
-      <div class="currency-switch" aria-label="Moneda de visualización">
-        <span>Ver en</span>
-        <button type="button" data-display-currency="CRC" class="active">₡ CRC</button>
-        <button type="button" data-display-currency="USD">$ USD</button>
+      <div class="one-utility-group one-utility-money">
+        <span class="one-utility-heading">MONEDA</span>
+        <div class="currency-switch" aria-label="Moneda de visualización">
+          <button type="button" data-display-currency="CRC" class="active">₡ CRC</button>
+          <button type="button" data-display-currency="USD">$ USD</button>
+        </div>
       </div>
-      <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC: pendiente</button>
-      <button id="oneSettingsBtn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">⚙</button>
-      <button id="exportBtn" title="Solicitar descarga de respaldo JSON">Respaldar</button>
-      <button id="importBtn" title="Restaurar un respaldo JSON">Restaurar</button>
+      <div class="one-utility-group one-utility-rate">
+        <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC · Sin configurar</button>
+      </div>
+      <div class="one-utility-group one-utility-data">
+        <span class="one-utility-heading">DATOS</span>
+        <div class="one-utility-data-actions">
+          <button id="exportBtn" type="button" title="Solicitar descarga de respaldo JSON">↓ <span>Respaldar</span></button>
+          <button id="importBtn" type="button" title="Restaurar un respaldo JSON">↑ <span>Restaurar</span></button>
+          <button id="oneSettingsBtn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">⚙</button>
+        </div>
+      </div>
       <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
@@ -654,7 +665,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v12.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v12.1.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 

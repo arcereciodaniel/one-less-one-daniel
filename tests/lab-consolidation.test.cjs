@@ -33,7 +33,7 @@ test("Datos y preferencias de Daniel y Lab quedan separados", () => {
 });
 
 test("Lab enlaza correctamente sus recursos compartidos", () => {
-  assert(lab.includes('href="./site.webmanifest?v=1200"'));
+  assert(lab.includes('href="./site.webmanifest?v=1210"'));
   assert(lab.includes('href="../mobile-pilot/desktop.css"'));
   assert(lab.includes('src="../mobile-pilot/desktop.js"'));
   assert.equal(JSON.parse(labManifest).start_url, "./");
