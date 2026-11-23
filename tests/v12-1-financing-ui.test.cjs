@@ -26,7 +26,7 @@ function boot(raw=sample()){
  return {w,errors,get:id=>w.document.getElementById(id),read:()=>JSON.parse(w.localStorage.getItem("daniel_finanzas_local_v1"))};
 }
 test("V12.1: nueva barra contiene las cuatro zonas y conserva las acciones funcionales",()=>{
- assert(html.includes('<small class="brand-version">v12.1.0</small>'));
+ assert(html.includes('<small class="brand-version">v12.1.1</small>'));
  const {w,get}=boot();
  for(const id of ["fxBtn","oneSettingsBtn","exportBtn","importBtn","oneBackupNotice"])
    assert(get(id),"Missing "+id);

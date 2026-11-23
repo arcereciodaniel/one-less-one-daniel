@@ -251,3 +251,10 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - Los movimientos anteriores y los registros del iPhone que no contienen vínculo explícito a tarjeta conservan su tratamiento original. One Less One Móvil mantiene la captura actual y el importador sigue siendo compatible.
 - Barra superior rediseñada: apariencia, moneda, tipo de cambio con compra/venta legibles, respaldar, restaurar y configuración; mismas dimensiones estructurales en temas claro y oscuro, responsive.
 - Fuentes unificadas en Daniel y Lab, claves de almacenamiento originales intactas; Gloriana no se modifica.
+
+## V12.1.1 — hotfix encabezado con todos los módulos activados (23 de noviembre de 2026)
+
+- Corregido el solapamiento de logotipo, menú y barra de controles cuando se habilitan Deudas, Cobros, Metas, Proyectos y Futuro simultáneamente.
+- El encabezado utiliza **áreas CSS Grid independientes** para marca, navegación y utilidades; el menú puede envolver filas sin quedar oculto ni montarse sobre los demás elementos.
+- Distribución: amplio (marca y utilidades arriba; navegación abajo), mediano (marca y navegación arriba; utilidades abajo), tablet/móvil (tres filas independientes).
+- La lógica de los botones, las monedas, el tipo de cambio, los respaldos y el almacenamiento financiero permanece intacta en Daniel y Lab. Sin cambios en Gloriana ni en el Worker móvil.
