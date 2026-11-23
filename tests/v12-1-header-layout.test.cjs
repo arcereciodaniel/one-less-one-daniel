@@ -4,7 +4,7 @@ const {JSDOM}=require("jsdom");
 const css=fs.readFileSync("src/styles/app.css","utf8");
 const shell=fs.readFileSync("src/app-shell.html","utf8");
 const daniel=fs.readFileSync("index.html","utf8"),lab=fs.readFileSync("lab/index.html","utf8");
-const marker="/* V12.1.3 · Encabezado mínimo en una fila de escritorio.";
+const marker="/* V12.1.3 · Navegación centrada y expansiva en escritorio.";
 const block=css.slice(css.indexOf(marker));
 assert(block.length>1000,"No está el hotfix minimalista");
 test("V12.1.3: escritorio tiene marca, navegación y controles en la misma fila",()=>{
