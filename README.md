@@ -267,3 +267,11 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - En Configuración, Tipo de cambio muestra las tasas de compra y venta actuales; la confirmación de respaldo también se visualiza allí.
 - En móviles (<800px) el menú puede utilizar una segunda fila para preservar legibilidad; el diseño estructural es idéntico en temas claro y oscuro.
 - No se modifican historiales, almacenamiento ni los repositorios de Gloriana. One Less One Móvil no cambia.
+
+## V12.1.3 — navegación principal centrada (23-nov-2026)
+
+- Restaurado el **menú centrado** junto al logotipo y los controles minimalistas en una sola fila de escritorio.
+- En anchos amplios (≥1300 px) las columnas laterales simétricas mantienen el menú en el centro de la pantalla. Al activar herramientas, la navegación crece hacia izquierda y derecha alrededor del centro; el botón **+** permanece al final.
+- En anchos intermedios el menú se centra dentro del espacio disponible entre el logotipo y los controles; si no cabe, el desplazamiento horizontal evita superposiciones y mantiene las herramientas accesibles.
+- En pantallas pequeñas se conserva el diseño responsive aprobado. Los dos temas tienen exactamente la misma distribución.
+- No hay cambios en las finanzas, almacenamiento local, Cloudflare, Deudas ni en One Less One Gloriana.

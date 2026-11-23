@@ -26,7 +26,7 @@ function boot(raw=sample()){
  return {w,errors,get:id=>w.document.getElementById(id),read:()=>JSON.parse(w.localStorage.getItem("daniel_finanzas_local_v1"))};
 }
 test("V12.1.2: barra mínima, controles intactos y datos dentro de Configuración",()=>{
- assert(html.includes('<small class="brand-version">v12.1.2</small>'));
+ assert(html.includes('<small class="brand-version">v12.1.3</small>'));
  const {w,get}=boot(),bar=get("oneSettingsBtn").closest(".header-actions");
  assert(bar);
  assert.equal(bar.querySelectorAll("button").length,5);
