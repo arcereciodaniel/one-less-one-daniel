@@ -258,3 +258,12 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 - El encabezado utiliza **áreas CSS Grid independientes** para marca, navegación y utilidades; el menú puede envolver filas sin quedar oculto ni montarse sobre los demás elementos.
 - Distribución: amplio (marca y utilidades arriba; navegación abajo), mediano (marca y navegación arriba; utilidades abajo), tablet/móvil (tres filas independientes).
 - La lógica de los botones, las monedas, el tipo de cambio, los respaldos y el almacenamiento financiero permanece intacta en Daniel y Lab. Sin cambios en Gloriana ni en el Worker móvil.
+
+## V12.1.2 — barra minimalista restaurada (23-nov-2026)
+
+- El menú principal vuelve a estar junto al logotipo en **una sola fila en escritorio**. El menú conserva todos los módulos activos; se habilita desplazamiento horizontal solo cuando el ancho disponible realmente lo requiere.
+- En la barra principal se muestran exclusivamente los botones de tema claro/oscuro, moneda CRC/USD y un ícono SVG discreto de Configuración.
+- Tipo de cambio, exportación de respaldo y restauración permanecen accesibles dentro de **Configuración**. Los disparadores de respaldo/restauración se conservan ocultos para mantener todas las comprobaciones de seguridad existentes.
+- En Configuración, Tipo de cambio muestra las tasas de compra y venta actuales; la confirmación de respaldo también se visualiza allí.
+- En móviles (<800px) el menú puede utilizar una segunda fila para preservar legibilidad; el diseño estructural es idéntico en temas claro y oscuro.
+- No se modifican historiales, almacenamiento ni los repositorios de Gloriana. One Less One Móvil no cambia.

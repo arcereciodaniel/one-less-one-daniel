@@ -25,16 +25,25 @@ function boot(raw=sample()){
  w.eval(js);
  return {w,errors,get:id=>w.document.getElementById(id),read:()=>JSON.parse(w.localStorage.getItem("daniel_finanzas_local_v1"))};
 }
-test("V12.1: nueva barra contiene las cuatro zonas y conserva las acciones funcionales",()=>{
- assert(html.includes('<small class="brand-version">v12.1.1</small>'));
- const {w,get}=boot();
- for(const id of ["fxBtn","oneSettingsBtn","exportBtn","importBtn","oneBackupNotice"])
+test("V12.1.2: barra mínima, controles intactos y datos dentro de Configuración",()=>{
+ assert(html.includes('<small class="brand-version">v12.1.2</small>'));
+ const {w,get}=boot(),bar=get("oneSettingsBtn").closest(".header-actions");
+ assert(bar);
+ assert.equal(bar.querySelectorAll("button").length,5);
+ assert.equal(bar.querySelectorAll("[data-theme-choice]").length,2);
+ assert.equal(bar.querySelectorAll("[data-display-currency]").length,2);
+ assert(bar.querySelector(".one-minimal-settings-btn svg"));
+ for(const id of ["fxBtn","exportBtn","importBtn","oneBackupNotice","oneSettingsFx","oneSettingsBackup","oneSettingsRestore"])
    assert(get(id),"Missing "+id);
- for(const cls of ["one-utility-preferences","one-utility-money","one-utility-rate","one-utility-data"])
-   assert(get("fxBtn").closest(".header-actions").querySelector("."+cls));
- assert(get("fxBtn").textContent.includes("Compra"),"TC compra visible");
- assert(get("fxBtn").textContent.includes("Venta"),"TC venta visible");
- assert.equal(get("fxBtn").querySelectorAll("span").length,2);
+ for(const id of ["fxBtn","exportBtn","importBtn"]){
+   assert(!bar.contains(get(id)),"La acción no debe estar en el encabezado: "+id);
+   assert(get("oneSettingsDialog").contains(get(id)),"La acción debe vivir dentro de configuración: "+id);
+   assert(get(id).hidden,"El botón auxiliar debe permanecer oculto: "+id);
+ }
+ assert(get("oneSettingsFxDetail").textContent.includes("Compra"));
+ assert(get("oneSettingsFxDetail").textContent.includes("Venta"));
+ get("oneSettingsBtn").click();
+ assert.equal(get("oneSettingsDialog").open,true);
 });
 test("V12.1: gasto con tarjeta no reduce efectivo y sí incrementa deuda; pago reduce efectivo por total y deuda por capital",()=>{
  const {w,get,read,errors}=boot();

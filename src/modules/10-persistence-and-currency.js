@@ -264,6 +264,10 @@ function updateCurrencyHeader(){
   detail.textContent=confirmed?"Compra ₡"+r.buy.toFixed(2)+"  ·  Venta ₡"+r.sell.toFixed(2):"Referencia aprox. ₡"+r.ref.toFixed(2);
   btn.replaceChildren(headline,detail);
   btn.title=confirmed?"Compra y venta en CRC/USD · "+(data.settings.fxSource==="hacienda"?"referencia de Hacienda":data.settings.fxSource==="bccr_mirror"?"referencia BCCR por fuente alternativa":"tasa registrada manualmente")+". Presioná para consultar o editar.":"Se utilizará el último dato disponible; presioná para configurarlo.";
+  const settingDetail=document.getElementById("oneSettingsFxDetail");
+  if(settingDetail)settingDetail.textContent=confirmed?
+    "Compra ₡"+r.buy.toFixed(2)+" · Venta ₡"+r.sell.toFixed(2)+" · "+data.settings.fxDate.slice(5):
+    "Compra, venta e histórico CRC/USD · Pendiente de confirmar";
 }
 
 function openFxDialog(forceToday=true){

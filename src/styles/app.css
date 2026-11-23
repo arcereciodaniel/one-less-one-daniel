@@ -1800,131 +1800,192 @@ header nav button.one-add-module-button:focus-visible{outline:2px solid var(--ac
 }
 
 
-/* V12.1.1 · Hotfix estructural del encabezado.
-   La navegación nunca comparte una misma fila flex con todas las utilidades.
-   Se utiliza GRID por áreas para evitar que se encimen la marca, módulos o botones. */
+/* V12.1.2 · Encabezado mínimo en una fila de escritorio.
+   El menú vuelve a estar junto al logo: los controles del día a día caben a la derecha.
+   Los demás ajustes quedan en Configuración; no se modifica la lógica de finanzas. */
 header .topbar{
-  display:grid!important;
-  grid-template-columns:max-content minmax(0,1fr);
-  grid-template-areas:
-    "brand utilities"
-    "nav nav";
-  column-gap:clamp(12px,1.65vw,25px);
-  row-gap:9px;
-  align-items:center;
-  justify-content:stretch;
-  width:100%;
-  min-width:0;
-  height:auto;
-  overflow:visible!important;
-  flex-wrap:initial!important
+ display:grid!important;
+ grid-template-columns:max-content minmax(0,1fr) max-content;
+ grid-template-areas:"brand nav utilities";
+ align-items:center!important;
+ column-gap:clamp(10px,1.45vw,24px);
+ row-gap:0;
+ flex-wrap:nowrap!important;
+ overflow:visible!important;
+ min-width:0;
 }
 header .topbar>.brand{
-  grid-area:brand;
-  justify-self:start;
-  align-self:center;
-  width:auto!important;
-  min-width:0;
-  margin:0!important;
-  white-space:nowrap
+ grid-area:brand;
+ align-self:center;
+ justify-self:start;
+ width:auto!important;
+ min-width:0;
+ margin:0!important;
+ white-space:nowrap
 }
 header .topbar>nav#nav{
-  grid-area:nav;
-  display:flex!important;
-  flex:none!important;
-  flex-direction:row!important;
-  flex-wrap:wrap!important;
-  align-items:center;
-  align-content:start;
-  justify-content:flex-start!important;
-  gap:3px 5px;
-  width:100%!important;
-  min-width:0!important;
-  max-width:100%;
-  margin:0!important;
-  padding:8px 0 0;
-  border-top:1px solid var(--border);
-  overflow:visible!important;
-  white-space:normal
+ grid-area:nav;
+ display:flex!important;
+ flex:0 1 auto!important;
+ flex-direction:row!important;
+ flex-wrap:nowrap!important;
+ justify-content:flex-start!important;
+ align-items:center;
+ gap:2px;
+ width:100%!important;
+ min-width:0!important;
+ max-width:100%;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ overflow-x:auto!important;
+ overflow-y:hidden!important;
+ scrollbar-width:thin;
+ scrollbar-color:var(--border) transparent;
+ scroll-padding-inline:12px;
+ overscroll-behavior-inline:contain;
 }
 header .topbar>nav#nav>button{
-  flex:0 0 auto!important;
-  min-width:0;
-  white-space:nowrap;
-  padding:9px 11px
+ flex:0 0 auto!important;
+ min-width:0;
+ white-space:nowrap;
+ padding:9px clamp(5px,.65vw,10px);
+ font-size:clamp(.71rem,.77vw,.81rem);
 }
+header .topbar>nav#nav .one-beta-tag{display:none!important}
 header .topbar>.header-actions.one-utility-bar{
-  grid-area:utilities;
+ grid-area:utilities;
+ justify-self:end;
+ align-self:center;
+ display:flex!important;
+ flex:0 0 auto!important;
+ flex-direction:row;
+ flex-wrap:nowrap!important;
+ align-items:center;
+ gap:7px;
+ width:max-content!important;
+ min-width:0;
+ max-width:max-content!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ box-shadow:none!important;
+ overflow:visible!important;
+}
+header .topbar>.one-utility-bar>.one-utility-preferences,
+header .topbar>.one-utility-bar>.one-utility-money{
+ display:flex;
+ align-items:center;
+ min-width:0;
+}
+header .topbar>.one-utility-bar .ui-switch,
+header .topbar>.one-utility-bar .currency-switch{
+ display:flex;
+ flex-direction:row;
+ align-items:center;
+ gap:1px;
+ margin:0;
+ padding:3px!important;
+ border:1px solid var(--border)!important;
+ border-radius:9px;
+ background:var(--surface)!important;
+ box-shadow:none;
+}
+header .topbar>.one-utility-bar .ui-switch button,
+header .topbar>.one-utility-bar .currency-switch button{
+ display:grid;
+ place-items:center;
+ width:33px;
+ min-width:33px;
+ height:31px;
+ min-height:31px;
+ padding:0!important;
+ border:0!important;
+ border-radius:6px;
+ background:transparent!important;
+ color:var(--muted);
+ box-shadow:none!important;
+ font-size:.7rem;
+ font-weight:690;
+ cursor:pointer;
+}
+header .topbar>.one-utility-bar .currency-switch button{
+ width:39px;
+ min-width:39px;
+ font-size:.68rem;
+}
+header .topbar>.one-utility-bar .ui-switch button.active,
+header .topbar>.one-utility-bar .currency-switch button.active{
+ background:var(--surface-hover)!important;
+ color:var(--text)!important;
+ box-shadow:inset 0 0 0 1px var(--border)!important
+}
+header .topbar>.one-utility-bar button:hover{color:var(--text)!important}
+header .topbar>.one-utility-bar .ui-switch button:hover,
+header .topbar>.one-utility-bar .currency-switch button:hover{
+ background:var(--surface-2)!important
+}
+header .topbar>.one-utility-bar #oneSettingsBtn.one-minimal-settings-btn{
+ display:grid;
+ place-items:center;
+ flex:0 0 38px;
+ width:38px;
+ min-width:38px;
+ height:38px;
+ min-height:38px;
+ margin:0;
+ padding:0!important;
+ border:1px solid var(--border)!important;
+ border-radius:9px!important;
+ background:var(--surface)!important;
+ box-shadow:none!important;
+ color:var(--muted);
+ cursor:pointer;
+}
+header .topbar>.one-utility-bar #oneSettingsBtn:hover{
+ background:var(--surface-hover)!important;
+ color:var(--text)!important
+}
+header .topbar>.one-utility-bar button:focus-visible{
+ outline:2px solid var(--accent);
+ outline-offset:2px;
+}
+.one-settings-dialog #oneBackupNotice:not([hidden]){
+ display:block;
+ max-width:none;
+ margin-top:13px;
+ padding:10px 11px;
+ border:1px solid var(--border);
+ border-radius:8px;
+ background:var(--surface-2)
+}
+@media(max-width:1170px){
+ header .topbar{column-gap:8px}
+ header .topbar>nav#nav>button{padding:8px 5px;font-size:.7rem}
+ .r8-brand-lockup .r8-wordmark{font-size:1.37rem}
+}
+@media(max-width:800px){
+ header .topbar{
+  grid-template-columns:minmax(0,1fr) max-content;
+  grid-template-areas:"brand utilities" "nav nav";
+  row-gap:10px
+ }
+ header .topbar>nav#nav{
+  width:100%!important;
+  border-top:1px solid var(--border)!important;
+  padding-top:8px!important;
+ }
+ header .topbar>.header-actions.one-utility-bar{
   justify-self:end;
-  align-self:center;
-  width:auto;
-  max-width:100%!important;
-  min-width:0;
-  margin:0!important;
-  gap:7px;
-  flex-wrap:wrap!important;
-  justify-content:flex-end;
-  overflow:visible!important
+  width:max-content!important;
+  justify-content:flex-end!important
+ }
 }
-header .topbar>.header-actions.one-utility-bar>.one-utility-group{
-  flex:0 0 auto;
-  max-width:100%
-}
-/* En pantallas medianas, primero la marca y el menú; las utilidades abajo.
-   El menú puede envolver en una segunda línea sin invadir ningún control. */
-@media(max-width:1400px){
-  header .topbar{
-    grid-template-columns:max-content minmax(0,1fr);
-    grid-template-areas:
-      "brand nav"
-      "utilities utilities";
-    row-gap:8px
-  }
-  header .topbar>nav#nav{
-    padding:0;
-    border:0;
-    justify-content:flex-end!important
-  }
-  header .topbar>.header-actions.one-utility-bar{
-    width:100%;
-    padding-top:9px;
-    border-top:1px solid var(--border);
-    justify-self:stretch;
-    justify-content:flex-end
-  }
-}
-/* En tablets y móviles hay tres zonas independientes. Nunca se usa
-   scroll horizontal como reemplazo de una opción visible del menú. */
-@media(max-width:980px){
-  header .topbar{
-    grid-template-columns:minmax(0,1fr);
-    grid-template-areas:
-      "brand"
-      "nav"
-      "utilities";
-    row-gap:9px
-  }
-  header .topbar>nav#nav{
-    justify-content:flex-start!important;
-    padding:8px 0;
-    border-top:1px solid var(--border);
-    border-bottom:1px solid var(--border)
-  }
-  header .topbar>.header-actions.one-utility-bar{
-    border:0;
-    padding:0;
-    justify-content:flex-start;
-    justify-self:stretch
-  }
-}
-@media(max-width:580px){
-  header .topbar{row-gap:10px}
-  header .topbar>nav#nav{gap:2px 4px}
-  header .topbar>nav#nav>button{padding:8px 9px}
-  header .topbar>.header-actions.one-utility-bar{width:100%;gap:7px}
-  header .topbar>.header-actions.one-utility-bar .one-utility-data{min-width:0}
-  header .topbar>.header-actions.one-utility-bar .one-utility-data-actions{
-    flex-wrap:wrap;
-    justify-content:flex-end
-  }
+@media(max-width:390px){
+ header .topbar{column-gap:5px}
+ header .topbar>.header-actions.one-utility-bar{gap:4px}
+ header .topbar>.one-utility-bar .ui-switch button{width:30px;min-width:30px}
+ header .topbar>.one-utility-bar .currency-switch button{width:36px;min-width:36px}
+ header .topbar>.one-utility-bar #oneSettingsBtn.one-minimal-settings-btn{width:34px;min-width:34px}
 }

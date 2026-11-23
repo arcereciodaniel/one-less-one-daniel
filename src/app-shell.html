@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v12.1.1</small>
+      <small class="brand-version">v12.1.2</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -32,33 +32,29 @@
       <button data-view="future" data-optional-module="future"><span class="nav-icon" aria-hidden="true">↗</span><span>Futuro <span class="one-beta-tag">BETA</span></span></button>
       <button type="button" id="manageModulesBtn" class="one-add-module-button" title="Agregar o quitar herramientas" aria-label="Agregar o quitar herramientas" aria-haspopup="dialog" aria-controls="modulesDialog" aria-expanded="false">+</button>
     </nav>
-    <div class="header-actions one-utility-bar" role="group" aria-label="Preferencias y datos">
-      <div class="one-utility-group one-utility-preferences" aria-label="Apariencia">
-        <div class="ui-switch" aria-label="Tema">
-          <button type="button" data-theme-choice="light" title="Tema claro" aria-label="Tema claro">☼</button>
-          <button type="button" data-theme-choice="dark" title="Tema oscuro" aria-label="Tema oscuro">☾</button>
+    <div class="header-actions one-utility-bar" role="group" aria-label="Apariencia, moneda y configuración">
+      <div class="one-utility-preferences">
+        <div class="ui-switch" role="group" aria-label="Tema">
+          <button type="button" data-theme-choice="light" title="Tema claro" aria-label="Tema claro">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          </button>
+          <button type="button" data-theme-choice="dark" title="Tema oscuro" aria-label="Tema oscuro">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 15.1A9 9 0 0 1 8.9 3.6a9 9 0 1 0 11.5 11.5Z"/></svg>
+          </button>
         </div>
       </div>
-      <div class="one-utility-group one-utility-money">
-        <span class="one-utility-heading">MONEDA</span>
-        <div class="currency-switch" aria-label="Moneda de visualización">
-          <button type="button" data-display-currency="CRC" class="active">₡ CRC</button>
-          <button type="button" data-display-currency="USD">$ USD</button>
+      <div class="one-utility-money">
+        <div class="currency-switch" role="group" aria-label="Moneda de visualización">
+          <button type="button" data-display-currency="CRC" class="active">CRC</button>
+          <button type="button" data-display-currency="USD">USD</button>
         </div>
       </div>
-      <div class="one-utility-group one-utility-rate">
-        <button id="fxBtn" class="fx-button" type="button" title="Actualizar tipo de cambio">TC · Sin configurar</button>
-      </div>
-      <div class="one-utility-group one-utility-data">
-        <span class="one-utility-heading">DATOS</span>
-        <div class="one-utility-data-actions">
-          <button id="exportBtn" type="button" title="Solicitar descarga de respaldo JSON">↓ <span>Respaldar</span></button>
-          <button id="importBtn" type="button" title="Restaurar un respaldo JSON">↑ <span>Restaurar</span></button>
-          <button id="oneSettingsBtn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">⚙</button>
-        </div>
-      </div>
-      <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
-      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button id="oneSettingsBtn" class="one-minimal-settings-btn" type="button" title="Configuración" aria-label="Abrir configuración" aria-haspopup="dialog" aria-controls="oneSettingsDialog">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.83l.06.06-2.9 2.9-.06-.06a1.65 1.65 0 0 0-1.83-.33 1.65 1.65 0 0 0-1 1.5V21h-4v-.1a1.65 1.65 0 0 0-1-1.5 1.65 1.65 0 0 0-1.83.33l-.06.06-2.9-2.9.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.5-1H3v-4h.1a1.65 1.65 0 0 0 1.5-1 1.65 1.65 0 0 0-.33-1.83l-.06-.06 2.9-2.9.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.5V3h4v.1a1.65 1.65 0 0 0 1 1.5 1.65 1.65 0 0 0 1.83-.33l.06-.06 2.9 2.9-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.5 1h.1v4h-.1a1.65 1.65 0 0 0-1.5 1Z"/>
+        </svg>
+      </button>
     </div>
   </div>
 </header>
@@ -665,7 +661,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v12.1.1 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v12.1.2 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -787,7 +783,7 @@
   </div>
   <div class="one-settings-group">
    <h3>Moneda y calendario</h3>
-   <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small>Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
    <div id="oneSettingsPaydayMount"></div>
   </div>
   <div class="one-settings-group">
@@ -795,7 +791,12 @@
    <p class="muted">Los archivos de respaldo son locales. Comprobá su descarga antes de restaurar o restablecer datos.</p>
    <div class="one-settings-buttons"><button class="btn secondary" type="button" id="oneSettingsBackup">Respaldar</button><button class="btn secondary" type="button" id="oneSettingsRestore">Restaurar</button></div>
    <div id="oneSettingsMaintenanceMount"></div>
+   <span id="oneBackupNotice" class="one-backup-notice" role="status" hidden></span>
   </div>
+  <button id="fxBtn" type="button" hidden aria-hidden="true" tabindex="-1">Actualizar tipo de cambio</button>
+  <button id="exportBtn" type="button" hidden aria-hidden="true" tabindex="-1">Respaldar</button>
+  <button id="importBtn" type="button" hidden aria-hidden="true" tabindex="-1">Restaurar</button>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
  </div>
 </dialog>
 <dialog id="oneDebtTypesDialog" class="one-settings-dialog" aria-labelledby="oneDebtTypesTitle">
