@@ -2031,6 +2031,9 @@ header .topbar>.one-utility-bar button:focus-visible{
 
 /* V14.2: shared light/dark layout. */
 .one-living-breakdown{margin-top:14px}.one-living-part{border-top:1px solid var(--border,rgba(128,128,128,.25));padding:10px 0}.one-living-part>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}.one-living-part>summary span:before{content:"›";display:inline-block;margin-right:8px}.one-living-part[open]>summary span:before{content:"⌄"}.one-living-part small{font-size:11px;opacity:.7}.one-living-detail{padding:10px 0 2px 16px}.one-living-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0}.one-living-detail .btn{margin-top:8px}
+
+/* V14.3 contextual reading: restrained, text-led and theme neutral. */
+.one-living-context{border-bottom:1px solid var(--border,rgba(128,128,128,.25));padding:8px 0 12px;margin:0 0 10px}.one-living-context h4{margin:0 0 6px;font-size:.95rem}.one-living-context p{margin:4px 0;line-height:1.45}.one-living-context details{margin-top:8px}.one-living-context .one-living-line span:last-child{text-align:right}.one-living-context small{display:block;color:var(--muted)}.one-living-status{display:inline-block;font-size:.76rem;line-height:1.3;color:var(--muted);white-space:normal}.one-living-status.excess,.one-living-status.local,.one-living-status.unassigned{font-weight:600;color:var(--text)}.one-living-status.compensated,.one-living-status.temporary{font-weight:500;color:var(--text)}.one-living-liquidity{font-size:.8rem;line-height:1.4;margin-top:8px}.one-living-detail .one-living-line span:last-child{text-align:right}.one-living-detail .one-living-status{display:block}
 </style>
 <link rel="stylesheet" href="../mobile-pilot/desktop.css">
 </head>
@@ -9240,6 +9243,7 @@ function oneFlexDashboard(r,activeRange,label,universal=false){
  const balance=actualBalanceAt(today);
  const knownBalance=!!latestReconciliation(today)||(data.periods||[]).some(p=>p.date<=today&&p.opening!==null&&p.opening!==undefined&&p.opening!=="")||(data.movements||[]).some(x=>x.date<=today)||(data.reserveMovements||[]).some(x=>x.date<=today);
  const ready=knownBalance&&current.coverage.complete&&current.plannedOut>0;
+ const livingLiquidity=universal?oneLivingLiquidity(balance,current.pending,oneLivingBalanceKnown(today),current.coverage.complete):null;
  get("dashboardHeroNote").innerHTML='<div class="one-available-kicker">Disponible estimado</div><strong class="one-available-value '+(ready&&balance-current.pending<0?"negative":"")+'">'+(ready?money(balance-current.pending):"—")+'</strong><span class="one-available-caption">'+safe(ready?"Después de compromisos presupuestados hasta "+dateLabel(activeRange.end):"Necesitamos un saldo y un presupuesto completo del período vigente.")+'</span>'+(ready?'<details class="one-available-details"><summary>Ver cálculo</summary><div class="one-available-math"><div><span>Saldo operativo hoy</span><strong>'+money(balance)+'</strong></div><div><span>Compromisos pendientes</span><strong>− '+money(current.pending)+'</strong></div><p>No incluye ingresos futuros ni gastos sin presupuestar.</p></div></details>':"");
  get("kpiGrid").innerHTML=[
   v7Kpi("↑","green","Ingresos reales",money(m.income),planText(m.plannedIncome),m.income?"good":""),
@@ -9253,6 +9257,15 @@ function oneFlexDashboard(r,activeRange,label,universal=false){
  const title=usage===null?"Todavía falta un plan comparable":usage<=.85?"Vas dentro de tu presupuesto":usage<=1?"Estás cerca del límite planeado":"Las salidas superaron el plan";
  const description=usage===null?"Creá un presupuesto para este período o elegí un rango cubierto por planes completos.":'Has utilizado '+(usage*100).toFixed(0)+'% del presupuesto de gastos, pagos y aportes a metas.';
  get("dashboardInsight").innerHTML='<div class="v7-insight-icon">↗</div><h3>'+safe(title)+'</h3><p>'+safe(description)+'</p>';
+ if(universal){
+  const context=oneLivingContextReport(r,m,oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings)),today);
+  const states=list.map(x=>context.statuses.get(x.c.id)?.code),count=keys=>states.filter(k=>keys.includes(k)).length;
+  const review=count(["excess","local","unassigned"]),comp=count(["compensated"]),temp=count(["temporary"]),unknown=count(["unknown"]);
+  const headline=context.future?"Planificación futura":review?"Revisá "+review+" categoría(s)":comp?"Hay desviaciones compensadas":temp?"Hay desviaciones temporales":unknown||!m.coverage.complete?"Presupuesto con cobertura parcial":"Categorías comparables dentro del plan";
+  const note=context.future?"Todavía no hay ejecución real en este intervalo.":"Contexto "+label(context.parent)+" · "+comp+" compensada(s), "+temp+" temporal(es), "+unknown+" sin cobertura completa. No cambia tu presupuesto.";
+  get("dashboardInsight").innerHTML='<div class="v7-insight-icon">↗</div><h3>'+safe(headline)+'</h3><p>'+safe(note)+'</p>';
+  if(livingLiquidity?.shortfall>.005)get("dashboardHeroNote").insertAdjacentHTML("beforeend",'<p class="one-living-liquidity">Faltante frente a compromisos del período vigente: '+safe(money(livingLiquidity.shortfall))+'. No considera ingresos futuros; no es una proyección de insolvencia.</p>');
+ }
  const canvas=get("expenseChart"),legend=get("expenseChartLegend"),note=get("oneFlexChartNote");
  if(note){note.hidden=m.coverage.complete;note.textContent="Sin presupuesto completo para comparar este rango."}
  if(canvas){canvas.hidden=!m.coverage.complete;if(m.coverage.complete)drawBarChart(canvas,[label(r)],[m.plannedOut],[m.actualOut])}
@@ -9328,7 +9341,7 @@ function oneLivingSum(category,r,sources,overrides,baseSlice,toCRC){
  return Math.round(amount*100)/100;
 }
 
-function oneUniversalMetrics(r,through=""){
+function oneUniversalMetrics(r,through="",overrideRows=data.livingBudgets||[]){
  const base=oneFlexMetrics(r,through),coverage=oneUniversalSources(data.periods,data.flexBudgets,p=>periodEndDate(p),r);
  const slice=(s,c,scope=r)=>{
   const intent=c.type==="Ingreso"?"receive":"pay",entry=s.native?s.native.entries.find(e=>e.categoryId===c.id):null;
@@ -9342,11 +9355,12 @@ function oneUniversalMetrics(r,through=""){
   }
   return currentToCRC(oneUniversalSlice(amount,s,scope),currency,intent);
  };
- const overrides=data.livingBudgets||[];
+ const overrides=overrideRows;
  const categories=base.categories.map(x=>{
   const hasOverride=overrides.some(e=>e.categoryId===x.c.id&&e.date>=r.start&&e.date<=r.end);
   const known=x.c.type==="Ingreso"?coverage.rows.reduce((sum,s)=>sum+slice(s,x.c),0):oneLivingSum(x.c,r,coverage.rows,overrides,slice,currentToCRC);
-  return {...x,p:coverage.complete||hasOverride||known!==0?known:null,partial:!coverage.complete,hasOverride};
+  const complete=coverage.complete||(x.c.type!=="Ingreso"&&hasOverride&&oneLivingCategoryComplete(r,coverage.rows,overrides,x.c.id));
+  return {...x,p:complete||hasOverride||known!==0?known:null,partial:!complete,hasOverride};
  });
  const plannedIncome=coverage.complete?categories.filter(x=>x.c.type==="Ingreso").reduce((s,x)=>s+x.p,0):null;
  const plannedOut=coverage.complete?categories.filter(x=>x.c.type!=="Ingreso").reduce((s,x)=>s+x.p,0):null;
@@ -9393,6 +9407,84 @@ function oneLivingDistributionChanges(rows,categoryId,parts,original,values,curr
  return next;
 }
 
+function oneLivingCategoryComplete(r,sources,overrides,categoryId){
+ const dates=new Set((overrides||[]).filter(e=>e.categoryId===categoryId&&e.date>=r.start&&e.date<=r.end).map(e=>e.date));
+ if(!dates.size)return false;
+ return oneLivingDays(r).every(date=>dates.has(date)||sources.filter(p=>p.start<=date&&p.end>=date).length===1);
+}
+
+function oneLivingContextParent(r,config){
+ const n=(Date.parse(r.end)-Date.parse(r.start))/86400000+1;
+ const fortnight=oneFlexRange(r.start,config,"fortnight");
+ if(n<=7&&r.end<=fortnight.end&&(r.start!==fortnight.start||r.end!==fortnight.end))return fortnight;
+ if(n<=31){
+  const a=oneFlexRange(r.start,{day:1},"month"),b=oneFlexRange(r.end,{day:1},"month");
+  return {start:a.start,end:b.end,next:b.next};
+ }
+ return {...r};
+}
+
+function oneLivingStatus(item,parent,elapsed,{future=false,closed=false,childOver=false}={}){
+ const known=x=>!!x&&!x.partial&&Number.isFinite(x.p)&&Number.isFinite(x.a);
+ const excess=x=>Math.max(0,Math.round((x.a-x.p)*100)/100);
+ const result=(code,label,amount=0)=>({code,label,amount});
+ if(future)return result("future","Plan futuro");
+ if(!known(item))return result("unknown","Cobertura incompleta");
+ if(item.p<=.005&&item.a>.005)return result("unassigned","Sin asignación",item.a);
+ const over=excess(item)>.005,context=known(parent);
+ if(over||childOver){
+  if(context&&excess(parent)>.005)return result("excess","Exceso acumulado",excess(parent));
+  if(context&&parent.p>.005){
+   if(closed||known(elapsed)&&elapsed.a<=elapsed.p+.005)return result("compensated",closed?"Desviación compensada":"Compensada al corte",over?excess(item):0);
+   return result("temporary","Desviación temporal",over?excess(item):0);
+  }
+  return result("local","Exceso del intervalo",over?excess(item):0);
+ }
+ if(item.p>.005&&item.a>=item.p-.005)return result("used","Presupuesto utilizado");
+ if(!closed&&item.p>.005&&item.a/item.p>=.85)return result("near","Cerca del límite");
+ return result("ok",item.p<=.005?"Sin actividad":"Dentro del plan");
+}
+
+function oneLivingLiquidity(balance,pending,known,complete){
+ if(!known||!complete||!Number.isFinite(balance)||!Number.isFinite(pending)||pending<0)return null;
+ const available=Math.round((balance-pending)*100)/100;
+ return {available,shortfall:Math.max(0,-available),pending};
+}
+
+function oneLivingContextReport(r,m,config,today){
+ const parent=oneLivingContextParent(r,config),same=parent.start===r.start&&parent.end===r.end;
+ const outer=same?m:oneUniversalMetrics(parent,today),future=r.start>today;
+ const elapsed=parent.start>today?null:parent.end<=today?outer:oneUniversalMetrics({start:parent.start,end:today},today);
+ const children=same&&!future&&(Date.parse(r.end)-Date.parse(r.start))/86400000<=61?
+   oneLivingPartition(r,config,"week").filter(p=>p.end<today&&(p.start!==r.start||p.end!==r.end)).map(p=>oneUniversalMetrics(p,today)):[];
+ const outerMap=new Map(outer.categories.map(x=>[x.c.id,x])),elapsedMap=new Map((elapsed?.categories||[]).map(x=>[x.c.id,x]));
+ const childOvers=new Set(children.flatMap(x=>x.categories.filter(c=>!c.partial&&c.p!==null&&c.a>c.p+.005).map(c=>c.c.id)));
+ const statuses=new Map();
+ for(const x of m.categories.filter(x=>x.c.type!=="Ingreso")){
+  const a=outerMap.get(x.c.id),b=elapsedMap.get(x.c.id);
+  const status=oneLivingStatus(x,a,b,{future,closed:parent.end<today,childOver:childOvers.has(x.c.id)});
+  statuses.set(x.c.id,{...status,parentPlan:a?.partial?null:a?.p??null,parentActual:a?.a??null});
+ }
+ return {parent,statuses,future};
+}
+
+function oneLivingBalanceKnown(today){
+ const first=allProjectedRows()[0];
+ return !!latestReconciliation(today)||!!first&&first.date<=today&&first.opening!==null&&first.opening!==undefined&&first.opening!=="";
+}
+
+function oneLivingAdjustmentMessage(next,activeRange,today){
+ const before=oneUniversalMetrics(activeRange,today),after=oneUniversalMetrics(activeRange,today,next);
+ if(!before.coverage.complete||!after.coverage.complete||before.pending===null||after.pending===null)return "\nDisponibilidad: falta cobertura completa del período vigente.";
+ const delta=Math.round((after.pending-before.pending)*100)/100;
+ const scope=dateLabel(activeRange.start)+" – "+dateLabel(activeRange.end);
+ const balance=actualBalanceAt(today),known=oneLivingBalanceKnown(today);
+ const a=oneLivingLiquidity(balance,before.pending,known,true),b=oneLivingLiquidity(balance,after.pending,known,true);
+ return "\nCompromisos pendientes ("+scope+"): "+money(before.pending)+" → "+money(after.pending)+
+   (a&&b?"\nDisponible estimado, sin ingresos futuros: "+money(a.available)+" → "+money(b.available):"\nSaldo de partida sin confirmar.")+
+   (Math.abs(delta)<.005?"\nSin cambio en compromisos del período vigente.":"");
+}
+
 function oneFlexRuntime(){
   const get=id=>document.getElementById(id),cfg=()=>oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings));
   let anchor="",mode="",universal=(data.livingBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null,breakdownMode="week";
@@ -9405,6 +9497,7 @@ function oneFlexRuntime(){
   const hide=(el,v)=>{if(el)el.hidden=v};
   const table=r=>{
     const metrics=universal?oneUniversalMetrics(r,todayIso()):oneFlexMetrics(r,todayIso()),coverage=metrics.coverage;
+    const context=universal?oneLivingContextReport(r,metrics,cfg(),todayIso()):null;
     const exact=plans().find(p=>p.start===r.start&&p.end===r.end),overlap=oneFlexBudgetOverlap(plans(),r.start,r.end);
     const catRows=metrics.categories.filter(x=>x.p>0||x.a>0||x.hasOverride);
     const {income,expense,debt,reimbursements}=metrics;
@@ -9415,18 +9508,30 @@ function oneFlexRuntime(){
     const notice=universal?'<p class="muted">Living Budget · Los cambios reemplazan la asignación de la categoría solo en estas fechas. Los totales superiores se recalculan. Futuro todavía no incorpora estos ajustes.</p>':'<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro utiliza los planes flexibles cuando existen, sin duplicar el presupuesto anterior.</p>';
     const knownOut=metrics.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null).reduce((sum,x)=>sum+x.p,0);
     const budgetSummary=universal?[["Presupuesto de salidas"+(coverage.complete?"":" · conocido"),knownOut],...summary]:summary;
-    return `<div class="plan-quarter-summary">${budgetSummary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados. * Importe conocido de cobertura parcial.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a,partial})=>`<tr><td>${safe(c.name)}${universal&&c.type!=="Ingreso"?` <button class="btn secondary small" type="button" data-living-distribute="${safe(c.id)}">Distribuir</button>`:""}</td><td class="num">${p!==null?money(p)+(partial?" *":""):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${universal?renderBreakdown(r):""}${history}`;
+    const contextHtml=context?renderLivingContext(context,catRows,metrics,r):"";
+    return `<div class="plan-quarter-summary">${budgetSummary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${contextHtml}${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados. * Importe conocido de cobertura parcial.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th>${universal?"<th>Contexto</th>":""}</tr></thead><tbody>${catRows.length?catRows.map(({c,p,a,partial})=>`<tr><td>${safe(c.name)}${universal&&c.type!=="Ingreso"?` <button class="btn secondary small" type="button" data-living-distribute="${safe(c.id)}">Distribuir</button>`:""}</td><td class="num">${p!==null?money(p)+(partial?" *":""):"—"}</td><td class="num">${money(a)}</td><td class="num">${(universal?!partial:coverage.complete)&&p!==null?money(c.type==="Ingreso"?a-p:p-a):"—"}</td>${universal?`<td>${c.type==="Ingreso"?"—":livingStatusHtml(context.statuses.get(c.id))}</td>`:""}</tr>`).join(""):`<tr><td colspan="${universal?5:4}" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${universal?renderBreakdown(r,metrics):""}${history}`;
+  };
+  const livingStatusHtml=status=>status?'<span class="one-living-status '+safe(status.code)+'">'+safe(status.label)+(status.amount>.005?' · '+safe(money(status.amount)):"")+'</span>':"—";
+  const renderLivingContext=(report,rows,m,r)=>{
+    const visible=rows.filter(x=>x.c.type!=="Ingreso"),statuses=visible.map(x=>report.statuses.get(x.c.id)).filter(Boolean);
+    const count=c=>statuses.filter(x=>c.includes(x.code)).length;
+    const review=count(["excess","local","unassigned"]),temporary=count(["temporary"]),compensated=count(["compensated"]),unknown=count(["unknown"]);
+    const text=report.future?"Período futuro: todavía no hay ejecución.":review?review+" categoría(s) requieren revisión del monto acumulado o de su asignación.":compensated?"Hay desviaciones compensadas por el comportamiento acumulado.":temporary?"Hay desviaciones temporales; todavía pueden compensarse.":unknown?"Falta cobertura para emitir una comparación completa.":"Las categorías comparables están dentro de sus asignaciones.";
+    const details=visible.filter(x=>["excess","local","unassigned","temporary","compensated"].includes(report.statuses.get(x.c.id)?.code)).map(x=>{const t=report.statuses.get(x.c.id);return '<div class="one-living-line"><span>'+safe(x.c.name)+'</span><span>'+livingStatusHtml(t)+(t.parentPlan===null?"":'<small> Acumulado: '+safe(money(t.parentActual))+' / '+safe(money(t.parentPlan))+'</small>')+'</span></div>'}).join("");
+    return '<section class="one-living-context"><h4>Lectura del presupuesto</h4><p>'+safe(text)+'</p><p class="muted">Contexto: '+safe(label(report.parent))+' · Ejecución hasta hoy. '+(unknown?unknown+' categoría(s) sin cobertura completa. ':"")+'La distribución diaria es una referencia estimada, no una obligación de gasto diario.</p>'+(details?'<details><summary>Ver desviaciones por categoría</summary>'+details+'</details>':"")+'</section>';
   };
   const scales=["week","fortnight","month","quarter","half","year"];
   const scaleOptions=selected=>scales.map(k=>'<option value="'+k+'" '+(selected===k?"selected":"")+'>'+labels[k]+'</option>').join("");
-  const renderBreakdown=r=>{
+  const renderBreakdown=(r,parentMetrics)=>{
     if(r.start===r.end)return "";
     const parts=oneLivingPartition(r,cfg(),breakdownMode);
     const heading='<div class="one-flex-toolbar"><h3>Desglose por períodos</h3><label>Expandir por <select data-living-breakdown>'+scaleOptions(breakdownMode)+'</select></label></div>';
     if(parts.length>80)return '<section class="v7-card">'+heading+'<p class="muted">Elegí una escala más amplia para ver hasta 80 bloques.</p></section>';
+    const today=todayIso(),parentElapsed=r.start>today?null:r.end<=today?parentMetrics:oneUniversalMetrics({start:r.start,end:today},today);
+    const byId=new Map(parentMetrics.categories.map(x=>[x.c.id,x])),elapsedById=new Map((parentElapsed?.categories||[]).map(x=>[x.c.id,x]));
     const rows=parts.map(p=>{
-      const m=oneUniversalMetrics(p,todayIso()),known=m.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null),total=known.reduce((sum,x)=>sum+x.p,0);
-      return '<details class="one-living-part"><summary><span><strong>'+safe(label(p))+'</strong>'+(p.partial?' <small>Parcial</small>':'')+'</span><strong>'+(known.length?money(total):"—")+(m.coverage.complete?"":" *")+'</strong></summary><div class="one-living-detail"><p class="muted">Gastos y aportes registrados: '+money(m.actualOut)+'</p>'+known.filter(x=>x.p>0||x.a>0||x.hasOverride).map(x=>'<div class="one-living-line"><span>'+safe(x.c.name)+'</span><strong>'+money(x.p)+'</strong></div>').join("")+'<button class="btn secondary small" type="button" data-living-part-start="'+p.start+'" data-living-part-end="'+p.end+'">Editar este intervalo</button></div></details>';
+      const m=oneUniversalMetrics(p,today),known=m.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null),total=known.reduce((sum,x)=>sum+x.p,0);
+      return '<details class="one-living-part"><summary><span><strong>'+safe(label(p))+'</strong>'+(p.partial?' <small>Parcial</small>':'')+'</span><strong>'+(known.length?money(total):"—")+(m.coverage.complete?"":" *")+'</strong></summary><div class="one-living-detail"><p class="muted">Gastos y aportes registrados: '+money(m.actualOut)+'</p>'+known.filter(x=>x.p>0||x.a>0||x.hasOverride).map(x=>'<div class="one-living-line"><span>'+safe(x.c.name)+'</span><span><strong>'+money(x.a)+' / '+money(x.p)+'</strong> '+livingStatusHtml(oneLivingStatus(x,byId.get(x.c.id),elapsedById.get(x.c.id),{future:p.start>today,closed:r.end<today}))+'</span></div>').join("")+'<button class="btn secondary small" type="button" data-living-part-start="'+p.start+'" data-living-part-end="'+p.end+'">Editar este intervalo</button></div></details>';
     }).join("");
     return '<section class="v7-card one-living-breakdown">'+heading+'<p class="muted">Los bloques no se superponen. Se recortan al límite de la vista. * Cobertura parcial.</p>'+rows+'</section>';
   };
@@ -9533,7 +9638,7 @@ function oneFlexRuntime(){
       d.values=inputs.map(x=>Number(x.value));
       const next=oneLivingDistributionChanges(previous,d.categoryId,d.parts,d.original,d.values,"CRC");
       if(next===previous){distDialog.close();return}
-      if(!confirm("¿Guardar distribución? Total conocido: "+distLabel(d.initial)+" → "+distLabel(distTotal(d.values))+". Los ajustes quedan en CRC. Los movimientos no cambiarán."))return;
+      if(!confirm("¿Guardar distribución? Total conocido: "+distLabel(d.initial)+" → "+distLabel(distTotal(d.values))+". Los ajustes quedan en CRC. Los movimientos no cambiarán."+oneLivingAdjustmentMessage(next,oneFlexRange(todayIso(),cfg()),todayIso())))return;
       data.livingBudgets=next;save();
     }catch(err){if(previous===undefined)delete data.livingBudgets;else data.livingBudgets=previous;return alert("No se guardó la distribución. "+err.message)}
     distDialog.close();universal=true;redraw();
@@ -9568,7 +9673,7 @@ function oneFlexRuntime(){
       }
       if(!changes.length){livingDialog.close();return}
       const delta=changes.reduce((s,x)=>s+x.delta,0);
-      if(!confirm("¿Guardar "+changes.length+" ajuste(s) para "+label(livingEdit.r)+"? El presupuesto conocido "+(delta>=0?"aumentará ":"disminuirá ")+money(Math.abs(delta))+". No cambia ningún movimiento real."))return;
+      if(!confirm("¿Guardar "+changes.length+" ajuste(s) para "+label(livingEdit.r)+"? El presupuesto conocido "+(delta>=0?"aumentará ":"disminuirá ")+money(Math.abs(delta))+". No cambia ningún movimiento real."+oneLivingAdjustmentMessage(next,oneFlexRange(todayIso(),cfg()),todayIso())))return;
       data.livingBudgets=next;save();
     }catch(err){if(previous===undefined)delete data.livingBudgets;else data.livingBudgets=previous;return alert("No se guardaron los ajustes. "+(err.message||"Revisá los datos."))}
     livingDialog.close();livingEdit=null;universal=true;redraw();
@@ -9628,7 +9733,7 @@ function oneFlexRuntime(){
     if(b.hasAttribute("data-flex-export")){
       const r=range(),m=universal?oneUniversalMetrics(r,todayIso()):oneFlexMetrics(r,todayIso()),currency=displayCurrency();
       const amount=v=>v===null?"":Math.round(fromCRC(v,currency)*100)/100;
-      const rows=[["Desde","Hasta","Categoría","Tipo","Moneda de visualización","Presupuesto","Real hasta hoy","Diferencia favorable","Cobertura del plan"],...m.categories.filter(x=>x.p>0||x.a>0).map(x=>[r.start,r.end,x.c.name,x.c.type,currency,amount(x.p),amount(x.a),amount(x.p===null?null:x.c.type==="Ingreso"?x.a-x.p:x.p-x.a),m.coverage.complete?"Completa":"Incompleta"])];
+      const rows=[["Desde","Hasta","Categoría","Tipo","Moneda de visualización","Presupuesto","Real hasta hoy","Diferencia favorable","Cobertura del plan"],...m.categories.filter(x=>x.p>0||x.a>0||x.hasOverride).map(x=>[r.start,r.end,x.c.name,x.c.type,currency,amount(x.p),amount(x.a),amount(x.p===null||x.partial||(!universal&&!m.coverage.complete)?null:x.c.type==="Ingreso"?x.a-x.p:x.p-x.a),(universal?!x.partial:m.coverage.complete)?"Completa":"Incompleta"])];
       download("presupuesto-"+r.start+"-"+r.end+".csv","\ufeff"+rows.map(row=>row.map(csvEscape).join(",")).join("\n"),"text/csv");return;
     }
     if(b.hasAttribute("data-flex-open")){
