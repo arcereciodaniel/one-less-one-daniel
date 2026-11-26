@@ -46,7 +46,7 @@ function confirmedFlows(){return [...(data.movements||[]).map(m=>({id:"m:"+m.id,
  localCSS+="\n#v17NativeHost{display:none!important}.olo-demo .demo-utility select{width:auto;min-width:0;height:34px;font-size:.75rem}.olo-demo .demo-utility{flex-wrap:wrap}";
  assert(!/<\/script/i.test(script));
  native=native.replace(/<body([^>]*)>/,'<body class="olo-demo"><div id="v17NativeHost" hidden inert>');
- native=native.replace("</body>",()=>"</div><style>"+localCSS+"</style>"+markup+"<script>(function(){try{"+script+"}catch(error){document.getElementById('rc-content').textContent='No se pudo iniciar la candidata. Los registros de prueba no se sobrescribieron. '+error.message;console.error(error)}})();</script></body>");
+ const closing=native.lastIndexOf("</body>");assert(closing>0);native=native.slice(0,closing)+"</div><style>"+localCSS+"</style>"+markup+"<script>(function(){try{"+script+"}catch(error){document.getElementById('rc-content').textContent='No se pudo iniciar la candidata. Los registros de prueba no se sobrescribieron. '+error.message;console.error(error)}})();</script>"+native.slice(closing);
  assert(!/<script\s+src=/i.test(native));assert(!native.includes("rastro_lab_v7_1_data_v1"));assert(!native.includes("daniel_finanzas_local_v1"));assert(native.includes("connect-src 'none'"));
  return native;
 }
