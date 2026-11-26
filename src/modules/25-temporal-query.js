@@ -20,7 +20,7 @@ function keyFor(p){return p.key||((p.quarter&&p.n)?`${p.quarter}-${p.n}`:"")}
 
 function auditLedger(raw){if(!raw||typeof raw!=="object"||Array.isArray(raw))throw Error("Invalid ledger");const names=["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans","flexBudgets","livingBudgets"],counts={},issues=[];for(const name of names){const rows=raw[name];counts[name]=Array.isArray(rows)?rows.length:0;if(rows!==undefined&&!Array.isArray(rows))issues.push({code:"invalid-list",field:name});if(["flexBudgets","livingBudgets"].includes(name))continue;const seen=new Set();for(const r of Array.isArray(rows)?rows:[]){const k=r&&typeof r==="object"?(name==="periods"?keyFor(r):r.id):null;if(!k){issues.push({code:"missing-id",field:name});continue}if(seen.has(k))issues.push({code:"duplicate-id",field:name,id:k});seen.add(k)}}const slots=new Set(),categories=new Set((Array.isArray(raw.categories)?raw.categories:[]).map(c=>c?.id));for(const p of Array.isArray(raw.periods)?raw.periods:[]){if(!p||typeof p!=="object")continue;const k=keyFor(p),slot=`${p.budgetMonth}|${p.fortnight}`;if(!validMonth(p.budgetMonth)||![1,2].includes(Number(p.fortnight))||!validDate(p.date))issues.push({code:"invalid-period",id:k});if(slots.has(slot))issues.push({code:"duplicate-slot",id:k});slots.add(slot);for(const [cid,amount] of Object.entries(p.categoryBudgets||{})){if(!categories.has(cid))issues.push({code:"unknown-category",id:k,categoryId:cid});try{minor(amount)}catch{issues.push({code:"invalid-budget-amount",id:k,categoryId:cid})}const currency=p.categoryBudgetCurrencies?.[cid]||"CRC";if(!["CRC","USD"].includes(currency))issues.push({code:"invalid-currency",id:k,categoryId:cid})}}return {counts,issues,requiresReconciliation:counts.flexBudgets>0||counts.livingBudgets>0,legacyOnly: true}}
 
-function queryBudget(raw,scope,endFor){if(!scope||!["financial","calendar"].includes(scope.basis)||typeof endFor!=="function")throw Error("Explicit basis and original period end resolver required");const audit=auditLedger(raw);if(audit.issues.some(x=>["periods","categories"].includes(x.field)||["invalid-period","duplicate-slot","unknown-category","invalid-budget-amount","invalid-currency"].includes(x.code)))throw Error("Review invalid budget records before querying");const rows=(raw.periods||[]).map(p=>{const end=endFor(p);if(!validDate(end)||end<p.date)throw Error("Invalid original period end");return {p,key:keyFor(p),start:p.date,end}}).sort((a,b)=>a.start.localeCompare(b.start));for(let i=1;i<rows.length;i++)if(rows[i].start<=rows[i-1].end)throw Error("Overlapping original periods");let selected=[],range=null,missingSlots=[];if(scope.basis==="financial"){if(scope.mode==="fortnight"){selected=rows.filter(r=>r.key===scope.key);if(selected.length!==1)throw Error("Unknown financial period")}else{const months=financialMonths(scope.month,scope.mode);selected=rows.filter(r=>months.includes(r.p.budgetMonth));for(const m of months)for(const q of [1,2])if(!selected.some(r=>r.p.budgetMonth===m&&Number(r.p.fortnight)===q))missingSlots.push(`${m}-Q${q}`)}if(selected.length)range={start:selected[0].start,end:selected.at(-1).end}}else{range=calendarRange(scope.anchor,scope.mode,scope.end);selected=rows.filter(r=>r.start<=range.end&&r.end>=range.start)}const whole=selected.filter(r=>scope.basis==="financial"||r.start>=range.start&&r.end<=range.end),partial=selected.filter(r=>!whole.includes(r));let gaps=[];if(range){let cursor=range.start;for(const r of selected){const start=r.start<range.start?range.start:r.start,end=r.end>range.end?range.end:r.end;if(start>cursor)gaps.push({start:cursor,end:shiftDate(start,-1)});if(end>=cursor)cursor=shiftDate(end,1)}if(cursor<=range.end)gaps.push({start:cursor,end:range.end})}const byCategory=new Map();for(const r of whole)for(const [cid,amount] of Object.entries(r.p.categoryBudgets||{})){const currency=r.p.categoryBudgetCurrencies?.[cid]||"CRC",k=JSON.stringify([cid,currency]);const cents=(byCategory.get(k)?.minor||0)+minor(amount);if(!Number.isSafeInteger(cents))throw Error("Unsafe aggregate");byCategory.set(k,{categoryId:cid,currency,minor:cents})}const knownSubtotal=[...byCategory.values()].sort((a,b)=>a.categoryId.localeCompare(b.categoryId)||a.currency.localeCompare(b.currency));const complete=selected.length>0&&!partial.length&&!missingSlots.length&&!gaps.length;return {basis:scope.basis,mode:scope.mode,range,coverage:complete?"complete":"partial",periodKeys:selected.map(r=>r.key),partialPeriods:partial.map(({key,start,end})=>({key,start,end})),missingSlots,gaps,knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,requiresReconciliation:audit.requiresReconciliation}}
+function queryBudgetLegacy(raw,scope,endFor){if(!scope||!["financial","calendar"].includes(scope.basis)||typeof endFor!=="function")throw Error("Explicit basis and original period end resolver required");const audit=auditLedger(raw);if(audit.issues.some(x=>["periods","categories"].includes(x.field)||["invalid-period","duplicate-slot","unknown-category","invalid-budget-amount","invalid-currency"].includes(x.code)))throw Error("Review invalid budget records before querying");const rows=(raw.periods||[]).map(p=>{const end=endFor(p);if(!validDate(end)||end<p.date)throw Error("Invalid original period end");return {p,key:keyFor(p),start:p.date,end}}).sort((a,b)=>a.start.localeCompare(b.start));for(let i=1;i<rows.length;i++)if(rows[i].start<=rows[i-1].end)throw Error("Overlapping original periods");let selected=[],range=null,missingSlots=[];if(scope.basis==="financial"){if(scope.mode==="fortnight"){selected=rows.filter(r=>r.key===scope.key);if(selected.length!==1)throw Error("Unknown financial period")}else{const months=financialMonths(scope.month,scope.mode);selected=rows.filter(r=>months.includes(r.p.budgetMonth));for(const m of months)for(const q of [1,2])if(!selected.some(r=>r.p.budgetMonth===m&&Number(r.p.fortnight)===q))missingSlots.push(`${m}-Q${q}`)}if(selected.length)range={start:selected[0].start,end:selected.at(-1).end}}else{range=calendarRange(scope.anchor,scope.mode,scope.end);selected=rows.filter(r=>r.start<=range.end&&r.end>=range.start)}const whole=selected.filter(r=>scope.basis==="financial"||r.start>=range.start&&r.end<=range.end),partial=selected.filter(r=>!whole.includes(r));let gaps=[];if(range){let cursor=range.start;for(const r of selected){const start=r.start<range.start?range.start:r.start,end=r.end>range.end?range.end:r.end;if(start>cursor)gaps.push({start:cursor,end:shiftDate(start,-1)});if(end>=cursor)cursor=shiftDate(end,1)}if(cursor<=range.end)gaps.push({start:cursor,end:range.end})}const byCategory=new Map();for(const r of whole)for(const [cid,amount] of Object.entries(r.p.categoryBudgets||{})){const currency=r.p.categoryBudgetCurrencies?.[cid]||"CRC",k=JSON.stringify([cid,currency]);const cents=(byCategory.get(k)?.minor||0)+minor(amount);if(!Number.isSafeInteger(cents))throw Error("Unsafe aggregate");byCategory.set(k,{categoryId:cid,currency,minor:cents})}const knownSubtotal=[...byCategory.values()].sort((a,b)=>a.categoryId.localeCompare(b.categoryId)||a.currency.localeCompare(b.currency));const complete=selected.length>0&&!partial.length&&!missingSlots.length&&!gaps.length;return {basis:scope.basis,mode:scope.mode,range,coverage:complete?"complete":"partial",periodKeys:selected.map(r=>r.key),partialPeriods:partial.map(({key,start,end})=>({key,start,end})),missingSlots,gaps,knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,requiresReconciliation:audit.requiresReconciliation}}
 // V15.4: partition a parent's inclusive dates without creating budget allocations.
 function weeklyBreakdown(start,end,events){
  if(!validDate(start)||!validDate(end)||end<start||!Array.isArray(events))throw Error("Invalid weekly breakdown");
@@ -75,6 +75,50 @@ function allocationPreview(parent,record,index,amount,mode){
  const total=next.reduce((s,n)=>s+n,0);
  if(!Number.isSafeInteger(total))throw Error("Unsafe total");
  return {weeks:state.weeks,base,next,oldTotal:state.total,total,currency:parent.currency,start:parent.start,end:parent.end};
+}
+// V15.5b: only confirmed whole weekly blocks can resolve a partial parent.
+// Whole financial periods always use the canonical parent once.
+function queryBudget(raw,scope,endFor){
+ const base=queryBudgetLegacy(raw,scope,endFor);
+ if(scope.basis!=="calendar"||!base.partialPeriods.length||!Array.isArray(raw.v15WeeklyAllocations)||!raw.v15WeeklyAllocations.length)return base;
+ const byCategory=new Map(base.knownSubtotal.map(x=>[JSON.stringify([x.categoryId,x.currency]),{...x}]));
+ const unresolved=new Set(),review=[],knownWeekly=new Set();
+ for(const part of base.partialPeriods){
+  const p=raw.periods.find(x=>keyFor(x)===part.key);
+  for(const [cid,amount] of Object.entries(p.categoryBudgets||{})){
+   const total=minor(amount),currency=p.categoryBudgetCurrencies?.[cid]||"CRC";
+   if(total===0)continue;
+   const category=raw.categories.find(c=>c.id===cid);
+   const matches=raw.v15WeeklyAllocations.filter(x=>x?.periodKey===part.key&&x.categoryId===cid);
+   let state=null;
+   if(matches.length===1&&category?.type==="Gasto"&&category.budgetable!==false){
+    try{state=allocationState({start:part.start,end:part.end,amount,currency},matches[0])}catch{}
+   }
+   if(!state||state.stale||!state.amounts){
+    unresolved.add(cid);
+    if(matches.length)review.push({periodKey:part.key,categoryId:cid});
+    continue;
+   }
+   let included=0,cut=false,hasWhole=false;
+   state.weeks.forEach((w,i)=>{
+    if(w.start>base.range.end||w.end<base.range.start)return;
+    if(w.start>=base.range.start&&w.end<=base.range.end){included+=state.amounts[i];hasWhole=true}
+    else if(state.amounts[i]!==0)cut=true;
+   });
+   if(cut)unresolved.add(cid);
+   if(hasWhole){
+    knownWeekly.add(cid);
+    const k=JSON.stringify([cid,currency]),sum=(byCategory.get(k)?.minor||0)+included;
+    if(!Number.isSafeInteger(sum))throw Error("Unsafe aggregate");
+    byCategory.set(k,{categoryId:cid,currency,minor:sum});
+   }
+  }
+ }
+ const knownSubtotal=[...byCategory.values()].sort((a,b)=>a.categoryId.localeCompare(b.categoryId)||a.currency.localeCompare(b.currency));
+ const covered=!base.gaps.length&&!base.missingSlots.length&&base.periodKeys.length>0;
+ const complete=covered&&unresolved.size===0;
+ const resolvedCategoryIds=covered?[...new Set(knownSubtotal.map(x=>x.categoryId))].filter(cid=>!unresolved.has(cid)):[];
+ return {...base,coverage:complete?"complete":"partial",knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,resolvedCategoryIds,unresolvedCategoryIds:[...unresolved],weeklyCategoryIds:[...knownWeekly],allocationReview:review};
 }
 return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview};
 

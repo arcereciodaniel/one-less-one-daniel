@@ -233,12 +233,15 @@ function oneV15RenderDatePlan(level,r){
     const visible=rows.filter(x=>(x.c.type==="Ingreso")===income);
     return '<div class="r8-section"><div class="r8-section-heading"><span>'+title+'</span><strong>'+money(visible.reduce((s,x)=>s+x.actual,0))+'</strong></div>'+ (visible.length?visible.map(x=>{
       const amounts=x.planned.filter(p=>p.minor!==0).map(p=>originalMoney(p.minor/100,p.currency)).join(" + ");
-      const label=complete?(amounts||"Sin asignación"):(amounts?"Subtotal completo: "+amounts:"Sin asignación para este intervalo");
+      const exact=complete||result?.resolvedCategoryIds?.includes(x.c.id);
+      const hasKnown=x.planned.length>0;
+      const displayAmounts=amounts||(hasKnown?x.planned.map(p=>originalMoney(0,p.currency)).join(" + "):"");
+      const label=exact?(displayAmounts?"Asignado: "+displayAmounts:"Sin asignación"):(displayAmounts?"Subtotal asignado: "+displayAmounts:"Sin asignación completa");
       return '<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(x.c.name)+'</span><small class="muted">'+safe(label)+'</small></span><strong>'+safe(money(x.actual))+'</strong></div>';
     }).join(""):'<div class="r8-empty-row">Sin registros</div>')+'</div>';
   };
   const status=complete?"Presupuesto definido":result?"Presupuesto sin asignación completa":"Presupuesto pendiente de revisión";
-  const note=((data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"")+(Array.isArray(data.v15WeeklyAllocations)&&data.v15WeeklyAllocations.length?" · Distribuciones semanales: ver quincena":"");
+  const note=((data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"")+(result?.allocationReview?.length?" · Distribuciones en revisión":"");
   document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+'</div></article></div></section>';
 }
 
@@ -313,10 +316,14 @@ function oneV15ResetAllocationFields(){
  const d=oneV15AllocationDraft;if(!d)return;
  const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
  const week=document.getElementById("v15AllocationWeek"),amount=document.getElementById("v15AllocationAmount");
- const undo=document.getElementById("v15AllocationUndo");
+ const undo=document.getElementById("v15AllocationUndo"),review=document.getElementById("v15AllocationReview");
+ d.reviewCategory=null;d.preview=null;review.hidden=true;
  try{
   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec);
-  if(state.stale)throw Error("El presupuesto original cambió. La distribución anterior está en revisión.");
+  if(state.stale){
+   review.hidden=false;week.replaceChildren();amount.value="";
+   throw Error("El presupuesto original cambió. Revisá la distribución para conservar el monto vigente.");
+  }
   week.replaceChildren(...state.weeks.map((w,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=dateLabel(w.start)+" – "+dateLabel(w.end);return o}));
   document.getElementById("v15AllocationCurrency").textContent=parent.currency;
   const initial=oneV15QueryCore.allocationPreview(parent,rec,0,(state.amounts?.[0]??Math.ceil(state.total/state.weeks.length))/100,"maintain");
@@ -333,8 +340,12 @@ function oneV15PreviewAllocation(){
  try{
   const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),field=document.getElementById("v15AllocationAmount");
+  const stale=oneV15QueryCore.allocationState(parent,rec).stale;
+  if(stale&&d.reviewCategory!==c.id)throw Error("Revisá la distribución anterior antes de continuar.");
   if(field.value===""||!field.validity.valid)throw Error("Ingresá un monto válido.");
-  const preview=oneV15QueryCore.allocationPreview(parent,rec,Number(document.getElementById("v15AllocationWeek").value),Number(field.value),document.getElementById("v15AllocationMode").value);
+  const mode=document.getElementById("v15AllocationMode").value;
+  if(stale&&mode!=="maintain")throw Error("Primero conservá el presupuesto vigente.");
+  const preview=oneV15QueryCore.allocationPreview(parent,stale?null:rec,Number(document.getElementById("v15AllocationWeek").value),Number(field.value),mode);
   d.preview={categoryId:c.id,...preview};
   slot.innerHTML=preview.weeks.map((w,i)=>'<div class="r8-budget-row"><span>'+safe(dateLabel(w.start)+" – "+dateLabel(w.end))+'</span><strong>'+safe(originalMoney(preview.next[i]/100,preview.currency))+'</strong></div>').join("")+'<div class="r8-section"><div class="r8-section-heading"><span>Total anterior</span><strong>'+safe(originalMoney(preview.oldTotal/100,preview.currency))+'</strong></div><div class="r8-section-heading"><span>Nuevo total</span><strong>'+safe(originalMoney(preview.total/100,preview.currency))+'</strong></div></div>';
   confirmBtn.disabled=false;
@@ -347,13 +358,16 @@ function oneV15PersistAllocation(undo=false){
   oneStorageAssertCurrent();
   const cid=document.getElementById("v15AllocationCategory").value,p=periodByKey(d.key),c=categoryById(cid),parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c);
   const state=oneV15QueryCore.allocationState(parent,rec);
-  if(state.stale)throw Error("El presupuesto original cambió.");
+  if(state.stale&&(undo||d.reviewCategory!==cid))throw Error("El presupuesto original cambió.");
   const staged=clone(data),target=staged.periods.find(x=>periodKey(x)===d.key);
   const rows=Array.isArray(staged.v15WeeklyAllocations)?staged.v15WeeklyAllocations:[];
   staged.v15WeeklyAllocations=rows.filter(x=>!(x.periodKey===d.key&&x.categoryId===cid));
   if(undo){
-   if(!rec?.undo)throw Error("No hay una distribución para revertir.");
-   if(rec.undo.hadAmount)target.categoryBudgets[cid]=rec.undo.amount;else delete target.categoryBudgets[cid];
+   if(!rec?.undo||typeof rec.undo.hadAmount!=="boolean")throw Error("No hay una distribución válida para revertir.");
+   const amount=rec.undo.amount;
+   if(!Number.isFinite(amount)||amount<0||!Number.isSafeInteger(Math.round(amount*100))||Math.abs(amount*100-Math.round(amount*100))>1e-5||(!rec.undo.hadAmount&&amount!==0))throw Error("El respaldo de distribución requiere revisión.");
+   if(rec.undo.previous&&(rec.undo.previous.periodKey!==d.key||rec.undo.previous.categoryId!==cid))throw Error("El respaldo de distribución no corresponde a esta categoría.");
+   if(rec.undo.hadAmount)target.categoryBudgets[cid]=amount;else delete target.categoryBudgets[cid];
    if(rec.undo.previous)staged.v15WeeklyAllocations.push(rec.undo.previous);
   }else{
    oneV15PreviewAllocation();const v=d.preview;if(!v||v.categoryId!==cid)throw Error("Revisá la vista previa.");
@@ -373,10 +387,26 @@ function oneV15BindAllocation(){
  const dialog=document.getElementById("v15AllocationDialog");
  document.getElementById("v15AllocationCancel").addEventListener("click",()=>dialog.close());
  document.getElementById("v15AllocationCategory").addEventListener("change",oneV15ResetAllocationFields);
+ document.getElementById("v15AllocationReview").addEventListener("click",()=>{
+  const d=oneV15AllocationDraft,p=d&&periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  try{
+   if(!d||JSON.stringify(data)!==d.ledger)throw Error("Los datos cambiaron. Volvé a abrir la distribución.");
+   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec);
+   if(!state.stale)return;
+   d.reviewCategory=c.id;
+   const week=document.getElementById("v15AllocationWeek");
+   week.replaceChildren(...state.weeks.map((w,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=dateLabel(w.start)+" – "+dateLabel(w.end);return o}));
+   document.getElementById("v15AllocationCurrency").textContent=parent.currency;
+   document.getElementById("v15AllocationAmount").value=String(Math.ceil(state.total/state.weeks.length)/100);
+   document.getElementById("v15AllocationMode").value="maintain";
+   document.getElementById("v15AllocationReview").hidden=true;
+   oneV15PreviewAllocation();
+  }catch(error){document.getElementById("v15AllocationPreview").textContent=error.message;}
+ });
  document.getElementById("v15AllocationWeek").addEventListener("change",()=>{
   const d=oneV15AllocationDraft,p=d&&periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
   try{
-   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec),base=state.amounts||oneV15QueryCore.allocationPreview(parent,rec,0,Math.ceil(state.total/state.weeks.length)/100,"maintain").base;
+   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec),base=state.amounts||oneV15QueryCore.allocationPreview(parent,state.stale&&d.reviewCategory===c.id?null:rec,0,Math.ceil(state.total/state.weeks.length)/100,"maintain").base;
    document.getElementById("v15AllocationAmount").value=String(base[Number(document.getElementById("v15AllocationWeek").value)]/100);
   }catch{}
   oneV15PreviewAllocation();
@@ -402,8 +432,9 @@ function oneV15WeekDetail(p){
   return '<details class="r8-unused" data-v15-week-start="'+safe(w.start)+'" data-v15-week-end="'+safe(w.end)+'"><summary>'+safe(label)+'</summary><div class="r8-section"><div class="r8-section-heading"><span>Ingresos registrados</span><strong>'+safe(money(income))+'</strong></div><div class="r8-section-heading"><span>Egresos registrados</span><strong>'+safe(money(out))+'</strong></div>'+renderEvents(w.events)+'</div>'+oneV15AllocationRows(p,w,index)+'</details>';
  }).join("");
  const outside=breakdown.outside.length?'<details class="r8-unused" data-v15-week-outside><summary>Registros fuera de fecha asignados a esta quincena</summary>'+renderEvents(breakdown.outside)+'</details>':"";
- const records=Array.isArray(data.v15WeeklyAllocations)?data.v15WeeklyAllocations.filter(x=>x.periodKey===key):[];
- const label=records.length?"Actividad registrada · asignaciones semanales (si vigentes)":"Actividad registrada · presupuesto sin distribución semanal";
+ const records=Array.isArray(data.v15WeeklyAllocations)?data.v15WeeklyAllocations.filter(x=>x?.periodKey===key):[];
+ const review=records.some(rec=>{try{return oneV15QueryCore.allocationState(oneV15AllocationParent(p,categoryById(rec.categoryId)),rec).stale}catch{return true}});
+ const label=review?"Actividad registrada · distribuciones en revisión":records.length?"Actividad registrada · asignaciones semanales":"Actividad registrada · presupuesto sin distribución semanal";
  return '<details class="r8-unused" data-v15-week-detail="'+safe(key)+'"><summary>Semanas</summary><div class="r8-card-dates">'+label+'</div>'+sections+outside+'<button type="button" class="btn secondary small" data-v15-allocate="'+safe(key)+'">Distribuir presupuesto</button></details>';
 }
 
