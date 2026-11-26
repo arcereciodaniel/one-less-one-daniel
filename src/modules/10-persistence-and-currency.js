@@ -180,6 +180,19 @@ function load(){
     const saved=localStorage.getItem(STORAGE_KEY);
     storageHasSavedData=saved!==null;
     if(saved!==null){
+      // V15 recovery: retain a separate, byte-for-byte copy before legacy migration.
+      // Daniel and Lab use different STORAGE_KEY values.
+      const recoveryKey=STORAGE_KEY+"_pre_v15_recovery_v1";
+      try{
+        if(localStorage.getItem(recoveryKey)===null){
+          localStorage.setItem(recoveryKey,saved);
+          if(localStorage.getItem(recoveryKey)!==saved)throw Error("No se verificó el respaldo V15.");
+        }
+      }catch(error){
+        // Continue reading the real ledger, but prevent every financial write.
+        storageReadError=true;
+        console.error("No se pudo respaldar el historial antes de recuperar V15; guardado bloqueado.",error);
+      }
       // Guardar una copia intacta antes de reinterpretar categorías/periodos.
       try{if(localStorage.getItem(INTEGRITY_SNAPSHOT_KEY)===null)localStorage.setItem(INTEGRITY_SNAPSHOT_KEY,saved)}
       catch(e){console.warn("No se pudo crear copia preventiva del historial",e)}

@@ -7,53 +7,6 @@ function oneFutureDates(start,end){
  const result=[];for(let date=start;date<=end;date=addDaysIso(date,1))result.push(date);
  return result;
 }
-function oneFuturePlanSources(legacy,native,endFor,flex){
- const original=(legacy||[]).filter(p=>p?.date).map(p=>({start:p.date,end:endFor(p),legacy:p}));
- if(!flex)return original.sort((a,b)=>a.start.localeCompare(b.start));
- const plans=(native||[]).map(p=>({start:p.start,end:p.end,native:p}));
- return [...original.filter(p=>!plans.some(n=>p.start<=n.end&&p.end>=n.start)),...plans].sort((a,b)=>a.start.localeCompare(b.start));
-}
-
-function oneFutureIncomeAllocations(amount,dates){
- if(!(amount>0)||!dates.length)return [];
- const count=new Map();for(const date of dates)count.set(date,(count.get(date)||0)+1);
- return [...count].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,n])=>({date,amount:amount*n/dates.length}));
-}
-
-function oneFutureMoney(value){return Number(value.toFixed(2))}
-
-function oneFutureLivingSources(sources,overrides){
- const gaps=[...new Set(overrides.map(e=>e.date).filter(date=>!sources.some(p=>p.start<=date&&p.end>=date)))].sort();
- const synthetic=[];
- for(const date of gaps){
-  const last=synthetic.at(-1);
-  if(last&&addDaysIso(last.end,1)===date&&last.start.slice(0,7)===date.slice(0,7))last.end=date;
-  else synthetic.push({start:date,end:date,synthetic:true});
- }
- return [...sources,...synthetic].sort((a,b)=>a.start.localeCompare(b.start));
-}
-
-function oneFutureWeighted(amount,dates,weights){
- const cents=Math.round(Math.max(0,amount)*100),sum=weights.reduce((s,v)=>s+Math.max(0,v),0);
- let cursor=0,previous=0;
- return dates.map((date,i)=>{
-  cursor+=sum?Math.max(0,weights[i]):1;
-  const end=i===dates.length-1?cents:Math.round(cents*cursor/(sum||dates.length));
-  const amount=(end-previous)/100;previous=end;return {date,amount};
- });
-}
-
-function oneFutureLivingDaily(source,c,overrides,dates){
- const entry=source.native?.entries.find(e=>e.categoryId===c.id);
- const raw=source.synthetic?0:source.native?num(entry?.amount):num(source.legacy?.categoryBudgets?.[c.id]);
- const currency=normalizeCurrency(source.native?entry?.currency:source.legacy?.categoryBudgetCurrencies?.[c.id]);
- const index=new Map(overrides.filter(e=>e.categoryId===c.id&&e.date>=source.start&&e.date<=source.end).map(e=>[e.date,e]));
- return dates.map(date=>{
-  const e=index.get(date);
-  return e?currentToCRC(e.amount,e.currency,"pay"):currentToCRC(oneUniversalSlice(raw,source,{start:date,end:date}),currency,"pay");
- });
-}
-
 function oneFutureForecast(asOf=todayIso(),days=90){
  if(!restoreValidDate(asOf)||!ONE_FUTURE_WINDOWS.includes(days))throw Error("Ventana de proyección inválida.");
  const until=addDaysIso(asOf,days),tomorrow=addDaysIso(asOf,1);
@@ -82,23 +35,8 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  // Una cuota del día 25 puede quedar fuera de una vista de 30 días, pero
  // dentro de la quincena iniciada: debe reducir el presupuesto de deuda
  // para que 30, 60 y 90 días coincidan en las fechas compartidas.
- const overrides=data.livingBudgets||[],living=overrides.length>0;
- const flexible=oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings)).enabled||living||(data.flexBudgets||[]).length>0;
- const originalSources=oneFuturePlanSources(data.periods,data.flexBudgets,p=>periodEndDate(p),flexible);
- const sources=living?oneFutureLivingSources(originalSources,overrides):originalSources;
- // Living income is scheduled independently of the spending calendar.
- if(living){
-  for(const c of (data.categories||[]).filter(c=>c.type==="Ingreso"&&c.active!==false)){
-   const cfg=normalizeIncomeConfig(c.incomeConfig||{});
-   const occurrences=oneFlexIncomeDates(cfg,tomorrow,until),counts=new Map();
-   for(const date of occurrences)counts.set(date,(counts.get(date)||0)+1);
-   for(const [date,count] of counts){
-    const registered=futureMovements.filter(m=>m.date===date&&m.type==="Ingreso"&&!oneIsCobroReimbursement(m)&&movementMatchesCategory(m,c)).reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-    add(date,Math.max(0,currentToCRC(cfg.expectedAmount*count,cfg.expectedCurrency,"receive")-registered),"income",c.name,"Ingreso programado · calendario propio");
-   }
-  }
- }
- const coveringEnds=sources.filter(p=>p.start<=until).map(p=>p.end).filter(end=>end>=asOf).sort();
+ const coveringEnds=(data.periods||[]).filter(p=>p?.date&&p.date<=until)
+  .map(p=>periodEndDate(p)).filter(end=>end>=asOf).sort();
  const debtPlanningUntil=coveringEnds.at(-1)||until;
  const dueDates=[];
  let undatedDebts=0,overdueDebts=0;
@@ -106,7 +44,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   const first=oneDebtDueEntry(d,asOf),fullMin=Math.max(0,debtMinimumCRC(d));
   if(!first||!(fullMin>0)||!first.date){if(debtOutstanding(d)>.005)undatedDebts++;continue}
   let due=first.date,remainingBalance=Math.max(0,debtOutstanding(d)),cycle=0;
-  while(due&&cycle<8&&remainingBalance>.005){
+  while(due&&cycle<5&&remainingBalance>.005){
    const debitDate=due<=asOf?tomorrow:due;
    if(debitDate>debtPlanningUntil)break;
    if(due<=asOf)overdueDebts++;
@@ -125,43 +63,32 @@ function oneFutureForecast(asOf=todayIso(),days=90){
    cycle++;
   }
  }
- const periods=sources;
+ const periods=[...(data.periods||[])].filter(p=>p?.date).sort((a,b)=>a.date.localeCompare(b.date));
  let daysWithoutBudget=0,manualIncomeGroups=0,undatedIncomeGroups=0;
  const coverage=new Set();
- for(const source of periods){
-  const p=source.legacy,native=source.native,start=source.start,end=source.end,rangeStart=start>tomorrow?start:tomorrow;
-  if(end<rangeStart||start>until)continue;
-  const sourceOverrides=overrides.filter(e=>e.date>=start&&e.date<=end),overrideIds=new Set(sourceOverrides.map(e=>e.categoryId));
-  const hasLiving=sourceOverrides.length>0;
-  const categories=type=>hasLiving?(data.categories||[]).filter(c=>c.type===type&&(overrideIds.has(c.id)||(native?native.entries.some(e=>e.categoryId===c.id):!source.synthetic&&budgetCategories(type,p).some(x=>x.id===c.id)))):native?(data.categories||[]).filter(c=>c.type===type&&native.entries.some(e=>e.categoryId===c.id)):budgetCategories(type,p);
-  const allDates=hasLiving?oneFutureDates(start,end):[];
-  const planned=(c,intent)=>{
-   if(c.type!=="Ingreso"&&hasLiving&&overrideIds.has(c.id))return oneFutureMoney(oneFutureLivingDaily(source,c,sourceOverrides,allDates).reduce((a,b)=>a+b,0));
-   if(source.synthetic)return 0;
-   if(!native)return periodCategoryBudgetCRC(p,c.id,intent);
-   const e=native.entries.find(x=>x.categoryId===c.id);return e?currentToCRC(e.amount,e.currency,intent):0;
-  };
+ for(const p of periods){
+  const end=periodEndDate(p),rangeStart=p.date>tomorrow?p.date:tomorrow;
+  if(end<rangeStart||p.date>until)continue;
   const wholeDates=oneFutureDates(rangeStart,end);
-  if(!source.synthetic)wholeDates.filter(date=>date<=until).forEach(date=>coverage.add(date));
+  wholeDates.filter(date=>date<=until).forEach(date=>coverage.add(date));
   const count=wholeDates.length;if(!count)continue;
-  const movements=(data.movements||[]).filter(m=>flexible?m.date>=start&&m.date<=end:m.period===periodKey(p)&&m.date<=end);
+  const movements=(data.movements||[]).filter(m=>m.period===periodKey(p)&&m.date<=end);
   // Ingresos: únicamente los presupuestados que poseen fechas de pago conocidas.
   // Los ingresos manuales sin fecha NO se inventan ni se distribuyen.
-  for(const c of categories("Ingreso")){
-   const budget=Math.max(0,planned(c,"receive"));
+  for(const c of budgetCategories("Ingreso",p)){
+   const budget=Math.max(0,periodCategoryBudgetCRC(p,c.id,"receive"));
    if(!(budget>0))continue;
-   const cfg=normalizeIncomeConfig(c.incomeConfig||{});
-   if(living){if(!cfg.projectAutomatically)manualIncomeGroups++;else if(!oneFlexIncomeDates(cfg,start,end).length)undatedIncomeGroups++;continue}
-   const occurrences=(native?oneFlexIncomeDates(cfg,start,end):(p.categoryBudgetScheduledDates?.[c.id]||scheduledIncomeForPeriod(c,p)?.dates||[]))
-     .filter(date=>restoreValidDate(date)&&date>=start&&date<=end);
-   const dates=native?occurrences:[...new Set(occurrences)].sort();
+   const cfg=incomeConfigFor(c);
+   const occurrences=(p.categoryBudgetScheduledDates?.[c.id]||scheduledIncomeForPeriod(c,p)?.dates||[])
+     .filter(date=>restoreValidDate(date)&&date>=p.date&&date<=end);
+   const unique=[...new Set(occurrences)].sort();
    if(!cfg?.projectAutomatically){manualIncomeGroups++;continue}
-   if(!dates.length){undatedIncomeGroups++;continue}
-   for(const allocation of oneFutureIncomeAllocations(budget,dates)){
-    const date=allocation.date;
-    const registered=movements.filter(m=>m.type==="Ingreso"&&!oneIsCobroReimbursement(m)&&m.date===date&&movementMatchesCategory(m,c))
+   if(!unique.length){undatedIncomeGroups++;continue}
+   const daily=budget/unique.length;
+   for(const date of unique){
+    const registered=movements.filter(m=>m.type==="Ingreso"&&m.date===date&&movementMatchesCategory(m,c))
       .reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-    add(date,Math.max(0,allocation.amount-registered),"income",c.name,native?"Ingreso flexible · calendario actual":"Ingreso programado");
+    add(date,Math.max(0,daily-registered),"income",c.name,"Ingreso programado");
    }
   }
   // Gastos ordinarios: lo que falta para completar el presupuesto del período,
@@ -169,20 +96,15 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
   let ordinary=0,plannedSavings=0;
   const savingsCategoryIds=new Set([
-   ...categories("Gasto").filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
   ]);
-  for(const c of categories("Gasto")){
-   const amount=Math.max(0,planned(c,"pay"));
+  for(const c of budgetCategories("Gasto",p)){
+   const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
    const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-   const goals=flexible?(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date>=start&&t.date<=end&&oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0):oneBudgetSavingsActual(p,c.id,end);
+   const goals=oneBudgetSavingsActual(p,c.id,end);
    const remaining=Math.max(0,amount-paid-goals);
-   if(hasLiving&&overrideIds.has(c.id)&&remaining>.005){
-    const isSavings=savingsCategoryIds.has(c.id);
-    const daily=oneFutureLivingDaily(source,c,sourceOverrides,wholeDates);
-    const weights=daily.map((v,i)=>Math.max(0,v-movements.filter(m=>m.type==="Gasto"&&m.date===wholeDates[i]).reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0)-(isSavings?(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date===wholeDates[i]&&oneContributionCategory(t)===c.id).reduce((sum,t)=>sum+reserveTxnHistoricalCRC(t,"pay"),0):0)));
-    for(const x of oneFutureWeighted(remaining,wholeDates,weights))add(x.date,-x.amount,isSavings?"budget-savings":"budget",c.name,"Asignación estimada");
-   }else if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
+   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
@@ -194,8 +116,8 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
-  const debtBudget=categories("Pago deuda").reduce((sum,c)=>{
-   const budget=Math.max(0,planned(c,"pay"));
+  const debtBudget=budgetCategories("Pago deuda",p).reduce((sum,c)=>{
+   const budget=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
    const paid=movements.filter(m=>m.type==="Pago deuda")
      .reduce((total,m)=>total+movementCategoryAmountCRC(m,c),0);
    return sum+Math.max(0,budget-paid);
@@ -207,10 +129,8 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
  }
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
- if(living)warnings.push("Los gastos pendientes son estimados; las cuotas e ingresos programados conservan sus fechas.");
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
- if(flexible&&sources.some(p=>p.native&&p.start<=until&&p.end>asOf))warnings.push("Los presupuestos flexibles prevalecen sobre los anteriores cuando se superponen. Los gastos se distribuyen como estimación y los ingresos se fechan con el calendario actual de cada categoría.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");
@@ -225,16 +145,11 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   if(balance<lowest){lowest=balance;lowestDate=date}
  }
  const byKind=kind=>items.filter(item=>item.kind===kind).reduce((s,item)=>s+Math.abs(item.amount),0);
- // Keep full precision during daily accumulation and round only published
- // flexible monetary totals and chart points, not each daily allocation.
- // This avoids cumulative cent loss and preserves the legacy forecast.
- const monetary=flexible?oneFutureMoney:v=>v;
- return {asOf,until,days,base:monetary(base),balance:monetary(balance),lowest:monetary(lowest),lowestDate,income:monetary(income),outgo:monetary(outgo),
-  points:flexible?points.map(p=>({...p,balance:monetary(p.balance),delta:monetary(p.delta),income:monetary(p.income),outgo:monetary(p.outgo)})):points,
-  items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
-  coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,flexible,living,
-  recurringIncome:monetary(byKind("income")),scheduledDebt:monetary(byKind("debt")),
-  budgetExpense:monetary(byKind("budget")+byKind("budget-savings")+byKind("budget-debt"))};
+ return {asOf,until,days,base,balance,lowest,lowestDate,income,outgo,
+  points,items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
+  coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,
+  recurringIncome:byKind("income"),scheduledDebt:byKind("debt"),
+  budgetExpense:byKind("budget")+byKind("budget-savings")+byKind("budget-debt")};
 }
 function oneFutureChart(points){
  const width=760,height=245,pad={left:110,right:18,top:20,bottom:40};
@@ -265,7 +180,7 @@ function renderFuture(){
   button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active));
  });
  const q=id=>document.getElementById(id);
- q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until)+"";
+ q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until);
  q("oneFutureNumbers").innerHTML=[
   ["Saldo operativo de hoy",forecast.base],
   ["Saldo estimado al final",forecast.balance],

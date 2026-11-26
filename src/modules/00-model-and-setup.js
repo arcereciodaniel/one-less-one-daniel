@@ -118,7 +118,7 @@ function normalizeIncomeConfig(cfg={}){
     day1:clampDay(cfg.day1,ONE_DEFAULT_PAY_DAYS.first),day2:clampDay(cfg.day2,ONE_DEFAULT_PAY_DAYS.second),
     assignment1:INCOME_ASSIGNMENTS.has(cfg.assignment1)?cfg.assignment1:"current-2",
     assignment2:INCOME_ASSIGNMENTS.has(cfg.assignment2)?cfg.assignment2:"next-1",
-    monthlyDay:clampDay(cfg.monthlyDay,30),weekday:Math.max(0,Math.min(6,Math.round(cfg.weekday!==undefined&&cfg.weekday!==null&&cfg.weekday!==""&&Number.isFinite(Number(cfg.weekday))?Number(cfg.weekday):5))),
+    monthlyDay:clampDay(cfg.monthlyDay,30),weekday:Math.max(0,Math.min(6,Math.round(num(cfg.weekday)||5))),
     biweeklyStart:String(cfg.biweeklyStart||""),onceDate:String(cfg.onceDate||"")
   };
   return out;
@@ -311,11 +311,6 @@ function migrateData(raw){
   raw.settings.displayCurrency=normalizeCurrency(raw.settings.displayCurrency||"CRC");
   raw.settings.payDays=onePayDays(raw.settings);
   raw.periods=Array.isArray(raw.periods)?raw.periods:[];
-  // Preserve native flexible allocations in the same local backup; older data has no such field.
-  oneFlexValidateBudgets(raw.flexBudgets);
-  if(raw.flexBudgets===undefined)raw.flexBudgets=[];
-  oneLivingValidate(raw.livingBudgets);
-  if(raw.livingBudgets===undefined)raw.livingBudgets=[];
   raw.movements=Array.isArray(raw.movements)?raw.movements:[];
   raw.movementTemplates=Array.isArray(raw.movementTemplates)?raw.movementTemplates:[];
   raw.movementAudit=Array.isArray(raw.movementAudit)?raw.movementAudit:[];
@@ -574,8 +569,6 @@ function restoreValidate(raw){
     if(raw[key]!==undefined&&(!Array.isArray(raw[key])||!raw[key].every(restoreIsRecord)))
       throw Error("La lista "+key+" no tiene el formato esperado.");
   }
-  oneFlexValidateBudgets(raw.flexBudgets);
-  oneLivingValidate(raw.livingBudgets);
   if(raw.settings!==undefined&&!restoreIsRecord(raw.settings))
     throw Error("La configuración financiera no es válida.");
   if(raw.settings?.fxHistory!==undefined&&!Array.isArray(raw.settings.fxHistory))
@@ -699,12 +692,12 @@ function restoreValidate(raw){
 }
 function restoreDetailsHtml(raw,file){
  const safeFile=String(file||"respaldo.json").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
- const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0],["Planes flexibles",raw.flexBudgets?.length||0],["Asignaciones Living",raw.livingBudgets?.length||0]];
+ const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
  return '<p><strong>Archivo:</strong> '+safeFile+'</p><div class="one-restore-counts">'+groups.map(([n,v])=>'<div><span>'+n+'</span><strong>'+v+'</strong></div>').join("")+'</div>';
 }
 function restorePrepare(raw){
  const valid=restoreValidate(raw),migrated=migrateData(clone(valid));
- for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans","flexBudgets","livingBudgets"]){
+ for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans"]){
   if(Array.isArray(valid[field])&&migrated[field].length!==valid[field].length)
     throw Error("La conversión no conservó todos los registros de "+field+".");
  }
