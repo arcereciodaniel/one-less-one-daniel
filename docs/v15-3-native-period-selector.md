@@ -1,0 +1,3 @@
+# V15.3a candidate — native financial period selector
+
+One native selector replaces the three top buttons and duplicate level selector in Options. Original period arrows, cards, editing, theme and CSS remain. Semester and year group original financial month labels; no prorating or new financial fields. The same original quincena cards remain editable by their existing record keys. Incomplete semester/year coverage is explicitly labeled. Only UI selection preferences are persisted. Week and custom date range are deferred to V15.3b, since partial allocations must remain unknown rather than invented. No production or existing Lab deployment; this branch is a candidate, not a release. User approval and real-ledger verification remain required.

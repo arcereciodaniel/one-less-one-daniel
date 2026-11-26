@@ -55,7 +55,7 @@ function oneStorageGuardInit(){
 // V10.9: diagnóstico conservador y de solo lectura; nunca repara ni modifica transacciones.
 function oneHealthCheck(raw){
  const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
- const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
+ const countIssue=(count,message,code)=>{if(count>0)issues.push({count,message,...(code?{code}:{})})};
  for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans"]){
   const seen=new Set();let duplicate=0;
   for(const item of get(kind)){
@@ -63,7 +63,7 @@ function oneHealthCheck(raw){
    if(!recordId)continue;
    if(seen.has(recordId))duplicate++;else seen.add(recordId);
   }
-  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.");
+  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.","duplicate-id:"+kind);
  }
  const cats=new Set(get("categories").map(c=>c.id)),funds=new Set(get("reserves").map(r=>r.id)),
   groups=new Set(get("sharedChargeGroups").map(g=>g.id)),debts=new Set(get("debts").map(d=>d.id));
@@ -86,13 +86,13 @@ function oneHealthCheck(raw){
   if(!restoreValidDate(c.date))badDate++;
   if(!Number.isFinite(Number(c.amount))||Number(c.amount)<0)badAmount++;
  }
- countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.");
- countIssue(orphanDebt,"referencia(s) a deudas inexistentes.");
- countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.");
+ countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.","missing-category-link");
+ countIssue(orphanDebt,"referencia(s) a deudas inexistentes.","missing-debt-link");
+ countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.","missing-goal-link");
  countIssue(orphanGroup,"cobro(s) vinculados a grupos inexistentes.");
  countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
  countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
- countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.","missing-historical-fx");
  const projectIds=new Set(get("projects").map(p=>p.id)),movementIds=new Set(get("movements").map(m=>m.id));
  const linkedIds=new Set();let badProjectLinks=0,duplicateProjectLinks=0;
  for(const link of get("projectLinks")){
@@ -141,6 +141,15 @@ function oneRenderDataHealth(){
  const slot=document.getElementById("oneDataHealthReport");
  if(!slot)return null;
  const report=oneHealthCheck(data),date=todayIso();
+ const release=oneV15QueryCore.releaseAudit(data);
+ const additional=[];
+ // Combine equivalent diagnostics by code; do not count a finding twice.
+ for(const x of release.issues){
+  const existing=report.issues.find(item=>item.code===x.code);
+  if(existing){existing.count=Math.max(existing.count,x.count);existing.severity=x.severity;continue;}
+  additional.push({count:x.count,code:x.code,severity:x.severity,message:"Auditoría V15 · "+x.code+" · "+(x.severity==="blocker"?"requiere revisión antes de publicar":"verificación pendiente")});
+ }
+ report.issues.unshift(...additional);
  const status=document.createElement("p");status.className="one-health-status";
  status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
  status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
@@ -400,6 +409,7 @@ function periodKey(p){return p.key||`${p.quarter}-${p.n}`}
 function periodForDateIn(periods,date){
   const candidates=[...periods].sort((a,b)=>a.date.localeCompare(b.date));let chosen=null;
   for(const p of candidates){if(p.date<=date)chosen=p;else break}
+  if(oneV15IsFlexiblePeriod(chosen)&&date>chosen.endDate)return null;
   return chosen;
 }
 function periodForDate(date){return periodForDateIn(data.periods,date)}
@@ -482,6 +492,7 @@ function addDaysIso(date,days){
   const d=new Date(date+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)
 }
 function periodEndDate(p,periods=null,settings=null){
+  if(oneV15IsFlexiblePeriod(p))return oneV15ValidateFlexiblePeriod(p).endDate;
   const rows=periods||data.periods,config=settings||data.settings;
   const next=(rows||[]).map(x=>x.date).filter(d=>d>p.date).sort()[0]||
     (Number(p.fortnight)===1?canonicalPaymentDate(p.budgetMonth,2,config):canonicalPaymentDate(oneMonthShift(p.budgetMonth,1),1,config));
@@ -573,12 +584,35 @@ function periodMovements(p,throughDate=null){
 function periodHasRealSignal(p){
   return periodMovements(p).length>0 || !!reconciliationForPeriod(p) || (data.reserveMovements||[]).some(t=>t.type==="Aporte"&&periodKey(periodForDate(t.date)||{})===periodKey(p));
 }
+// V15.8: canonical read-only rows, using assigned period keys and historical FX.
+function oneV15PeriodBudgetRows(p,throughDate){
+  const movements=periodMovements(p,throughDate),cats=budgetCategories(["Gasto","Pago deuda"],p);
+  const known=new Set(cats.map(c=>c.id));
+  for(const c of data.categories||[]){
+    if(known.has(c.id)||c.budgetable===false||!["Gasto","Pago deuda"].includes(c.type))continue;
+    if(movements.some(m=>m.type===c.type&&movementCategoryAmountCRC(m,c)!==0)||oneBudgetSavingsActual(p,c.id,throughDate)!==0){cats.push(c);known.add(c.id)}
+  }
+  const savingsIds=new Set([
+    ...(data.categories||[]).filter(c=>c.type==="Gasto"&&/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
+  return cats.map(c=>{
+    const plannedCRC=periodCategoryBudgetCRC(p,c.id,"pay");
+    const spentCRC=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
+    const savingsCRC=oneBudgetSavingsActual(p,c.id,throughDate);
+    const isSavings=c.type==="Gasto"&&savingsIds.has(c.id);
+    return {id:c.id,name:c.name,type:c.type,plannedCRC,spentCRC,savingsCRC,isSavings,paceEligible:c.type==="Gasto"&&!isSavings&&!savingsCRC,remainingCRC:Math.max(0,plannedCRC-spentCRC-savingsCRC)};
+  });
+}
+function oneV15CurrentBudget(asOf=todayIso()){
+  if(oneV15QueryCore.hasUnreconciledBudget(data))return null;
+  const p=periodForDate(asOf);
+  if(!p||!p.date||p.date>asOf||periodEndDate(p)<asOf)return null;
+  const rows=oneV15PeriodBudgetRows(p,asOf);
+  try{return {p,rows,hasPlan:rows.some(r=>r.plannedCRC>0),analysis:oneV15QueryCore.budgetIntelligence(rows,p.date,periodEndDate(p),asOf)}}catch{return null}
+}
 function remainingBudgetForCurrentPeriod(p,throughDate){
-  const ms=periodMovements(p,throughDate).filter(m=>m.type==="Gasto"||m.type==="Pago deuda");
-  return budgetCategories(["Gasto","Pago deuda"],p).reduce((sum,c)=>{
-    const spent=ms.reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+oneBudgetSavingsActual(p,c.id,throughDate);
-    return sum+Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay")-spent);
-  },0);
+  return oneV15PeriodBudgetRows(p,throughDate).reduce((sum,r)=>sum+r.remainingCRC,0);
 }
 function pendingIncomeForCurrentPeriod(p,asOfDate){
   // Solo ingresos con pago programado después del saldo calculado a hoy.
@@ -647,12 +681,18 @@ function monthLabel(key){
   const [year,month]=key.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(year,month-1,1)));
 }
-function fortnightLabel(p){return `${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
+function oneV15PeriodCaption(p){
+ if(!oneV15IsFlexiblePeriod(p))return p.fortnight===1?"1.ª quincena":"2.ª quincena";
+ return {weekly:"Semana",biweekly:"Período de 14 días",semimonthly:"Quincena calendario",monthly:"Período mensual"}[p.frequency]||"Período";
+}
+function oneV15PeriodOption(p){return oneV15IsFlexiblePeriod(p)?periodKey(p):String(p.fortnight)}
+function oneV15HasFlexiblePeriods(){return data.periods.some(oneV15IsFlexiblePeriod)}
+function fortnightLabel(p){return oneV15IsFlexiblePeriod(p)?oneV15PeriodCaption(p)+" · "+dateLabel(p.date)+" – "+dateLabel(p.endDate):`${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
 function filterOptions(level){
   if(level==="fortnight"){
     return allProjectedRows().map(p=>({
       value:periodKey(p),
-      label:`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
+      label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
     }));
   }
   if(level==="month"){
@@ -675,7 +715,25 @@ function selectedMovements(level,value){
   if(level==="month")return data.movements.filter(m=>movementBudgetMonth(m)===value);
   return data.movements.filter(m=>movementBudgetQuarter(m)===value);
 }
+// V15.3: only financial month labels, never calendar redistribution.
+function oneV15FinancialGroup(month,level){
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||"")))return "";
+  if(level==="year")return month.slice(0,4)+"-01";
+  if(level==="half")return month.slice(0,4)+(Number(month.slice(5))<=6?"-01":"-07");
+  return month;
+}
+function oneV15PlanMatches(p,level,value){
+  if(level==="quarter")return budgetQuarter(p)===value;
+  if(level==="month")return p.budgetMonth===value;
+  if(level==="half"||level==="year")return !!value&&oneV15FinancialGroup(p.budgetMonth,level)===value;
+  return periodKey(p)===value;
+}
+function oneV15PlanGroups(level){
+  return [...new Set(availableBudgetMonths().map(m=>oneV15FinancialGroup(m,level)).filter(Boolean))].sort();
+}
 function selectedLabel(level,value){
+  if(value&&level==="half")return (value.endsWith("-01")?"I":"II")+" semestre · "+value.slice(0,4);
+  if(value&&level==="year")return value.slice(0,4);
   return filterOptions(level).find(x=>x.value===value)?.label||value||"";
 }
 function categoryReportFiltered(level,value){
@@ -848,7 +906,7 @@ function currentFinancialContext(){
   const calendarMonth=today.slice(0,7);
   const financialMonth=active?.budgetMonth||nearestValue(availableBudgetMonths(),calendarMonth);
   const financialQuarter=budgetQuarterFromMonth(financialMonth||calendarMonth);
-  return {today,active,financialMonth,financialQuarter,fortnight:String(active?.fortnight||1)};
+  return {today,active,financialMonth,financialQuarter,fortnight:active?oneV15PeriodOption(active):"1"};
 }
 function currentFilterDefaults(level){
   const ctx=currentFinancialContext();
@@ -866,22 +924,29 @@ function syncHierarchicalFilter(prefix,resetCurrent=false){
   if(qEl)fillSelect(qEl,quarters,qCurrent);
   if(mEl)fillObjectSelect(mEl,months.map(m=>({value:m,label:monthLabel(m)})),mCurrent);
   if(fEl){
-    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).map(p=>String(p.fortnight));
-    const desired=!resetCurrent&&available.includes(fEl.value)?fEl.value:(defaults.fortnight||available[0]||"1");
-    fillObjectSelect(fEl,[{value:"1",label:"Quincena 1"},{value:"2",label:"Quincena 2"}].filter(x=>available.includes(x.value)),desired);
+    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({value:oneV15PeriodOption(p),label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):"Quincena "+p.fortnight}));
+    const values=available.map(x=>x.value);
+    const desired=!resetCurrent&&values.includes(fEl.value)?fEl.value:values.includes(defaults.fortnight)?defaults.fortnight:values[0]||"1";
+    fillObjectSelect(fEl,available,desired);
   }
+  const generic=oneV15HasFlexiblePeriods();
+  const singleOption=[...levelEl.options].find(o=>o.value==="fortnight");
+  if(singleOption)singleOption.textContent=generic?"Período":"Quincena";
+  const dateMode=prefix==="plan"&&["week","custom"].includes(level);
   if(qWrap)qWrap.hidden=level!=="quarter";
-  if(mWrap)mWrap.hidden=level==="quarter";
+  if(mWrap)mWrap.hidden=level==="quarter"||dateMode;
   if(fWrap)fWrap.hidden=level!=="fortnight";
 }
 function hierarchicalSelection(prefix){
   const level=document.getElementById(prefix+"Level")?.value||"quarter";
+  if(prefix==="plan"&&["week","custom"].includes(level))return {level,value:oneV15DateRange(level)};
   if(level==="quarter")return {level,value:document.getElementById(prefix+"Quarter")?.value||""};
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
-  const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
-  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
-  return {level,value:p?periodKey(p):"",month,fortnight};
+  if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
+  const option=document.getElementById(prefix+"Fortnight")?.value||"1";
+  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&oneV15PeriodOption(r)===option);
+  return {level,value:p?periodKey(p):"",month,fortnight:p?.fortnight||0};
 }
 function selectionQuarter(prefix){
   const s=hierarchicalSelection(prefix);if(s.level==="quarter")return s.value;

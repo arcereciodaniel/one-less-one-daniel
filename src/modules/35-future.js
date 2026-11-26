@@ -95,16 +95,10 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // después de descontar gastos efectivos (incluidos futuros ya registrados)
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
   let ordinary=0,plannedSavings=0;
-  const savingsCategoryIds=new Set([
-   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
-   ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
-  ]);
-  for(const c of budgetCategories("Gasto",p)){
-   const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-   const goals=oneBudgetSavingsActual(p,c.id,end);
-   const remaining=Math.max(0,amount-paid-goals);
-   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
+  // Same rows as Presupuesto/Inicio, including already registered future items.
+  const budgetRows=oneV15PeriodBudgetRows(p,end);
+  for(const row of budgetRows.filter(r=>r.type==="Gasto")){
+   if(row.isSavings)plannedSavings+=row.remainingCRC;else ordinary+=row.remainingCRC;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
@@ -116,12 +110,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
-  const debtBudget=budgetCategories("Pago deuda",p).reduce((sum,c)=>{
-   const budget=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Pago deuda")
-     .reduce((total,m)=>total+movementCategoryAmountCRC(m,c),0);
-   return sum+Math.max(0,budget-paid);
-  },0);
+  const debtBudget=budgetRows.filter(r=>r.type==="Pago deuda").reduce((sum,r)=>sum+r.remainingCRC,0);
   const scheduled=dueDates.filter(x=>x.date>=rangeStart&&x.date<=end).reduce((sum,x)=>sum+x.amount,0);
   const extra=Math.max(0,debtBudget-scheduled);
   if(extra>.005){
@@ -131,6 +120,9 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
+ if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
+ if((data.projectPlans||[]).some(plan=>{const p=oneProjectById(plan.projectId);return p&&oneProjectEnabled(p)&&oneProjectPlanSummary(p,plan).remaining>.005;}))warnings.push("Las previsiones pendientes de Proyectos no se suman automáticamente: podrían estar incluidas en el presupuesto.");
+ if(oneV15QueryCore.hasUnreconciledBudget(data))warnings.push("Ajustes presupuestarios V13/V14 pendientes de reconciliar; la proyección usa únicamente el presupuesto base.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");

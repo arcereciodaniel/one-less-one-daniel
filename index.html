@@ -2028,7 +2028,7 @@ header .topbar>.one-utility-bar button:focus-visible{
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v12.1.3</small>
+      <small class="brand-version">v16.0.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -2206,13 +2206,34 @@ header .topbar>.one-utility-bar button:focus-visible{
       <div class="r8-plan-title-actions">
         <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
-        <div class="r8-view-switch" aria-label="Nivel de presupuesto">
-          <button type="button" data-r8-plan-level="quarter">Trimestre</button>
-          <button type="button" data-r8-plan-level="month">Mes</button>
-          <button type="button" data-r8-plan-level="fortnight">Quincena</button>
+        <div class="r8-view-switch">
+          <select id="planLevel" aria-label="Período de presupuesto">
+            <option value="week">Semana</option>
+            <option value="fortnight">Quincena</option>
+            <option value="month" selected>Mes</option>
+            <option value="quarter">Trimestre</option>
+            <option value="half">Semestre</option>
+            <option value="year">Año</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="period-filter" id="v15PlanDateControls" hidden>
+          <div><label for="v15PlanStart">Desde</label><input id="v15PlanStart" type="date"></div>
+          <div><label for="v15PlanEnd">Hasta</label><input id="v15PlanEnd" type="date"></div>
         </div>
       </div>
     </div>
+    <dialog id="v15AllocationDialog" class="one-budget-copy-dialog" aria-labelledby="v15AllocationTitle">
+      <form id="v15AllocationForm">
+        <div class="one-budget-copy-head"><h2 id="v15AllocationTitle">Distribuir presupuesto</h2></div>
+        <label for="v15AllocationCategory">Categoría</label><select id="v15AllocationCategory" required></select>
+        <label for="v15AllocationWeek">Semana</label><select id="v15AllocationWeek" required></select>
+        <label for="v15AllocationAmount">Monto · <span id="v15AllocationCurrency"></span></label><input id="v15AllocationAmount" type="number" min="0" step="0.01" required>
+        <label for="v15AllocationMode">Ajuste</label><select id="v15AllocationMode"><option value="maintain">Mantener total</option><option value="increase">Aumentar total</option></select>
+        <div id="v15AllocationPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+        <div class="one-budget-copy-actions"><button class="btn secondary" type="button" id="v15AllocationReview" hidden>Revisar distribución</button><button class="btn secondary" type="button" id="v15AllocationUndo" hidden>Revertir</button><button class="btn secondary" type="button" id="v15AllocationCancel">Cancelar</button><button class="btn" type="submit" id="v15AllocationConfirm">Confirmar</button></div>
+      </form>
+    </dialog>
     <dialog id="copyBudgetDialog" class="one-budget-copy-dialog" aria-labelledby="copyBudgetTitle">
       <form id="copyBudgetForm">
         <div class="one-budget-copy-head"><h2 id="copyBudgetTitle">Copiar presupuesto anterior</h2><button type="button" id="closeCopyBudgetDialog" aria-label="Cerrar">×</button></div>
@@ -2226,13 +2247,6 @@ header .topbar>.one-utility-bar button:focus-visible{
       <summary>Opciones de período, categorías y planificación</summary>
     <div class="toolbar v7-plan-toolbar">
       <div class="period-filter" id="planFilters">
-        <div><label>Vista</label>
-          <select id="planLevel">
-            <option value="quarter">Trimestre</option>
-            <option value="month" selected>Mes</option>
-            <option value="fortnight">Quincena</option>
-          </select>
-        </div>
         <div id="planQuarterWrap"><label>Trimestre</label><select id="planQuarter"></select></div>
         <div id="planMonthWrap" class="month-select" hidden><label>Mes</label><select id="planMonth"></select></div>
         <div id="planFortnightWrap" hidden><label>Quincena</label><select id="planFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>
@@ -2670,7 +2684,7 @@ header .topbar>.one-utility-bar button:focus-visible{
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v12.1.3 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v16.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -2780,6 +2794,21 @@ header .topbar>.one-utility-bar button:focus-visible{
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
+<dialog id="v15CalendarDialog" class="one-budget-copy-dialog" aria-labelledby="v15CalendarTitle">
+ <form id="v15CalendarForm">
+  <div class="one-budget-copy-head"><h2 id="v15CalendarTitle">Calendario presupuestario</h2></div>
+  <label for="v15CalendarFrequency">Frecuencia de planificación</label><select id="v15CalendarFrequency"><option value="weekly">Semanal</option><option value="biweekly">Cada 2 semanas</option><option value="semimonthly">Quincenal calendario (1 y 16)</option><option value="monthly">Mensual</option></select>
+  <label for="v15CalendarStart">Desde</label><input type="date" id="v15CalendarStart" required>
+  <p class="muted">Propuesta de 90 días. Los ingresos programados conservan sus propias fechas. No modifica los presupuestos existentes.</p>
+  <div id="v15CalendarPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+  <details class="r8-unused"><summary>Transición al nuevo calendario</summary>
+    <div id="v15TransitionStatus" class="r8-card-dates" role="status"></div>
+    <button class="btn secondary small" type="button" id="v15TransitionDate">Usar primera fecha disponible</button>
+    <div class="one-budget-copy-actions"><button class="btn secondary small" type="button" id="v15TransitionCancel" hidden>Retirar transición</button><button class="btn secondary small" type="button" id="v15TransitionPrepare" disabled>Preparar transición</button><button class="btn secondary small" type="button" id="v15TransitionActivate" hidden disabled>Activar en Lab</button><button class="btn secondary small" type="button" id="v15TransitionExtend" hidden disabled>Ampliar 90 días</button></div>
+  </details>
+  <div class="one-budget-copy-actions"><button class="btn secondary" id="v15CalendarCancel" type="button">Cerrar</button><button class="btn" id="v15CalendarSave" type="submit">Guardar propuesta</button></div>
+ </form>
+</dialog>
 <dialog id="oneSettingsDialog" class="one-settings-dialog" aria-labelledby="oneSettingsTitle">
  <div class="dialog-body">
   <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
@@ -2793,6 +2822,7 @@ header .topbar>.one-utility-bar button:focus-visible{
   <div class="one-settings-group">
    <h3>Moneda y calendario</h3>
    <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="v15CalendarOpen" class="one-settings-action"><span><strong>Calendario presupuestario</strong><small>Planificación futura · propuesta</small></span><span aria-hidden="true">›</span></button>
    <div id="oneSettingsPaydayMount"></div>
   </div>
   <div class="one-settings-group">
@@ -3270,14 +3300,14 @@ function dateForMonthDay(year,monthIndex,day){const last=new Date(Date.UTC(year,
 function shiftMonth(monthKeyValue,delta){const [y,m]=String(monthKeyValue).split("-").map(Number),d=new Date(Date.UTC(y,m-1+delta,1));return d.toISOString().slice(0,7)}
 function targetPeriodByAssignment(raw,date,assignment){
   const month=date.slice(0,7),isNext=String(assignment).startsWith("next-"),targetMonth=isNext?shiftMonth(month,1):month,fortnight=String(assignment).endsWith("-2")?2:1;
-  return (raw.periods||[]).find(p=>p.budgetMonth===targetMonth&&Number(p.fortnight)===fortnight)||null;
+  return (raw.periods||[]).find(p=>!oneV15IsFlexiblePeriod(p)&&p.budgetMonth===targetMonth&&Number(p.fortnight)===fortnight)||null;
 }
 function incomeOccurrencesForData(raw,c){
   const cfg=normalizeIncomeConfig(c?.incomeConfig||{}),result=new Map();
   if(!c||c.type!=="Ingreso"||c.active===false||c.budgetable===false||!cfg.projectAutomatically||cfg.expectedAmount<=0||cfg.frequency==="irregular")return result;
   const periods=[...(raw.periods||[])].sort((a,b)=>String(a.date).localeCompare(String(b.date)));if(!periods.length)return result;
   const minDate=periods[0].date,maxDate=periodEndDate(periods.at(-1),periods,raw.settings);
-  const addOccurrence=(date,target=null)=>{if(!date||date<minDate||date>maxDate)return;const p=target||periodForDateIn(raw.periods,date);if(!p)return;const key=periodKey(p),cur=result.get(key)||{amount:0,currency:cfg.expectedCurrency,dates:[]};cur.amount+=cfg.expectedAmount;cur.dates.push(date);result.set(key,cur)};
+  const addOccurrence=(date,target=null)=>{if(!date||date<minDate||date>maxDate)return;const byDate=periodForDateIn(raw.periods,date);const p=oneV15IsFlexiblePeriod(byDate)?byDate:target||byDate;if(!p)return;const key=periodKey(p),cur=result.get(key)||{amount:0,currency:cfg.expectedCurrency,dates:[]};cur.amount+=cfg.expectedAmount;cur.dates.push(date);result.set(key,cur)};
   const min=new Date(minDate+"T00:00:00Z"),max=new Date(maxDate+"T00:00:00Z");
   if(cfg.frequency==="semimonthly"||cfg.frequency==="monthly"){
     for(let cursor=new Date(Date.UTC(min.getUTCFullYear(),min.getUTCMonth(),1));cursor<=max;cursor=new Date(Date.UTC(cursor.getUTCFullYear(),cursor.getUTCMonth()+1,1))){
@@ -3379,7 +3409,7 @@ function oneAlignMovementPeriods(raw,fromMonth){
 }
 function oneUpdatePaydayPeriods(fromMonth){
   for(const p of data.periods){
-    if(p.budgetMonth>=fromMonth)p.date=canonicalPaymentDate(p.budgetMonth,p.fortnight,data.settings);
+    if(!oneV15IsFlexiblePeriod(p)&&p.budgetMonth>=fromMonth)p.date=canonicalPaymentDate(p.budgetMonth,p.fortnight,data.settings);
   }
   oneAlignMovementPeriods(data,fromMonth);
 }
@@ -3402,7 +3432,31 @@ function id(){return globalThis.crypto?.randomUUID?.() || Math.random().toString
 function clone(x){return JSON.parse(JSON.stringify(x))}
 let data = load();
 
+// V15.6c: explicit period identity, independent of accounting month slots.
+function oneV15IsFlexiblePeriod(p){return p?.periodKind==="flexible"}
+function oneV15ValidateFlexiblePeriod(p){
+  if(!oneV15IsFlexiblePeriod(p)||!restoreValidDate(p.date)||!restoreValidDate(p.endDate)||p.endDate<p.date||
+    !["weekly","biweekly","semimonthly","monthly"].includes(p.frequency)||
+    p.key!=="v15-period-"+p.date+"-"+p.endDate||p.budgetMonth!==p.date.slice(0,7)||p.fortnight!==0)
+      throw Error("Período flexible inválido; se conserva el respaldo original.");
+  return p;
+}
+function oneV15ValidatePeriodIdentities(rows,settings){
+  if(!rows.some(oneV15IsFlexiblePeriod))return;
+  const keys=new Set();
+  for(const p of rows){
+    if(oneV15IsFlexiblePeriod(p))oneV15ValidateFlexiblePeriod(p);
+    const key=periodKey(p);if(!key||keys.has(key))throw Error("Identidad de período duplicada.");keys.add(key);
+  }
+  const ordered=[...rows].sort((a,b)=>a.date.localeCompare(b.date));
+  for(let i=1;i<ordered.length;i++){
+    const previous=ordered[i-1],next=ordered[i];
+    if(previous.date===next.date||periodEndDate(previous,rows,settings)>=next.date)
+      throw Error("Períodos financieros solapados.");
+  }
+}
 function deriveBudgetMeta(p){
+  if(oneV15IsFlexiblePeriod(p))return {budgetMonth:p.date.slice(0,7),fortnight:0};
   if(p.budgetMonth&&p.fortnight)return {budgetMonth:p.budgetMonth,fortnight:Number(p.fortnight)};
   const d=new Date((p.date||"")+"T00:00:00Z");
   if(Number.isNaN(d.getTime()))return {budgetMonth:"",fortnight:1};
@@ -3439,6 +3493,7 @@ function migrateData(raw){
   raw.settings.displayCurrency=normalizeCurrency(raw.settings.displayCurrency||"CRC");
   raw.settings.payDays=onePayDays(raw.settings);
   raw.periods=Array.isArray(raw.periods)?raw.periods:[];
+  oneV15ValidatePeriodIdentities(raw.periods,raw.settings);
   raw.movements=Array.isArray(raw.movements)?raw.movements:[];
   raw.movementTemplates=Array.isArray(raw.movementTemplates)?raw.movementTemplates:[];
   raw.movementAudit=Array.isArray(raw.movementAudit)?raw.movementAudit:[];
@@ -3544,7 +3599,7 @@ function migrateData(raw){
 
   const remap=new Map(), merged=[], byAccountingPeriod=new Map();
   [...raw.periods].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{
-    const accountingKey=`${p.budgetMonth}|${p.fortnight}`;
+    const accountingKey=oneV15IsFlexiblePeriod(p)?"explicit|"+periodKey(p):`${p.budgetMonth}|${p.fortnight}`;
     const existing=byAccountingPeriod.get(accountingKey);
     if(!existing){byAccountingPeriod.set(accountingKey,p);merged.push(p);return;}
     remap.set(periodKey(p),periodKey(existing));
@@ -3701,6 +3756,7 @@ function restoreValidate(raw){
     throw Error("La configuración financiera no es válida.");
   if(raw.settings?.fxHistory!==undefined&&!Array.isArray(raw.settings.fxHistory))
     throw Error("El historial de tipos de cambio es inválido.");
+  oneV15ValidatePeriodIdentities(raw.periods,raw.settings||{});
   const seen=new Set();
   for(const p of raw.periods){
     const hasKey=typeof p.key==="string"&&p.key.trim().length>0;
@@ -3899,7 +3955,7 @@ function oneStorageGuardInit(){
 // V10.9: diagnóstico conservador y de solo lectura; nunca repara ni modifica transacciones.
 function oneHealthCheck(raw){
  const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
- const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
+ const countIssue=(count,message,code)=>{if(count>0)issues.push({count,message,...(code?{code}:{})})};
  for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans"]){
   const seen=new Set();let duplicate=0;
   for(const item of get(kind)){
@@ -3907,7 +3963,7 @@ function oneHealthCheck(raw){
    if(!recordId)continue;
    if(seen.has(recordId))duplicate++;else seen.add(recordId);
   }
-  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.");
+  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.","duplicate-id:"+kind);
  }
  const cats=new Set(get("categories").map(c=>c.id)),funds=new Set(get("reserves").map(r=>r.id)),
   groups=new Set(get("sharedChargeGroups").map(g=>g.id)),debts=new Set(get("debts").map(d=>d.id));
@@ -3930,13 +3986,13 @@ function oneHealthCheck(raw){
   if(!restoreValidDate(c.date))badDate++;
   if(!Number.isFinite(Number(c.amount))||Number(c.amount)<0)badAmount++;
  }
- countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.");
- countIssue(orphanDebt,"referencia(s) a deudas inexistentes.");
- countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.");
+ countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.","missing-category-link");
+ countIssue(orphanDebt,"referencia(s) a deudas inexistentes.","missing-debt-link");
+ countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.","missing-goal-link");
  countIssue(orphanGroup,"cobro(s) vinculados a grupos inexistentes.");
  countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
  countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
- countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.","missing-historical-fx");
  const projectIds=new Set(get("projects").map(p=>p.id)),movementIds=new Set(get("movements").map(m=>m.id));
  const linkedIds=new Set();let badProjectLinks=0,duplicateProjectLinks=0;
  for(const link of get("projectLinks")){
@@ -3985,6 +4041,15 @@ function oneRenderDataHealth(){
  const slot=document.getElementById("oneDataHealthReport");
  if(!slot)return null;
  const report=oneHealthCheck(data),date=todayIso();
+ const release=oneV15QueryCore.releaseAudit(data);
+ const additional=[];
+ // Combine equivalent diagnostics by code; do not count a finding twice.
+ for(const x of release.issues){
+  const existing=report.issues.find(item=>item.code===x.code);
+  if(existing){existing.count=Math.max(existing.count,x.count);existing.severity=x.severity;continue;}
+  additional.push({count:x.count,code:x.code,severity:x.severity,message:"Auditoría V15 · "+x.code+" · "+(x.severity==="blocker"?"requiere revisión antes de publicar":"verificación pendiente")});
+ }
+ report.issues.unshift(...additional);
  const status=document.createElement("p");status.className="one-health-status";
  status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
  status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
@@ -4244,6 +4309,7 @@ function periodKey(p){return p.key||`${p.quarter}-${p.n}`}
 function periodForDateIn(periods,date){
   const candidates=[...periods].sort((a,b)=>a.date.localeCompare(b.date));let chosen=null;
   for(const p of candidates){if(p.date<=date)chosen=p;else break}
+  if(oneV15IsFlexiblePeriod(chosen)&&date>chosen.endDate)return null;
   return chosen;
 }
 function periodForDate(date){return periodForDateIn(data.periods,date)}
@@ -4326,6 +4392,7 @@ function addDaysIso(date,days){
   const d=new Date(date+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)
 }
 function periodEndDate(p,periods=null,settings=null){
+  if(oneV15IsFlexiblePeriod(p))return oneV15ValidateFlexiblePeriod(p).endDate;
   const rows=periods||data.periods,config=settings||data.settings;
   const next=(rows||[]).map(x=>x.date).filter(d=>d>p.date).sort()[0]||
     (Number(p.fortnight)===1?canonicalPaymentDate(p.budgetMonth,2,config):canonicalPaymentDate(oneMonthShift(p.budgetMonth,1),1,config));
@@ -4417,12 +4484,35 @@ function periodMovements(p,throughDate=null){
 function periodHasRealSignal(p){
   return periodMovements(p).length>0 || !!reconciliationForPeriod(p) || (data.reserveMovements||[]).some(t=>t.type==="Aporte"&&periodKey(periodForDate(t.date)||{})===periodKey(p));
 }
+// V15.8: canonical read-only rows, using assigned period keys and historical FX.
+function oneV15PeriodBudgetRows(p,throughDate){
+  const movements=periodMovements(p,throughDate),cats=budgetCategories(["Gasto","Pago deuda"],p);
+  const known=new Set(cats.map(c=>c.id));
+  for(const c of data.categories||[]){
+    if(known.has(c.id)||c.budgetable===false||!["Gasto","Pago deuda"].includes(c.type))continue;
+    if(movements.some(m=>m.type===c.type&&movementCategoryAmountCRC(m,c)!==0)||oneBudgetSavingsActual(p,c.id,throughDate)!==0){cats.push(c);known.add(c.id)}
+  }
+  const savingsIds=new Set([
+    ...(data.categories||[]).filter(c=>c.type==="Gasto"&&/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
+  return cats.map(c=>{
+    const plannedCRC=periodCategoryBudgetCRC(p,c.id,"pay");
+    const spentCRC=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
+    const savingsCRC=oneBudgetSavingsActual(p,c.id,throughDate);
+    const isSavings=c.type==="Gasto"&&savingsIds.has(c.id);
+    return {id:c.id,name:c.name,type:c.type,plannedCRC,spentCRC,savingsCRC,isSavings,paceEligible:c.type==="Gasto"&&!isSavings&&!savingsCRC,remainingCRC:Math.max(0,plannedCRC-spentCRC-savingsCRC)};
+  });
+}
+function oneV15CurrentBudget(asOf=todayIso()){
+  if(oneV15QueryCore.hasUnreconciledBudget(data))return null;
+  const p=periodForDate(asOf);
+  if(!p||!p.date||p.date>asOf||periodEndDate(p)<asOf)return null;
+  const rows=oneV15PeriodBudgetRows(p,asOf);
+  try{return {p,rows,hasPlan:rows.some(r=>r.plannedCRC>0),analysis:oneV15QueryCore.budgetIntelligence(rows,p.date,periodEndDate(p),asOf)}}catch{return null}
+}
 function remainingBudgetForCurrentPeriod(p,throughDate){
-  const ms=periodMovements(p,throughDate).filter(m=>m.type==="Gasto"||m.type==="Pago deuda");
-  return budgetCategories(["Gasto","Pago deuda"],p).reduce((sum,c)=>{
-    const spent=ms.reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+oneBudgetSavingsActual(p,c.id,throughDate);
-    return sum+Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay")-spent);
-  },0);
+  return oneV15PeriodBudgetRows(p,throughDate).reduce((sum,r)=>sum+r.remainingCRC,0);
 }
 function pendingIncomeForCurrentPeriod(p,asOfDate){
   // Solo ingresos con pago programado después del saldo calculado a hoy.
@@ -4491,12 +4581,18 @@ function monthLabel(key){
   const [year,month]=key.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(year,month-1,1)));
 }
-function fortnightLabel(p){return `${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
+function oneV15PeriodCaption(p){
+ if(!oneV15IsFlexiblePeriod(p))return p.fortnight===1?"1.ª quincena":"2.ª quincena";
+ return {weekly:"Semana",biweekly:"Período de 14 días",semimonthly:"Quincena calendario",monthly:"Período mensual"}[p.frequency]||"Período";
+}
+function oneV15PeriodOption(p){return oneV15IsFlexiblePeriod(p)?periodKey(p):String(p.fortnight)}
+function oneV15HasFlexiblePeriods(){return data.periods.some(oneV15IsFlexiblePeriod)}
+function fortnightLabel(p){return oneV15IsFlexiblePeriod(p)?oneV15PeriodCaption(p)+" · "+dateLabel(p.date)+" – "+dateLabel(p.endDate):`${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
 function filterOptions(level){
   if(level==="fortnight"){
     return allProjectedRows().map(p=>({
       value:periodKey(p),
-      label:`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
+      label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
     }));
   }
   if(level==="month"){
@@ -4519,7 +4615,25 @@ function selectedMovements(level,value){
   if(level==="month")return data.movements.filter(m=>movementBudgetMonth(m)===value);
   return data.movements.filter(m=>movementBudgetQuarter(m)===value);
 }
+// V15.3: only financial month labels, never calendar redistribution.
+function oneV15FinancialGroup(month,level){
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||"")))return "";
+  if(level==="year")return month.slice(0,4)+"-01";
+  if(level==="half")return month.slice(0,4)+(Number(month.slice(5))<=6?"-01":"-07");
+  return month;
+}
+function oneV15PlanMatches(p,level,value){
+  if(level==="quarter")return budgetQuarter(p)===value;
+  if(level==="month")return p.budgetMonth===value;
+  if(level==="half"||level==="year")return !!value&&oneV15FinancialGroup(p.budgetMonth,level)===value;
+  return periodKey(p)===value;
+}
+function oneV15PlanGroups(level){
+  return [...new Set(availableBudgetMonths().map(m=>oneV15FinancialGroup(m,level)).filter(Boolean))].sort();
+}
 function selectedLabel(level,value){
+  if(value&&level==="half")return (value.endsWith("-01")?"I":"II")+" semestre · "+value.slice(0,4);
+  if(value&&level==="year")return value.slice(0,4);
   return filterOptions(level).find(x=>x.value===value)?.label||value||"";
 }
 function categoryReportFiltered(level,value){
@@ -4692,7 +4806,7 @@ function currentFinancialContext(){
   const calendarMonth=today.slice(0,7);
   const financialMonth=active?.budgetMonth||nearestValue(availableBudgetMonths(),calendarMonth);
   const financialQuarter=budgetQuarterFromMonth(financialMonth||calendarMonth);
-  return {today,active,financialMonth,financialQuarter,fortnight:String(active?.fortnight||1)};
+  return {today,active,financialMonth,financialQuarter,fortnight:active?oneV15PeriodOption(active):"1"};
 }
 function currentFilterDefaults(level){
   const ctx=currentFinancialContext();
@@ -4710,22 +4824,29 @@ function syncHierarchicalFilter(prefix,resetCurrent=false){
   if(qEl)fillSelect(qEl,quarters,qCurrent);
   if(mEl)fillObjectSelect(mEl,months.map(m=>({value:m,label:monthLabel(m)})),mCurrent);
   if(fEl){
-    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).map(p=>String(p.fortnight));
-    const desired=!resetCurrent&&available.includes(fEl.value)?fEl.value:(defaults.fortnight||available[0]||"1");
-    fillObjectSelect(fEl,[{value:"1",label:"Quincena 1"},{value:"2",label:"Quincena 2"}].filter(x=>available.includes(x.value)),desired);
+    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({value:oneV15PeriodOption(p),label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):"Quincena "+p.fortnight}));
+    const values=available.map(x=>x.value);
+    const desired=!resetCurrent&&values.includes(fEl.value)?fEl.value:values.includes(defaults.fortnight)?defaults.fortnight:values[0]||"1";
+    fillObjectSelect(fEl,available,desired);
   }
+  const generic=oneV15HasFlexiblePeriods();
+  const singleOption=[...levelEl.options].find(o=>o.value==="fortnight");
+  if(singleOption)singleOption.textContent=generic?"Período":"Quincena";
+  const dateMode=prefix==="plan"&&["week","custom"].includes(level);
   if(qWrap)qWrap.hidden=level!=="quarter";
-  if(mWrap)mWrap.hidden=level==="quarter";
+  if(mWrap)mWrap.hidden=level==="quarter"||dateMode;
   if(fWrap)fWrap.hidden=level!=="fortnight";
 }
 function hierarchicalSelection(prefix){
   const level=document.getElementById(prefix+"Level")?.value||"quarter";
+  if(prefix==="plan"&&["week","custom"].includes(level))return {level,value:oneV15DateRange(level)};
   if(level==="quarter")return {level,value:document.getElementById(prefix+"Quarter")?.value||""};
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
-  const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
-  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
-  return {level,value:p?periodKey(p):"",month,fortnight};
+  if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
+  const option=document.getElementById(prefix+"Fortnight")?.value||"1";
+  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&oneV15PeriodOption(r)===option);
+  return {level,value:p?periodKey(p):"",month,fortnight:p?.fortnight||0};
 }
 function selectionQuarter(prefix){
   const s=hierarchicalSelection(prefix);if(s.level==="quarter")return s.value;
@@ -4776,7 +4897,7 @@ function renderDashboard(){
   document.getElementById("dashboardCategories").innerHTML=categoryTable(cat);
   renderReconciliationStatus();
   if(document.getElementById("oneDataHealthDetails")?.open)oneRenderDataHealth();
-  const labels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+  const labels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
   drawBarChart(document.getElementById("expenseChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.expenses):[0],labels.length?rows.map(r=>r.actualExpenses):[0]);
   drawLineChart(document.getElementById("cashChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.ending):[0],labels.length?rows.map(r=>r.actualBalance):[0]);
 }
@@ -4830,7 +4951,7 @@ function setPlanMonthOpen(section,open,persist=true){
   const body=section.querySelector(".plan-month-body"),btn=section.querySelector(".plan-month-toggle");
   if(body)body.hidden=!open;
   section.classList.toggle("is-collapsed",!open);
-  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":"Ver quincenas"}
+  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":oneV15HasFlexiblePeriods()?"Ver períodos":"Ver quincenas"}
   if(persist)rememberPlanMonthOpen(section.dataset.planMonth,open);
 }
 function setAllPlanMonths(open){
@@ -4898,6 +5019,37 @@ function oneApplyCopyBudgetMonth(month){
   return true;
 }
 
+// V15.7: reuse the existing collapsed detail style. Advice never changes a budget.
+function oneV15IntelligenceHtml(rows,start,end,asOf,pace=true){
+ try{
+  const result=oneV15QueryCore.budgetIntelligence(rows,start,end,asOf,{pace});
+  const names=new Map(rows.map(r=>[r.id,r.name]));
+  const line=(label,amount)=>'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(label)+'</span></span><strong>'+safe(money(amount/100))+'</strong></div>';
+  const group=(label,items,field)=>items.length?'<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+items.map(r=>line(names.get(r.id)||r.id,r[field])).join("")+'</div>':"";
+  const sections=group("Sin presupuesto",result.unbudgeted,"used")+group("Exceso del presupuesto",result.over,"excess")+group("Por encima del ritmo de referencia",result.ahead,"ahead");
+  const pending=result.remaining===null?"":'<div class="r8-section"><div class="r8-section-heading"><span>Presupuesto pendiente de utilizar</span><strong>'+safe(money(result.remaining/100))+'</strong></div>'+line("Pagos de deuda presupuestados",result.remainingDebt)+line("Otros gastos y ahorro",result.remainingOther)+'</div>';
+  if(!sections&&!result.remaining)return "";
+  const notes=(result.ahead.length?'<div class="r8-card-dates">Ritmo lineal por días; no es un pronóstico ni un exceso del total.</div>':"")+(pending?'<div class="r8-card-dates">Importes presupuestados, no saldos bancarios ni vencimientos confirmados.</div>':"");
+  return '<details class="r8-unused" data-v15-intelligence><summary>Revisar presupuesto</summary>'+sections+pending+notes+'</details>';
+ }catch{return ""}
+}
+function oneV15PeriodIntelligence(p,asOf){
+ if(oneV15QueryCore.hasUnreconciledBudget(data))return "";
+ const rows=oneV15PeriodBudgetRows(p,asOf).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ return oneV15IntelligenceHtml(rows,p.date,periodEndDate(p),asOf);
+}
+function oneV15DateIntelligence(query,range,asOf){
+ // An incomplete query must never infer that an unknown allocation is zero.
+ if(query?.coverage!=="complete"||query.requiresReconciliation||oneV15QueryCore.hasUnreconciledBudget(data))return "";
+ const movements=data.movements.filter(m=>m.date>=range.start&&m.date<=range.end&&m.date<=asOf);
+ const contributions=(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date>=range.start&&t.date<=range.end&&t.date<=asOf);
+ const rows=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false).map(c=>({
+  id:c.id,name:c.name,type:c.type,plannedCRC:query.totals.filter(x=>x.categoryId===c.id).reduce((s,x)=>s+currentToCRC(x.minor/100,x.currency,"pay"),0),
+  spentCRC:movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0),
+  savingsCRC:contributions.filter(t=>oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0),paceEligible:false
+ })).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ return oneV15IntelligenceHtml(rows,range.start,range.end,asOf,false);
+}
 function r8BudgetLine(category,period){
   const key=periodKey(period),cid=category.id,currency=normalizeCurrency(period.categoryBudgetCurrencies?.[cid]||"CRC");
   const amount=num(period.categoryBudgets?.[cid]);
@@ -4938,10 +5090,280 @@ function r8BudgetSection(types,heading,period){
   </div>`;
 }
 
+// Date views are intentionally read-only; the original financial cards remain unchanged.
+function oneV15DateRange(level){
+  const pref=uiState.v15DateQuery||{},today=todayIso();
+  if(level==="week")return oneV15QueryCore.calendarRange(restoreValidDate(pref.week)?pref.week:today,"week");
+  if(restoreValidDate(pref.start)&&restoreValidDate(pref.end)&&pref.start<=pref.end)return {start:pref.start,end:pref.end};
+  return {start:today,end:today};
+}
+function oneV15SaveDateRange(level,range){
+  uiState.v15DateQuery={...(uiState.v15DateQuery||{}),...(level==="week"?{week:range.start}:{start:range.start,end:range.end})};
+  saveUiState();
+}
+function oneV15SyncDateControls(level){
+  const dateMode=["week","custom"].includes(level),custom=level==="custom";
+  const controls=document.getElementById("v15PlanDateControls");
+  controls.hidden=!custom;
+  // Existing stylesheet gives display:flex to period-filter; honor hidden explicitly.
+  controls.style.display=custom?"":"none";
+  for(const id of ["newQuarterBtn","duplicateQuarterBtn","expandPlanBtn","collapsePlanBtn"])document.getElementById(id).disabled=dateMode;
+  if(custom){
+    const r=oneV15DateRange(level),a=document.getElementById("v15PlanStart"),b=document.getElementById("v15PlanEnd");
+    a.value=r.start;b.value=r.end;a.max=r.end;b.min=r.start;a.setCustomValidity("");b.setCustomValidity("");
+  }
+}
+function oneV15RenderDatePlan(level,r){
+  const preference={level,quarter:document.getElementById("planQuarter").value,month:document.getElementById("planMonth").value,fortnight:document.getElementById("planFortnight").value};
+  if(JSON.stringify(uiState.v15PlanSelection)!==JSON.stringify(preference)){uiState.v15PlanSelection=preference;saveUiState()}
+  oneV15SyncDateControls(level);
+  const rangeLabel=dateLabel(r.start)+" – "+dateLabel(r.end);
+  document.getElementById("planTitle").textContent="Presupuesto";
+  document.getElementById("r8PlanEyebrow").textContent="PLAN FINANCIERO";
+  document.getElementById("planSub").textContent=rangeLabel;
+  document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.disabled=level==="custom");
+  const today=todayIso(),allRows=allAdaptiveProjectedRows(),live=allRows.find(p=>p.date<=today&&today<=periodEndDate(p));
+  const operation=actualBalanceAt(today),obligations=live?remainingBudgetForCurrentPeriod(live,today):0,closing=live?live.ending:operation;
+  const items=[["Saldo operativo hoy",money(operation),""],["Compromisos pendientes",money(obligations),""],["Cierre actual estimado",money(closing),closing<0?"negative":"positive"]];
+  document.getElementById("planQuarterSummary").innerHTML=items.map(([label,amount,tone])=>'<div class="summary-box"><div class="summary-label">'+label+'</div><div class="summary-value '+tone+'">'+amount+'</div></div>').join("");
+  document.getElementById("goalBudgetPreview").hidden=true;
+  document.getElementById("planSummary").textContent="";
+  document.getElementById("planClosing").innerHTML="";
+  let result=null;
+  try{result=oneV15QueryCore.queryBudget(data,{basis:"calendar",mode:level,anchor:r.start,end:r.end},p=>periodEndDate(p,data.periods,data.settings))}catch(error){console.warn("V15 date query unavailable",error)}
+  const complete=result?.coverage==="complete";
+  const within=t=>t.date>=r.start&&t.date<=r.end;
+  const movements=data.movements.filter(within),contributions=(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&within(t));
+  const rows=sortedCategories((data.categories||[]).filter(c=>["Ingreso","Gasto","Pago deuda"].includes(c.type))).map(c=>{
+    const actual=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+(c.type==="Gasto"?contributions.filter(t=>oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0):0);
+    const planned=(result?.totals||result?.knownSubtotal||[]).filter(x=>x.categoryId===c.id);
+    return {c,actual,planned};
+  }).filter(x=>x.actual!==0||x.planned.some(p=>p.minor!==0));
+  const section=(title,income)=>{
+    const visible=rows.filter(x=>(x.c.type==="Ingreso")===income);
+    return '<div class="r8-section"><div class="r8-section-heading"><span>'+title+'</span><strong>'+money(visible.reduce((s,x)=>s+x.actual,0))+'</strong></div>'+ (visible.length?visible.map(x=>{
+      const amounts=x.planned.filter(p=>p.minor!==0).map(p=>originalMoney(p.minor/100,p.currency)).join(" + ");
+      const exact=complete||result?.resolvedCategoryIds?.includes(x.c.id);
+      const hasKnown=x.planned.length>0;
+      const displayAmounts=amounts||(hasKnown?x.planned.map(p=>originalMoney(0,p.currency)).join(" + "):"");
+      const label=exact?(displayAmounts?"Asignado: "+displayAmounts:"Sin asignación"):(displayAmounts?"Subtotal asignado: "+displayAmounts:"Sin asignación completa");
+      return '<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(x.c.name)+'</span><small class="muted">'+safe(label)+'</small></span><strong>'+safe(money(x.actual))+'</strong></div>';
+    }).join(""):'<div class="r8-empty-row">Sin registros</div>')+'</div>';
+  };
+  const status=complete?"Presupuesto definido":result?"Presupuesto sin asignación completa":"Presupuesto pendiente de revisión";
+  const note=((data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"")+(result?.allocationReview?.length?" · Distribuciones en revisión":"");
+  document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+oneV15DateIntelligence(result,r,today)+'</div></article></div></section>';
+}
+
+// V15.4: native, collapsed breakdowns. No writes to the financial model.
+function oneV15MonthCategoryTotals(month){
+ let result;
+ try{
+  const grouped=data.periods.filter(p=>p.budgetMonth===month);
+  if(grouped.some(oneV15IsFlexiblePeriod)){
+   const sums=new Map();
+   for(const p of grouped){
+    const exact=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"period",key:periodKey(p)},x=>periodEndDate(x,data.periods,data.settings));
+    for(const a of exact.totals||[]){const k=JSON.stringify([a.categoryId,a.currency]),minor=(sums.get(k)?.minor||0)+a.minor;if(!Number.isSafeInteger(minor))throw Error("Monto fuera de rango");sums.set(k,{...a,minor})}
+   }
+   result={coverage:"grouped",knownSubtotal:[...sums.values()]};
+  }else result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings));
+ }
+ catch{return '<details class="r8-unused"><summary>Totales por categoría</summary><div class="r8-empty-row">Presupuesto pendiente de revisión</div></details>'}
+ const values=result.totals||result.knownSubtotal;
+ const sections=[["Ingresos",["Ingreso"]],["Gastos, deudas y ahorro",["Gasto","Pago deuda"]]].map(([label,types])=>{
+  const rows=sortedCategories((data.categories||[]).filter(c=>types.includes(c.type)&&c.budgetable!==false)).map(c=>{
+   const amounts=values.filter(x=>x.categoryId===c.id&&x.minor!==0).map(x=>originalMoney(x.minor/100,x.currency));
+   return amounts.length?'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(amounts.join(" + "))+'</strong></div>':"";
+  }).filter(Boolean);
+  return '<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+(rows.join("")||'<div class="r8-empty-row">Sin asignaciones</div>')+'</div>';
+ }).join("");
+ const status=result.coverage==="complete"?"":result.coverage==="grouped"?"<div class=\"r8-card-dates\">Períodos agrupados por mes de referencia</div>":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
+ return '<details class="r8-unused" data-v15-month-totals="'+safe(month)+'"><summary>Totales por categoría</summary>'+status+sections+'</details>';
+}
+function oneV15WeekEvents(p){
+ const key=periodKey(p),categories=budgetCategories(["Ingreso","Gasto","Pago deuda"],p),events=[];
+ // Use the exact legacy period assignment and category/split calculation.
+ for(const m of periodMovements(p))for(const c of categories){
+  if(m.type!==c.type)continue;
+  const amountCRC=movementCategoryAmountCRC(m,c);
+  if(amountCRC)events.push({date:m.date,categoryId:c.id,type:c.type,amountCRC});
+ }
+ // Same linked contribution rule as oneBudgetSavingsActual; never add a second movement.
+ for(const t of data.reserveMovements||[]){
+  if(t.type!=="Aporte"||periodKey(periodForDate(t.date)||{})!==key)continue;
+  const c=categories.find(c=>c.type!=="Ingreso"&&c.id===oneContributionCategory(t));
+  if(c){const amountCRC=reserveTxnHistoricalCRC(t,"pay");if(amountCRC)events.push({date:t.date,categoryId:c.id,type:c.type,amountCRC});}
+ }
+ return events;
+}
+// V15.5: weekly allocations annotate canonical category budgets; they are not independent expenses.
+let oneV15AllocationDraft=null;
+function oneV15AllocationParent(p,c){
+ if(!p||!c||c.active===false||c.budgetable===false||c.type!=="Gasto")throw Error("Categoría no disponible");
+ const amount=p.categoryBudgets?.[c.id]??0,currency=p.categoryBudgetCurrencies?.[c.id]||"CRC";
+ return {start:p.date,end:periodEndDate(p),amount,currency};
+}
+function oneV15AllocationRecord(p,c){
+ const rows=data.v15WeeklyAllocations;
+ if(rows===undefined)return null;
+ if(!Array.isArray(rows))throw Error("Asignaciones pendientes de revisión");
+ const matches=rows.filter(x=>x?.periodKey===periodKey(p)&&x.categoryId===c.id);
+ if(matches.length>1)throw Error("Asignaciones duplicadas");
+ return matches[0]||null;
+}
+function oneV15AllocationRows(p,w,index){
+ const list=[];
+ for(const c of budgetCategories("Gasto",p)){
+  try{
+   const rec=oneV15AllocationRecord(p,c);if(!rec)continue;
+   const state=oneV15QueryCore.allocationState(oneV15AllocationParent(p,c),rec);
+   if(state.stale)continue;
+   list.push('<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(originalMoney(state.amounts[index]/100,rec.currency))+'</strong></div>');
+  }catch{}
+ }
+ return list.length?'<div class="r8-section"><div class="r8-section-heading"><span>Presupuesto asignado</span></div>'+list.join("")+'</div>':"";
+}
+function oneV15OpenAllocation(key){
+ const p=periodByKey(key),dialog=document.getElementById("v15AllocationDialog");if(!p)return;
+ const cats=budgetCategories("Gasto",p).filter(c=>c.active!==false&&c.budgetable!==false);
+ if(!cats.length)return alert("No hay categorías de gasto disponibles.");
+ oneV15AllocationDraft={key,ledger:JSON.stringify(data)};
+ document.getElementById("v15AllocationCategory").replaceChildren(...cats.map(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;return o}));
+ oneV15ResetAllocationFields();dialog.showModal();
+}
+function oneV15ResetAllocationFields(){
+ const d=oneV15AllocationDraft;if(!d)return;
+ const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+ const week=document.getElementById("v15AllocationWeek"),amount=document.getElementById("v15AllocationAmount");
+ const undo=document.getElementById("v15AllocationUndo"),review=document.getElementById("v15AllocationReview");
+ d.reviewCategory=null;d.preview=null;review.hidden=true;
+ try{
+  const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec);
+  if(state.stale){
+   review.hidden=false;week.replaceChildren();amount.value="";
+   throw Error("El presupuesto original cambió. Revisá la distribución para conservar el monto vigente.");
+  }
+  week.replaceChildren(...state.weeks.map((w,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=dateLabel(w.start)+" – "+dateLabel(w.end);return o}));
+  document.getElementById("v15AllocationCurrency").textContent=parent.currency;
+  const initial=oneV15QueryCore.allocationPreview(parent,rec,0,(state.amounts?.[0]??Math.ceil(state.total/state.weeks.length))/100,"maintain");
+  amount.value=String(initial.base[0]/100);document.getElementById("v15AllocationMode").value="maintain";
+  undo.hidden=!rec?.undo;oneV15PreviewAllocation();
+ }catch(error){
+  document.getElementById("v15AllocationPreview").textContent=error.message;document.getElementById("v15AllocationConfirm").disabled=true;undo.hidden=true;d.preview=null;
+ }
+}
+function oneV15PreviewAllocation(){
+ const d=oneV15AllocationDraft;if(!d)return;
+ const slot=document.getElementById("v15AllocationPreview"),confirmBtn=document.getElementById("v15AllocationConfirm");
+ d.preview=null;confirmBtn.disabled=true;
+ try{
+  const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),field=document.getElementById("v15AllocationAmount");
+  const stale=oneV15QueryCore.allocationState(parent,rec).stale;
+  if(stale&&d.reviewCategory!==c.id)throw Error("Revisá la distribución anterior antes de continuar.");
+  if(field.value===""||!field.validity.valid)throw Error("Ingresá un monto válido.");
+  const mode=document.getElementById("v15AllocationMode").value;
+  if(stale&&mode!=="maintain")throw Error("Primero conservá el presupuesto vigente.");
+  const preview=oneV15QueryCore.allocationPreview(parent,stale?null:rec,Number(document.getElementById("v15AllocationWeek").value),Number(field.value),mode);
+  d.preview={categoryId:c.id,...preview};
+  slot.innerHTML=preview.weeks.map((w,i)=>'<div class="r8-budget-row"><span>'+safe(dateLabel(w.start)+" – "+dateLabel(w.end))+'</span><strong>'+safe(originalMoney(preview.next[i]/100,preview.currency))+'</strong></div>').join("")+'<div class="r8-section"><div class="r8-section-heading"><span>Total anterior</span><strong>'+safe(originalMoney(preview.oldTotal/100,preview.currency))+'</strong></div><div class="r8-section-heading"><span>Nuevo total</span><strong>'+safe(originalMoney(preview.total/100,preview.currency))+'</strong></div></div>';
+  confirmBtn.disabled=false;
+ }catch(error){slot.textContent=error.message}
+}
+function oneV15PersistAllocation(undo=false){
+ const d=oneV15AllocationDraft;if(!d)return false;
+ try{
+  if(JSON.stringify(data)!==d.ledger)throw Error("Los datos cambiaron. Cerrá y volvé a abrir la distribución.");
+  oneStorageAssertCurrent();
+  const cid=document.getElementById("v15AllocationCategory").value,p=periodByKey(d.key),c=categoryById(cid),parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c);
+  const state=oneV15QueryCore.allocationState(parent,rec);
+  if(state.stale&&(undo||d.reviewCategory!==cid))throw Error("El presupuesto original cambió.");
+  const staged=clone(data),target=staged.periods.find(x=>periodKey(x)===d.key);
+  const rows=Array.isArray(staged.v15WeeklyAllocations)?staged.v15WeeklyAllocations:[];
+  staged.v15WeeklyAllocations=rows.filter(x=>!(x.periodKey===d.key&&x.categoryId===cid));
+  if(undo){
+   if(!rec?.undo||typeof rec.undo.hadAmount!=="boolean")throw Error("No hay una distribución válida para revertir.");
+   const amount=rec.undo.amount;
+   if(!Number.isFinite(amount)||amount<0||!Number.isSafeInteger(Math.round(amount*100))||Math.abs(amount*100-Math.round(amount*100))>1e-5||(!rec.undo.hadAmount&&amount!==0))throw Error("El respaldo de distribución requiere revisión.");
+   if(rec.undo.previous&&(rec.undo.previous.periodKey!==d.key||rec.undo.previous.categoryId!==cid))throw Error("El respaldo de distribución no corresponde a esta categoría.");
+   if(rec.undo.hadAmount)target.categoryBudgets[cid]=amount;else delete target.categoryBudgets[cid];
+   if(rec.undo.previous)staged.v15WeeklyAllocations.push(rec.undo.previous);
+  }else{
+   oneV15PreviewAllocation();const v=d.preview;if(!v||v.categoryId!==cid)throw Error("Revisá la vista previa.");
+   const previous=rec?{...rec}:null;if(previous)delete previous.undo;
+   staged.v15WeeklyAllocations.push({periodKey:d.key,categoryId:cid,start:v.start,end:v.end,currency:v.currency,parentMinor:v.total,amounts:v.next,createdAt:new Date().toISOString(),undo:{hadAmount:Object.prototype.hasOwnProperty.call(p.categoryBudgets||{},cid),amount:parent.amount,previous}});
+   if(v.total!==v.oldTotal)target.categoryBudgets[cid]=v.total/100;
+  }
+  // Commit all changes in one checked write; never mutate live state on a failed save.
+  oneStoragePersist(JSON.stringify(staged));data=staged;
+  document.getElementById("v15AllocationDialog").close();oneV15AllocationDraft=null;
+  renderPlan();renderDashboard();renderReports();
+  const detail=[...document.querySelectorAll("[data-v15-week-detail]")].find(x=>x.dataset.v15WeekDetail===d.key);if(detail)detail.open=true;
+  return true;
+ }catch(error){document.getElementById("v15AllocationPreview").textContent=error.message;return false}
+}
+function oneV15BindAllocation(){
+ const dialog=document.getElementById("v15AllocationDialog");
+ document.getElementById("v15AllocationCancel").addEventListener("click",()=>dialog.close());
+ document.getElementById("v15AllocationCategory").addEventListener("change",oneV15ResetAllocationFields);
+ document.getElementById("v15AllocationReview").addEventListener("click",()=>{
+  const d=oneV15AllocationDraft,p=d&&periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  try{
+   if(!d||JSON.stringify(data)!==d.ledger)throw Error("Los datos cambiaron. Volvé a abrir la distribución.");
+   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec);
+   if(!state.stale)return;
+   d.reviewCategory=c.id;
+   const week=document.getElementById("v15AllocationWeek");
+   week.replaceChildren(...state.weeks.map((w,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=dateLabel(w.start)+" – "+dateLabel(w.end);return o}));
+   document.getElementById("v15AllocationCurrency").textContent=parent.currency;
+   document.getElementById("v15AllocationAmount").value=String(Math.ceil(state.total/state.weeks.length)/100);
+   document.getElementById("v15AllocationMode").value="maintain";
+   document.getElementById("v15AllocationReview").hidden=true;
+   oneV15PreviewAllocation();
+  }catch(error){document.getElementById("v15AllocationPreview").textContent=error.message;}
+ });
+ document.getElementById("v15AllocationWeek").addEventListener("change",()=>{
+  const d=oneV15AllocationDraft,p=d&&periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  try{
+   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec),base=state.amounts||oneV15QueryCore.allocationPreview(parent,state.stale&&d.reviewCategory===c.id?null:rec,0,Math.ceil(state.total/state.weeks.length)/100,"maintain").base;
+   document.getElementById("v15AllocationAmount").value=String(base[Number(document.getElementById("v15AllocationWeek").value)]/100);
+  }catch{}
+  oneV15PreviewAllocation();
+ });
+ for(const id of ["v15AllocationAmount","v15AllocationMode"])document.getElementById(id).addEventListener("input",oneV15PreviewAllocation);
+ document.getElementById("v15AllocationForm").addEventListener("submit",e=>{e.preventDefault();oneV15PersistAllocation(false)});
+ document.getElementById("v15AllocationUndo").addEventListener("click",()=>{if(confirm("¿Revertir la última distribución y restaurar su presupuesto anterior?"))oneV15PersistAllocation(true)});
+}
+
+function oneV15WeekDetail(p){
+ const key=periodKey(p);let breakdown;
+ try{breakdown=oneV15QueryCore.weeklyBreakdown(p.date,periodEndDate(p),oneV15WeekEvents(p))}
+ catch{return '<div class="r8-empty-row">Desglose pendiente de revisión</div>'}
+ const renderEvents=events=>{
+  const grouped=new Map();
+  for(const e of events){const id=e.categoryId;grouped.set(id,(grouped.get(id)||0)+e.amountCRC);}
+  return sortedCategories((data.categories||[]).filter(c=>grouped.has(c.id))).map(c=>'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(money(grouped.get(c.id)))+'</strong></div>').join("")||'<div class="r8-empty-row">Sin registros</div>';
+ };
+ const sections=breakdown.weeks.map((w,index)=>{
+  const label=dateLabel(w.start)+" – "+dateLabel(w.end);
+  const income=w.events.filter(e=>e.type==="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
+  const out=w.events.filter(e=>e.type!=="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
+  return '<details class="r8-unused" data-v15-week-start="'+safe(w.start)+'" data-v15-week-end="'+safe(w.end)+'"><summary>'+safe(label)+'</summary><div class="r8-section"><div class="r8-section-heading"><span>Ingresos registrados</span><strong>'+safe(money(income))+'</strong></div><div class="r8-section-heading"><span>Egresos registrados</span><strong>'+safe(money(out))+'</strong></div>'+renderEvents(w.events)+'</div>'+oneV15AllocationRows(p,w,index)+'</details>';
+ }).join("");
+ const outside=breakdown.outside.length?'<details class="r8-unused" data-v15-week-outside><summary>Registros fuera de fecha asignados a esta quincena</summary>'+renderEvents(breakdown.outside)+'</details>':"";
+ const records=Array.isArray(data.v15WeeklyAllocations)?data.v15WeeklyAllocations.filter(x=>x?.periodKey===key):[];
+ const review=records.some(rec=>{try{return oneV15QueryCore.allocationState(oneV15AllocationParent(p,categoryById(rec.categoryId)),rec).stale}catch{return true}});
+ const label=review?"Actividad registrada · distribuciones en revisión":records.length?"Actividad registrada · asignaciones semanales":"Actividad registrada · presupuesto sin distribución semanal";
+ return '<details class="r8-unused" data-v15-week-detail="'+safe(key)+'"><summary>Semanas</summary><div class="r8-card-dates">'+label+'</div>'+sections+outside+'<button type="button" class="btn secondary small" data-v15-allocate="'+safe(key)+'">Distribuir presupuesto</button></details>';
+}
+
 function renderPlan(){
   const {level,value}=hierarchicalSelection("plan");
+  if(["week","custom"].includes(level)){oneV15RenderDatePlan(level,value);return}
+  oneV15SyncDateControls(level);
   const allRows=allAdaptiveProjectedRows(),staticRows=allProjectedRows();
-  const rows=level==="quarter"?allRows.filter(r=>r.planningQuarter===value):level==="month"?allRows.filter(r=>r.budgetMonth===value):allRows.filter(r=>periodKey(r)===value);
+  const rows=allRows.filter(r=>oneV15PlanMatches(r,level,value));
   const months=[...new Set(rows.map(r=>r.budgetMonth))];
   const today=todayIso();
   const live=allRows.find(p=>p.date<=today&&today<=periodEndDate(p));
@@ -4952,20 +5374,19 @@ function renderPlan(){
   const income=rows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
   const expenses=rows.reduce((sum,r)=>sum+num(r.expenses),0);
   const finalClosing=rows.at(-1)?.ending??firstOpening;
-  const oldRows=level==="quarter"?staticRows.filter(r=>r.planningQuarter===value):level==="month"?staticRows.filter(r=>r.budgetMonth===value):staticRows.filter(r=>periodKey(r)===value);
+  const oldRows=staticRows.filter(r=>oneV15PlanMatches(r,level,value));
   const staticClosing=oldRows.at(-1)?.ending??firstOpening;
-  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?`${monthLabel(rows[0].budgetMonth)} · ${rows[0].fortnight===1?"1.ª":"2.ª"} quincena`:selectedLabel(level,value);
+  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?fortnightLabel(rows[0]):selectedLabel(level,value);
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
   document.getElementById("planTitle").textContent=title;
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
-  document.getElementById("planSub").textContent="Planificación y control por períodos financieros.";
+  document.getElementById("planSub").textContent=oneV15QueryCore.hasUnreconciledBudget(data)?"Presupuesto base · ajustes V13/V14 pendientes de reconciliación.":"Planificación y control por períodos financieros.";
   document.getElementById("planClosingTitle").textContent="Cierre proyectado del periodo";
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>{
-    const selected=b.dataset.r8PlanLevel===level;
-    b.classList.toggle("active",selected);
-    b.setAttribute("aria-pressed",String(selected));
-  });
-  const possible=level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const extended=level==="half"||level==="year";
+  const possible=extended?oneV15PlanGroups(level):level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const selector=document.getElementById("planLevel");
+  const preference={level,quarter:document.getElementById("planQuarter").value,month:document.getElementById("planMonth").value,fortnight:document.getElementById("planFortnight").value};
+  if(selector&&JSON.stringify(uiState.v15PlanSelection)!==JSON.stringify(preference)){uiState.v15PlanSelection=preference;saveUiState()}
   const pos=possible.indexOf(value);
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>{
     b.disabled=pos<0||pos+Number(b.dataset.r8PeriodShift)<0||pos+Number(b.dataset.r8PeriodShift)>=possible.length;
@@ -4979,7 +5400,7 @@ function renderPlan(){
     `<div class="summary-box"><div class="summary-label">${label}</div><div class="summary-value ${tone}">${amount}</div></div>`
   ).join("");
   document.getElementById("planMonths").innerHTML=months.length?months.map((month)=>{
-    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>num(a.fortnight)-num(b.fortnight));
+    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>a.date.localeCompare(b.date));
     const monthIncome=monthRows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
     const monthExpenses=monthRows.reduce((sum,r)=>sum+num(r.expenses),0);
     const flow=monthIncome-monthExpenses;
@@ -5002,12 +5423,14 @@ function renderPlan(){
       ).join("");
       return `<article class="r8-fortnight-card ${current?"current":""}">
         <div class="r8-card-main">
-          <div class="r8-fortnight-heading"><h3>${r.fortnight===1?"1.ª quincena":"2.ª quincena"}</h3><span class="r8-chip${statusClass}">${status}</span></div>
-          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneShiftDate(end,1))}</div>
+          <div class="r8-fortnight-heading"><h3>${safe(oneV15PeriodCaption(r))}</h3><span class="r8-chip${statusClass}">${status}</span></div>
+          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneV15IsFlexiblePeriod(r)?end:oneShiftDate(end,1))}</div>
           <div class="r8-card-closing-label">Cierre proyectado</div>
           <div class="r8-card-closing ${tone}">${money(r.ending)}</div>
           ${r8BudgetSection("Ingreso","Ingresos",r)}
           ${r8BudgetSection(["Gasto","Pago deuda"],"Gastos, deudas y ahorro",r)}
+          ${oneV15PeriodIntelligence(r,today)}
+          ${oneV15IsFlexiblePeriod(r)&&r.frequency==="weekly"?"":oneV15WeekDetail(r)}
         </div>
         <div class="r8-card-footer">
           <button type="button" data-r8-add-category="${key}" title="Crear una categoría presupuestable">+ Agregar categoría</button>
@@ -5015,7 +5438,7 @@ function renderPlan(){
         </div>
         <div class="r8-card-details" data-r8-technical="${key}" ${open?"":"hidden"}>
           <div class="r8-detail-grid">
-            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}"></div>
+            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}" ${oneV15IsFlexiblePeriod(r)?"disabled":""}></div>
             <div class="r8-detail-item"><label>Saldo base utilizado</label>${openingEdit}</div>
             <div class="r8-detail-item"><label>Ingresos presupuestados</label><strong>${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</strong></div>
             <div class="r8-detail-item"><label>Disponible antes de compromisos</label><strong>${money(r.available)}</strong></div>
@@ -5035,7 +5458,7 @@ function renderPlan(){
           <button class="r8-month-toggle plan-month-toggle" type="button" data-toggle-plan-month="${month}" aria-expanded="true">Ocultar detalle</button>
         </div>
       </div>
-      <div class="plan-month-body"><div class="r8-fortnight-grid">${cards}</div></div>
+      <div class="plan-month-body">${level==="fortnight"?"":oneV15MonthCategoryTotals(month)}<div class="r8-fortnight-grid">${cards}</div></div>
     </section>`;
   }).join(""):`<div class="r8-plan-empty">Todavía no hay quincenas configuradas para este período.</div>`;
   const firstV8Open=!uiState.r8BudgetInitialized;
@@ -5052,7 +5475,6 @@ function renderPlan(){
 }
 
 function initR8(){
-  const levelControl=document.getElementById("planLevel");
   const copyDialog=document.getElementById("copyBudgetDialog");
   document.getElementById("closeCopyBudgetDialog")?.addEventListener("click",()=>copyDialog.close());
   document.getElementById("cancelCopyBudget")?.addEventListener("click",()=>copyDialog.close());
@@ -5061,15 +5483,27 @@ function initR8(){
     if(oneApplyCopyBudgetMonth(copyDialog?.dataset.targetMonth||""))copyDialog.close();
   });
   updateMovementFields();
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>b.addEventListener("click",()=>{
-    const next=b.dataset.r8PlanLevel;if(!next||!levelControl)return;
-    levelControl.value=next;
-    levelControl.dispatchEvent(new Event("change",{bubbles:true}));
-  }));
+  oneV15BindAllocation();
+  const start=document.getElementById("v15PlanStart"),end=document.getElementById("v15PlanEnd");
+  for(const field of [start,end])field.addEventListener("change",()=>{
+    start.setCustomValidity("");end.setCustomValidity("");
+    if(!restoreValidDate(start.value)||!restoreValidDate(end.value)||end.value<start.value){
+      field.setCustomValidity("Elegí fechas válidas y en orden.");field.reportValidity();return;
+    }
+    oneV15SaveDateRange("custom",{start:start.value,end:end.value});renderPlan();
+  });
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.addEventListener("click",()=>{
     const shift=Number(b.dataset.r8PeriodShift)||0;
     const {level,value}=hierarchicalSelection("plan");
-    if(level==="quarter"){
+    if(level==="week"){
+      const r=oneV15DateRange("week");oneV15SaveDateRange("week",{start:oneShiftDate(r.start,shift*7)});renderPlan();return;
+    }
+    if(level==="custom")return;
+    if(level==="half"||level==="year"){
+      const groups=oneV15PlanGroups(level),target=groups[groups.indexOf(value)+shift];
+      const month=target&&availableBudgetMonths().find(m=>oneV15FinancialGroup(m,level)===target);
+      if(month){document.getElementById("planMonth").value=month;document.getElementById("planQuarter").value=budgetQuarterFromMonth(month);syncHierarchicalFilter("plan",false)}
+    }else if(level==="quarter"){
       const qs=planningQuarters(),i=qs.indexOf(value),target=qs[i+shift];
       if(target)document.getElementById("planQuarter").value=target;
     }else if(level==="month"){
@@ -5085,12 +5519,13 @@ function initR8(){
       if(p){
         document.getElementById("planMonth").value=p.budgetMonth;
         syncHierarchicalFilter("plan");
-        document.getElementById("planFortnight").value=String(p.fortnight);
+        document.getElementById("planFortnight").value=oneV15PeriodOption(p);
       }
     }
     renderPlan();
   }));
   document.getElementById("planMonths")?.addEventListener("click",(event)=>{
+    const allocation=event.target.closest("[data-v15-allocate]");if(allocation){oneV15OpenAllocation(allocation.dataset.v15Allocate);return}
     const copy=event.target.closest("[data-copy-budget-month]");
     if(copy){oneOpenCopyBudgetMonth(copy.dataset.copyBudgetMonth);return}
     const edit=event.target.closest("[data-r8-edit-budget]");
@@ -5142,7 +5577,7 @@ function renderMovements(){
   const rows=selectedMovements(level,value).filter(m=>!type||m.type===type).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("movementCount").textContent=`${rows.length} movimientos`;
   document.getElementById("movementTable").innerHTML=`<thead><tr><th>Fecha</th><th>Mes presupuestario</th><th>Quincena</th><th>Tipo</th><th>Categoría</th><th>Deuda</th><th>Cuenta</th><th>Descripción</th><th>Monto</th><th></th></tr></thead><tbody>${
-    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
+    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(oneV15IsFlexiblePeriod(p)?safe(oneV15PeriodCaption(p)):p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
   }</tbody>`;
 }
 function renderDebts(){
@@ -5172,6 +5607,352 @@ function renderDebts(){
   }</tbody>`;
 }
 
+
+// Shared V15 read-only query core: same implementation in browser and Node.
+const oneV15QueryCore=(()=>{
+// V15.1/2: pure experimental query core; no persistence, DOM, FX, or projection side effects.
+function validDate(s){return typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+"T00:00:00Z"))&&new Date(s+"T00:00:00Z").toISOString().slice(0,10)===s}
+
+function shiftDate(s,n){if(!validDate(s))throw Error("Invalid date");const d=new Date(s+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+
+function validMonth(s){return typeof s==="string"&&/^\d{4}-(0[1-9]|1[0-2])$/.test(s)&&validDate(s+"-01")}
+
+function shiftMonth(s,n){if(!validMonth(s))throw Error("Invalid budget month");const d=new Date(s+"-01T00:00:00Z");d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,7)}
+
+function financialMonths(month,mode){if(!validMonth(month))throw Error("Invalid budget month");const m=Number(month.slice(5)),n={month:1,quarter:3,half:6,year:12}[mode];if(!n)throw Error("Invalid financial mode");const start=shiftMonth(month,-((m-1)%n));return Array.from({length:n},(_,i)=>shiftMonth(start,i))}
+
+function calendarRange(anchor,mode,end){if(!validDate(anchor))throw Error("Invalid anchor");if(mode==="custom"){if(!validDate(end)||end<anchor)throw Error("Invalid range");return {start:anchor,end}}if(mode==="week"){const d=new Date(anchor+"T00:00:00Z"),start=shiftDate(anchor,-((d.getUTCDay()+6)%7));return {start,end:shiftDate(start,6)}}const months=financialMonths(anchor.slice(0,7),mode);return {start:months[0]+"-01",end:shiftDate(shiftMonth(months.at(-1),1)+"-01",-1)}}
+
+function minor(value){if(typeof value!=="number"||!Number.isFinite(value)||value<0||!Number.isSafeInteger(Math.round(value*100))||Math.abs(value*100-Math.round(value*100))>1e-5)throw Error("Invalid amount; review source");return Math.round(value*100)}
+
+function keyFor(p){return p.key||((p.quarter&&p.n)?`${p.quarter}-${p.n}`:"")}
+
+function auditLedger(raw){if(!raw||typeof raw!=="object"||Array.isArray(raw))throw Error("Invalid ledger");const names=["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans","flexBudgets","livingBudgets"],counts={},issues=[];for(const name of names){const rows=raw[name];counts[name]=Array.isArray(rows)?rows.length:0;if(rows!==undefined&&!Array.isArray(rows))issues.push({code:"invalid-list",field:name});if(["flexBudgets","livingBudgets"].includes(name))continue;const seen=new Set();for(const r of Array.isArray(rows)?rows:[]){const k=r&&typeof r==="object"?(name==="periods"?keyFor(r):r.id):null;if(!k){issues.push({code:"missing-id",field:name});continue}if(seen.has(k))issues.push({code:"duplicate-id",field:name,id:k});seen.add(k)}}const slots=new Set(),categories=new Set((Array.isArray(raw.categories)?raw.categories:[]).map(c=>c?.id));for(const p of Array.isArray(raw.periods)?raw.periods:[]){if(!p||typeof p!=="object")continue;const k=keyFor(p),explicit=p.periodKind==="flexible",slot=explicit?"explicit|"+k:`${p.budgetMonth}|${p.fortnight}`;if(!validMonth(p.budgetMonth)||!validDate(p.date)||(explicit?!validDate(p.endDate)||p.endDate<p.date||p.fortnight!==0||p.budgetMonth!==p.date.slice(0,7)||k!=="v15-period-"+p.date+"-"+p.endDate||!["weekly","biweekly","semimonthly","monthly"].includes(p.frequency):![1,2].includes(Number(p.fortnight))))issues.push({code:"invalid-period",id:k});if(slots.has(slot))issues.push({code:"duplicate-slot",id:k});slots.add(slot);for(const [cid,amount] of Object.entries(p.categoryBudgets||{})){if(!categories.has(cid))issues.push({code:"unknown-category",id:k,categoryId:cid});try{minor(amount)}catch{issues.push({code:"invalid-budget-amount",id:k,categoryId:cid})}const currency=p.categoryBudgetCurrencies?.[cid]||"CRC";if(!["CRC","USD"].includes(currency))issues.push({code:"invalid-currency",id:k,categoryId:cid})}}return {counts,issues,requiresReconciliation:counts.flexBudgets>0||counts.livingBudgets>0,legacyOnly: !(raw.periods||[]).some(p=>p?.periodKind==="flexible")}}
+
+function queryBudgetLegacy(raw,scope,endFor){if(!scope||!["financial","calendar"].includes(scope.basis)||typeof endFor!=="function")throw Error("Explicit basis and original period end resolver required");const audit=auditLedger(raw);if(audit.issues.some(x=>["periods","categories"].includes(x.field)||["invalid-period","duplicate-slot","unknown-category","invalid-budget-amount","invalid-currency"].includes(x.code)))throw Error("Review invalid budget records before querying");const rows=(raw.periods||[]).map(p=>{const end=p.periodKind==="flexible"?p.endDate:endFor(p);if(!validDate(end)||end<p.date)throw Error("Invalid original period end");return {p,key:keyFor(p),start:p.date,end}}).sort((a,b)=>a.start.localeCompare(b.start));for(let i=1;i<rows.length;i++)if(rows[i].start<=rows[i-1].end)throw Error("Overlapping original periods");let selected=[],range=null,missingSlots=[];if(scope.basis==="financial"){if(scope.mode==="fortnight"||scope.mode==="period"){selected=rows.filter(r=>r.key===scope.key&&(scope.mode==="period"||r.p.periodKind!=="flexible"));if(selected.length!==1)throw Error("Unknown financial period")}else{const months=financialMonths(scope.month,scope.mode);selected=rows.filter(r=>months.includes(r.p.budgetMonth));if(selected.some(r=>r.p.periodKind==="flexible"))throw Error("Flexible groups require explicit calendar date query");for(const m of months)for(const q of [1,2])if(!selected.some(r=>r.p.budgetMonth===m&&Number(r.p.fortnight)===q))missingSlots.push(`${m}-Q${q}`)}if(selected.length)range={start:selected[0].start,end:selected.at(-1).end}}else{range=calendarRange(scope.anchor,scope.mode,scope.end);selected=rows.filter(r=>r.start<=range.end&&r.end>=range.start)}const whole=selected.filter(r=>scope.basis==="financial"||r.start>=range.start&&r.end<=range.end),partial=selected.filter(r=>!whole.includes(r));let gaps=[];if(range){let cursor=range.start;for(const r of selected){const start=r.start<range.start?range.start:r.start,end=r.end>range.end?range.end:r.end;if(start>cursor)gaps.push({start:cursor,end:shiftDate(start,-1)});if(end>=cursor)cursor=shiftDate(end,1)}if(cursor<=range.end)gaps.push({start:cursor,end:range.end})}const byCategory=new Map();for(const r of whole)for(const [cid,amount] of Object.entries(r.p.categoryBudgets||{})){const currency=r.p.categoryBudgetCurrencies?.[cid]||"CRC",k=JSON.stringify([cid,currency]);const cents=(byCategory.get(k)?.minor||0)+minor(amount);if(!Number.isSafeInteger(cents))throw Error("Unsafe aggregate");byCategory.set(k,{categoryId:cid,currency,minor:cents})}const knownSubtotal=[...byCategory.values()].sort((a,b)=>a.categoryId.localeCompare(b.categoryId)||a.currency.localeCompare(b.currency));const complete=selected.length>0&&!partial.length&&!missingSlots.length&&!gaps.length;return {basis:scope.basis,mode:scope.mode,range,coverage:complete?"complete":"partial",periodKeys:selected.map(r=>r.key),partialPeriods:partial.map(({key,start,end})=>({key,start,end})),missingSlots,gaps,knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,requiresReconciliation:audit.requiresReconciliation}}
+// V15.4: partition a parent's inclusive dates without creating budget allocations.
+function weeklyBreakdown(start,end,events){
+ if(!validDate(start)||!validDate(end)||end<start||!Array.isArray(events))throw Error("Invalid weekly breakdown");
+ const weeks=[];
+ for(let cursor=start;cursor<=end;){
+  const week=calendarRange(cursor,"week"),last=week.end<end?week.end:end;
+  weeks.push({start:cursor,end:last,planned:null,events:[]});
+  if(weeks.length>530)throw Error("Unexpectedly long original period");
+  cursor=shiftDate(last,1);
+ }
+ const outside=[];
+ for(const event of events){
+  if(!event||!Number.isFinite(event.amountCRC))throw Error("Invalid actual event");
+  const target=validDate(event.date)?weeks.find(w=>w.start<=event.date&&event.date<=w.end):null;
+  (target?target.events:outside).push({...event});
+ }
+ return {weeks,outside};
+}
+// V15.5: allocations are integer minor units, scoped to an original parent.
+function allocateWeighted(total,weights){
+ if(!Number.isSafeInteger(total)||total<0||!weights.length||weights.some(w=>!Number.isSafeInteger(w)||w<0))throw Error("Invalid allocation");
+ const sum=weights.reduce((s,w)=>s+BigInt(w),0n),den=sum||BigInt(weights.length);
+ const rows=weights.map((w,i)=>{const n=BigInt(total)*(sum?BigInt(w):1n);return {i,value:Number(n/den),remainder:n%den}});
+ let left=total-rows.reduce((s,r)=>s+r.value,0);
+ for(const r of [...rows].sort((a,b)=>a.remainder===b.remainder?a.i-b.i:a.remainder>b.remainder?-1:1)){if(left<=0)break;r.value++;left--}
+ return rows.map(r=>r.value);
+}
+function allocationState(parent,record){
+ if(!parent||!["CRC","USD"].includes(parent.currency))throw Error("Invalid parent currency");
+ const total=minor(parent.amount),weeks=weeklyBreakdown(parent.start,parent.end,[]).weeks.map(w=>({start:w.start,end:w.end}));
+ if(weeks.length<2||weeks.length>8)throw Error("Unexpected weekly allocation span");
+ if(record){
+  const valid=record.start===parent.start&&record.end===parent.end&&record.currency===parent.currency&&record.parentMinor===total&&Array.isArray(record.amounts)&&record.amounts.length===weeks.length&&record.amounts.every(v=>Number.isSafeInteger(v)&&v>=0)&&record.amounts.reduce((s,v)=>s+v,0)===total;
+  if(!valid)return {weeks,total,stale:true,amounts:null};
+  return {weeks,total,stale:false,amounts:record.amounts.slice()};
+ }
+ return {weeks,total,stale:false,amounts:null};
+}
+function allocationPreview(parent,record,index,amount,mode){
+ const state=allocationState(parent,record);
+ if(state.stale)throw Error("Parent changed; review before replacing allocation");
+ if(!Number.isInteger(index)||index<0||index>=state.weeks.length||!["maintain","increase"].includes(mode))throw Error("Invalid allocation choice");
+ const base=state.amounts||allocateWeighted(state.total,state.weeks.map(()=>1)),target=minor(amount),next=base.slice();
+ if(mode==="maintain"){
+  if(target>state.total)throw Error("Amount exceeds parent budget");
+  const other=allocateWeighted(state.total-target,base.filter((_,i)=>i!==index));
+  let j=0;for(let i=0;i<next.length;i++)next[i]=i===index?target:other[j++];
+ }else{
+  if(target<base[index])throw Error("Increase cannot reduce total");
+  next[index]=target;
+ }
+ const total=next.reduce((s,n)=>s+n,0);
+ if(!Number.isSafeInteger(total))throw Error("Unsafe total");
+ return {weeks:state.weeks,base,next,oldTotal:state.total,total,currency:parent.currency,start:parent.start,end:parent.end};
+}
+// V15.5b: only confirmed whole weekly blocks can resolve a partial parent.
+// Whole financial periods always use the canonical parent once.
+function queryBudget(raw,scope,endFor){
+ const base=queryBudgetLegacy(raw,scope,endFor);
+ if(scope.basis!=="calendar"||!base.partialPeriods.length||!Array.isArray(raw.v15WeeklyAllocations)||!raw.v15WeeklyAllocations.length)return base;
+ const byCategory=new Map(base.knownSubtotal.map(x=>[JSON.stringify([x.categoryId,x.currency]),{...x}]));
+ const unresolved=new Set(),review=[],knownWeekly=new Set();
+ for(const part of base.partialPeriods){
+  const p=raw.periods.find(x=>keyFor(x)===part.key);
+  for(const [cid,amount] of Object.entries(p.categoryBudgets||{})){
+   const total=minor(amount),currency=p.categoryBudgetCurrencies?.[cid]||"CRC";
+   if(total===0)continue;
+   const category=raw.categories.find(c=>c.id===cid);
+   const matches=raw.v15WeeklyAllocations.filter(x=>x?.periodKey===part.key&&x.categoryId===cid);
+   let state=null;
+   if(matches.length===1&&category?.type==="Gasto"&&category.budgetable!==false){
+    try{state=allocationState({start:part.start,end:part.end,amount,currency},matches[0])}catch{}
+   }
+   if(!state||state.stale||!state.amounts){
+    unresolved.add(cid);
+    if(matches.length)review.push({periodKey:part.key,categoryId:cid});
+    continue;
+   }
+   let included=0,cut=false,hasWhole=false;
+   state.weeks.forEach((w,i)=>{
+    if(w.start>base.range.end||w.end<base.range.start)return;
+    if(w.start>=base.range.start&&w.end<=base.range.end){included+=state.amounts[i];hasWhole=true}
+    else if(state.amounts[i]!==0)cut=true;
+   });
+   if(cut)unresolved.add(cid);
+   if(hasWhole){
+    knownWeekly.add(cid);
+    const k=JSON.stringify([cid,currency]),sum=(byCategory.get(k)?.minor||0)+included;
+    if(!Number.isSafeInteger(sum))throw Error("Unsafe aggregate");
+    byCategory.set(k,{categoryId:cid,currency,minor:sum});
+   }
+  }
+ }
+ const knownSubtotal=[...byCategory.values()].sort((a,b)=>a.categoryId.localeCompare(b.categoryId)||a.currency.localeCompare(b.currency));
+ const covered=!base.gaps.length&&!base.missingSlots.length&&base.periodKeys.length>0;
+ const complete=covered&&unresolved.size===0;
+ const resolvedCategoryIds=covered?[...new Set(knownSubtotal.map(x=>x.categoryId))].filter(cid=>!unresolved.has(cid)):[];
+ return {...base,coverage:complete?"complete":"partial",knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,resolvedCategoryIds,unresolvedCategoryIds:[...unresolved],weeklyCategoryIds:[...knownWeekly],allocationReview:review};
+}
+// V15.6a: a prospective calendar independent from income frequency and legacy periods.
+function planningCalendar(start,frequency,days=90){
+ if(!validDate(start)||!["weekly","biweekly","semimonthly","monthly"].includes(frequency)||!Number.isInteger(days)||days<1||days>366)throw Error("Invalid planning calendar");
+ const end=shiftDate(start,days-1),periods=[];
+ for(let cursor=start;cursor<=end;){
+  let next;
+  if(frequency==="weekly"||frequency==="biweekly")next=shiftDate(cursor,frequency==="weekly"?7:14);
+  else if(frequency==="semimonthly"&&Number(cursor.slice(8))<16)next=cursor.slice(0,7)+"-16";
+  else next=shiftMonth(cursor.slice(0,7),1)+"-01";
+  const naturalEnd=shiftDate(next,-1),last=naturalEnd>end?end:naturalEnd;
+  periods.push({start:cursor,end:last,truncated:last!==naturalEnd});
+  cursor=next;
+ }
+ return periods;
+}
+function projectedIncomeDates(config,start,end){
+ if(!validDate(start)||!validDate(end)||end<start||((Date.parse(end)-Date.parse(start))/86400000)>366)throw Error("Invalid income interval");
+ if(!config||!config.projectAutomatically||config.frequency==="irregular"||config.expectedAmount<=0)return [];
+ const amount=minor(config.expectedAmount),currency=config.expectedCurrency;
+ if(!["CRC","USD"].includes(currency))throw Error("Invalid income currency");
+ const out=[],add=date=>{if(validDate(date)&&date>=start&&date<=end)out.push({date,minor:amount,currency})};
+ const dayInMonth=(m,d)=>{
+  if(!Number.isInteger(d)||d<1||d>31)throw Error("Invalid income day");
+  const last=Number(shiftDate(shiftMonth(m,1)+"-01",-1).slice(8));
+  return m+"-"+String(Math.min(d,last)).padStart(2,"0");
+ };
+ if(["monthly","semimonthly"].includes(config.frequency)){
+  for(let m=start.slice(0,7);m<=end.slice(0,7);m=shiftMonth(m,1)){
+   if(config.frequency==="monthly")add(dayInMonth(m,config.monthlyDay));
+   else{if(config.day1===config.day2)throw Error("Duplicate income days");add(dayInMonth(m,config.day1));add(dayInMonth(m,config.day2))}
+  }
+ }else if(config.frequency==="weekly"||config.frequency==="biweekly"){
+  if(config.frequency==="weekly"&&(!Number.isInteger(config.weekday)||config.weekday<0||config.weekday>6))throw Error("Invalid weekday");
+  if(config.frequency==="biweekly"&&!validDate(config.biweeklyStart))throw Error("Missing biweekly anchor");
+  for(let d=start;d<=end;d=shiftDate(d,1)){
+   if(config.frequency==="weekly"?new Date(d+"T00:00:00Z").getUTCDay()===config.weekday:d>=config.biweeklyStart&&((Date.parse(d)-Date.parse(config.biweeklyStart))/86400000)%14===0)add(d);
+  }
+ }else if(config.frequency==="once"){if(!validDate(config.onceDate))throw Error("Missing income date");add(config.onceDate)}
+ else throw Error("Unknown income frequency");
+ return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function previewPlanningCalendar(raw,start,frequency,days=90){
+ const periods=planningCalendar(start,frequency,days).map(p=>({...p,incomes:[]}));
+ const warnings=[];
+ for(const c of raw.categories||[]){
+  if(c.type!=="Ingreso"||c.active===false||c.budgetable===false)continue;
+  try{
+   const occurrences=projectedIncomeDates(c.incomeConfig,start,periods.at(-1).end);
+   for(const event of occurrences){
+    const p=periods.find(x=>event.date>=x.start&&event.date<=x.end);
+    if(p)p.incomes.push({...event,categoryId:c.id});
+   }
+  }catch{warnings.push(c.id)}
+ }
+ return {periods,warnings};
+}
+// V15.6b: transition contract; no materialization into the legacy ledger.
+function transitionPreflight(raw,proposal,asOf,endFor){
+ if(!validDate(asOf)||typeof endFor!=="function"||!proposal||!Array.isArray(raw?.periods))throw Error("Invalid transition");
+ const calendar=planningCalendar(proposal.start,proposal.frequency,proposal.days);
+ const tomorrow=shiftDate(asOf,1),issues=[],keys=new Set();
+ const legacy=raw.periods.map(p=>{
+  const key=keyFor(p),end=endFor(p);
+  if(!key||keys.has(key)||!validDate(p.date)||!validDate(end)||end<p.date)throw Error("Invalid legacy period");
+  keys.add(key);return {key,start:p.date,end};
+ }).sort((a,b)=>a.start.localeCompare(b.start));
+ for(let i=1;i<legacy.length;i++)if(legacy[i].start<=legacy[i-1].end)issues.push("legacy-overlap");
+ const legacyEnd=legacy.reduce((last,p)=>p.end>last?p.end:last,"");
+ const earliest=legacyEnd&&legacyEnd>=tomorrow?shiftDate(legacyEnd,1):tomorrow;
+ if(proposal.start<tomorrow)issues.push("not-future");
+ if(proposal.start<earliest)issues.push("legacy-overlap");
+ if(proposal.start>earliest)issues.push("transition-gap");
+ const overlaps=legacy.filter(p=>p.start<=calendar.at(-1).end&&p.end>=proposal.start);
+ // Future movements may have been explicitly assigned to an old period; do not reassign them.
+ const assignedFuture=(raw.movements||[]).filter(m=>validDate(m.date)&&m.date>=proposal.start&&keys.has(m.period));
+ if(assignedFuture.length)issues.push("assigned-future-movements");
+ const boundary=JSON.stringify({legacy,assigned:assignedFuture.map(m=>[m.id,m.date,m.period]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))});
+ return {ready:issues.length===0,issues:[...new Set(issues)],earliest,legacyEnd,overlapCount:overlaps.length,assignedFutureCount:assignedFuture.length,boundary,periods:calendar};
+}
+function transitionStatus(raw,record,asOf,endFor){
+ if(!record||record.status!=="prepared")return {status:"none"};
+ try{
+  const check=transitionPreflight(raw,record,asOf,endFor);
+  return {status:check.ready&&check.boundary===record.boundary?"prepared":"review",...check};
+ }catch{return {status:"review",ready:false,issues:["invalid-transition"]}}
+}
+// V15.6c: shadow materialization only; existing ledger and dates are immutable.
+function materializeTransition(raw,record,asOf,endFor){
+ const check=transitionStatus(raw,record,asOf,endFor);
+ if(check.status!=="prepared"||!check.ready)throw Error("Transition requires review");
+ const staged=JSON.parse(JSON.stringify(raw));
+ const created=flexibleRows(check.periods,record.frequency);
+ const ids=new Set(staged.periods.map(keyFor));
+ for(const p of created){if(ids.has(p.key))throw Error("Period identity collision");ids.add(p.key);}
+ staged.periods.push(...created);
+ return {ledger:staged,createdKeys:created.map(p=>p.key)};
+}
+
+function flexibleRows(periods,frequency){
+ return periods.map(p=>{
+  const month=p.start.slice(0,7),quarter=month.slice(0,4)+"-T"+Math.ceil(Number(month.slice(5))/3);
+  return {key:"v15-period-"+p.start+"-"+p.end,periodKind:"flexible",frequency,date:p.start,endDate:p.end,budgetMonth:month,quarter,fortnight:0,opening:null,openingCurrency:"CRC",income:0,incomeCurrency:"CRC",otherIncome:0,otherIncomeCurrency:"CRC",budgets:{},budgetCurrencies:{},categoryBudgets:{},categoryBudgetCurrencies:{},categoryBudgetSources:{},categoryBudgetScheduledDates:{}};
+ });
+}
+
+function extendFlexibleCalendar(raw,record,asOf,days=90){
+ if(!validDate(asOf)||!record||record.status!=="active"||!validDate(record.start)||!Number.isInteger(days)||days<1||days>366)throw Error("Invalid active calendar");
+ const rows=raw.periods.filter(p=>p.periodKind==="flexible").sort((a,b)=>a.date.localeCompare(b.date));
+ if(!rows.length||rows.some(p=>p.frequency!==record.frequency)||rows[0].date!==record.start)throw Error("Review active calendar");
+ for(let i=1;i<rows.length;i++)if(rows[i].date!==shiftDate(rows[i-1].endDate,1))throw Error("Calendar gap or overlap");
+ const last=rows.at(-1),start=shiftDate(last.endDate,1);
+ if(start<=asOf||raw.periods.some(p=>p.date>last.date))throw Error("Review calendar boundary before extending");
+ if((raw.movements||[]).some(m=>validDate(m.date)&&m.date>=start))throw Error("Review future movements before extending");
+ let segments;
+ if(["weekly","biweekly"].includes(record.frequency)){
+  const step=record.frequency==="weekly"?7:14,offset=(Date.parse(start)-Date.parse(record.start))/86400000,first=Math.min(days,step-(offset%step));
+  segments=[{start,end:shiftDate(start,first-1)}];
+  if(days>first)segments.push(...planningCalendar(shiftDate(start,first),record.frequency,days-first));
+ }else segments=planningCalendar(start,record.frequency,days);
+ const created=flexibleRows(segments,record.frequency),staged=JSON.parse(JSON.stringify(raw)),ids=new Set(staged.periods.map(keyFor));
+ for(const p of created){if(ids.has(p.key))throw Error("Period identity collision");ids.add(p.key)}
+ staged.periods.push(...created);
+ return {ledger:staged,createdKeys:created.map(p=>p.key)};
+}
+// V15.7: advisory budget analysis. Inputs are canonical CRC amounts; no persistence.
+function budgetIntelligence(rows,start,end,asOf,{pace=true,complete=true}={}){
+ if(!validDate(start)||!validDate(end)||!validDate(asOf)||start>end||!Array.isArray(rows))throw Error("Invalid budget intelligence scope");
+ const day=86400000,days=(Date.parse(end)-Date.parse(start))/day+1;
+ const status=asOf<start?"future":asOf>end?"closed":"current";
+ const elapsed=status==="future"?0:status==="closed"?days:(Date.parse(asOf)-Date.parse(start))/day+1;
+ const cents=n=>{if(typeof n!=="number"||!Number.isFinite(n)||n<0||!Number.isSafeInteger(Math.round(n*100)))throw Error("Invalid budget intelligence amount");return Math.round(n*100)};
+ const ids=new Set(),out=[];
+ for(const r of rows){
+  if(!r||typeof r.id!=="string"||!r.id||ids.has(r.id)||!["Gasto","Pago deuda"].includes(r.type))throw Error("Invalid budget intelligence category");
+  ids.add(r.id);
+  if(r.plannedCRC===null||!complete)continue;
+  const planned=cents(r.plannedCRC),spent=cents(r.spentCRC),saving=cents(r.savingsCRC??0),used=spent+saving;
+  if(!Number.isSafeInteger(used))throw Error("Unsafe budget intelligence total");
+  const excess=Math.max(0,used-planned),remaining=Math.max(0,planned-used);
+  const expected=pace&&status==="current"&&elapsed<days&&r.type==="Gasto"&&r.paceEligible===true&&saving===0&&planned>0?Math.round(planned*(elapsed/days)):null;
+  const ahead=expected===null||excess>0?0:Math.max(0,used-expected);
+  out.push({id:r.id,type:r.type,planned,spent,saving,used,excess,remaining,expected,ahead,unbudgeted:planned===0&&used>0});
+ }
+ const sum=(field,list=out)=>{const n=list.reduce((s,r)=>s+r[field],0);if(!Number.isSafeInteger(n))throw Error("Unsafe aggregate");return n};
+ return {status,days,elapsed,complete,rows:out,unbudgeted:out.filter(r=>r.unbudgeted),over:out.filter(r=>r.excess>0&&!r.unbudgeted),ahead:out.filter(r=>r.ahead>0),remaining:status==="closed"?null:sum("remaining"),remainingDebt:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Pago deuda")),remainingOther:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Gasto"))};
+}
+// V15.9: a read-only release preflight. Output contains only counts and issue codes.
+function hasUnreconciledBudget(raw){
+ return ["flexBudgets","livingBudgets"].some(k=>raw?.[k]!==undefined&&(!Array.isArray(raw[k])||raw[k].length>0));
+}
+function releaseAudit(raw){
+ const issues=[],counts={},record=x=>x&&typeof x==="object"&&!Array.isArray(x);
+ const add=(code,severity,count=1)=>{if(count>0)issues.push({code,severity,count})};
+ if(!record(raw))return {ready:false,counts,issues:[{code:"invalid-backup",severity:"blocker",count:1}]};
+ const lists=["periods","movements","categories","debts","reserves","reserveMovements","reconciliations","sharedCharges","sharedChargeGroups","projects","projectLinks","projectPlans","v15WeeklyAllocations","flexBudgets","livingBudgets"];
+ const get=k=>Array.isArray(raw[k])?raw[k]:[];
+ for(const k of lists){
+  counts[k]=get(k).length;
+  if((["periods","movements","debts"].includes(k)||raw[k]!==undefined)&&(!Array.isArray(raw[k])||get(k).some(x=>!record(x))))add("invalid-list:"+k,"blocker");
+ }
+ if(!get("periods").length)add("no-periods","blocker");
+ if(hasUnreconciledBudget(raw))add("legacy-budget-adjustments","blocker",Math.max(1,counts.flexBudgets+counts.livingBudgets));
+ const rows=k=>get(k).filter(record),ids=k=>new Set(rows(k).map(x=>x.id).filter(Boolean));
+ for(const k of lists.filter(x=>!["v15WeeklyAllocations","flexBudgets","livingBudgets"].includes(x))){
+  const seen=new Set();let duplicate=0,missing=0;
+  for(const r of rows(k)){const key=k==="periods"?keyFor(r):r.id;if(!key){missing++;continue}if(seen.has(key))duplicate++;seen.add(key)}
+  add("duplicate-id:"+k,"blocker",duplicate);add("missing-id:"+k,"review",missing);
+ }
+ const categories=new Map(rows("categories").map(x=>[x.id,x])),periods=new Map(rows("periods").map(x=>[keyFor(x),x])),debtIds=ids("debts"),goalIds=ids("reserves"),movementIds=ids("movements"),projectIds=ids("projects");
+ const ordered=rows("periods").filter(p=>validDate(p.date)).sort((a,b)=>a.date.localeCompare(b.date));
+ const endFor=p=>p.periodKind==="flexible"?p.endDate:(()=>{const next=ordered.find(x=>x.date>p.date);return next?shiftDate(next.date,-1):null})();
+ const moneyOK=x=>(typeof x==="number"||typeof x==="string"&&x.trim()!=="")&&Number.isFinite(Number(x))&&Number(x)>=0;
+ const currencyOK=x=>x===undefined||["CRC","USD"].includes(x);
+ let invalid=0,unknown=0,overlap=0;const slots=new Set(),starts=new Set();
+ for(const p of rows("periods")){
+  const flexible=p.periodKind==="flexible",slot=flexible?keyFor(p):p.budgetMonth+"|"+p.fortnight;
+  if(!validDate(p.date)||!validMonth(p.budgetMonth)||(!flexible&&![1,2].includes(Number(p.fortnight)))||(flexible&&(!validDate(p.endDate)||p.endDate<p.date||keyFor(p)!=="v15-period-"+p.date+"-"+p.endDate)))invalid++;
+  if(slots.has(slot)||starts.has(p.date))overlap++;slots.add(slot);starts.add(p.date);
+  if(p.categoryBudgets!==undefined&&!record(p.categoryBudgets))invalid++;
+  if(p.categoryBudgetCurrencies!==undefined&&!record(p.categoryBudgetCurrencies))invalid++;
+  for(const [cid,amount] of Object.entries(record(p.categoryBudgets)?p.categoryBudgets:{})){if(!moneyOK(amount)||!currencyOK(p.categoryBudgetCurrencies?.[cid]))invalid++;if(!categories.has(cid))unknown++}
+ }
+ for(let i=1;i<ordered.length;i++)if(ordered[i-1].periodKind==="flexible"&&ordered[i-1].endDate>=ordered[i].date)overlap++;
+ add("invalid-budget-period","blocker",invalid);add("overlapping-period","blocker",overlap);add("unknown-budget-category","blocker",unknown);
+ let badMovement=0,orphanPeriod=0,orphanCategory=0,badSplit=0,badDebt=0,missingFx=0,duplicateMobile=0;
+ const mobile=new Set();
+ for(const m of rows("movements")){
+  if(!validDate(m.date)||!moneyOK(m.amount)||!currencyOK(m.currency))badMovement++;
+  if(!periods.has(m.period))orphanPeriod++;
+  if(m.categoryId&&!categories.has(m.categoryId))orphanCategory++;
+  if(m.debtId&&!debtIds.has(m.debtId))badDebt++;
+  if(m.currency==="USD"&&!(Number(m.fxBuy)>0&&Number(m.fxSell)>0))missingFx++;
+  if(m.mobilePilotId){if(mobile.has(m.mobilePilotId))duplicateMobile++;mobile.add(m.mobilePilotId)}
+  if(m.splits!==undefined&&!Array.isArray(m.splits))badSplit++;
+  if(Array.isArray(m.splits)&&m.splits.length){
+   const seen=new Set();let sum=0,valid=true;
+   for(const x of m.splits){if(!record(x)||!moneyOK(x.amount)||Number(x.amount)<=0||!categories.has(x.categoryId)||seen.has(x.categoryId)){valid=false;continue}seen.add(x.categoryId);sum+=Number(x.amount)}
+   if(!valid||Math.abs(sum-Number(m.amount))>.005)badSplit++;
+  }
+ }
+ add("invalid-movement","blocker",badMovement);add("missing-period-link","blocker",orphanPeriod);add("missing-category-link","blocker",orphanCategory);add("invalid-split","blocker",badSplit);add("missing-debt-link","review",badDebt);add("missing-historical-fx","review",missingFx);add("duplicate-mobile-id","blocker",duplicateMobile);
+ add("missing-goal-link","review",rows("reserveMovements").filter(t=>t.reserveId&&!goalIds.has(t.reserveId)).length);
+ const linked=new Set();let projectLink=0;
+ for(const x of rows("projectLinks")){if(!projectIds.has(x.projectId)||!movementIds.has(x.movementId)||linked.has(x.movementId))projectLink++;linked.add(x.movementId)}
+ add("invalid-project-link","blocker",projectLink);
+ const allocSeen=new Set();let stale=0,duplicate=0;
+ for(const a of rows("v15WeeklyAllocations")){
+  const key=JSON.stringify([a.periodKey,a.categoryId]);if(allocSeen.has(key))duplicate++;allocSeen.add(key);
+  const p=periods.get(a.periodKey),c=categories.get(a.categoryId);
+  try{
+   if(!p||c?.type!=="Gasto"||!Object.prototype.hasOwnProperty.call(p.categoryBudgets||{},a.categoryId))throw Error("Missing allocation parent");
+   const end=endFor(p)||a.end;
+   if(allocationState({start:p.date,end,amount:Number(p.categoryBudgets[a.categoryId]),currency:p.categoryBudgetCurrencies?.[a.categoryId]||"CRC"},a).stale)stale++;
+  }catch{stale++}
+ }
+ add("duplicate-week-allocation","blocker",duplicate);add("stale-week-allocation","review",stale);
+ if(raw.v15CalendarTransition?.status==="active")add("active-flexible-calendar","review");
+ if(raw.categorySchemaVersion!==1||raw.incomeSchemaVersion!==1)add("legacy-schema","review");
+ return {ready:!issues.length,counts,issues};
+}
+return {hasUnreconciledBudget,releaseAudit,budgetIntelligence,auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
+
+})();
+if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;
 function reserveLabel(r){return r.type==="protected"?"Capital protegido":"Meta / reserva"}
 function openReserve(r=null){
   document.getElementById("reserveDialogTitle").textContent=r?"Editar fondo":"Agregar fondo";
@@ -5969,16 +6750,10 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // después de descontar gastos efectivos (incluidos futuros ya registrados)
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
   let ordinary=0,plannedSavings=0;
-  const savingsCategoryIds=new Set([
-   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
-   ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
-  ]);
-  for(const c of budgetCategories("Gasto",p)){
-   const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-   const goals=oneBudgetSavingsActual(p,c.id,end);
-   const remaining=Math.max(0,amount-paid-goals);
-   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
+  // Same rows as Presupuesto/Inicio, including already registered future items.
+  const budgetRows=oneV15PeriodBudgetRows(p,end);
+  for(const row of budgetRows.filter(r=>r.type==="Gasto")){
+   if(row.isSavings)plannedSavings+=row.remainingCRC;else ordinary+=row.remainingCRC;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
@@ -5990,12 +6765,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
-  const debtBudget=budgetCategories("Pago deuda",p).reduce((sum,c)=>{
-   const budget=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Pago deuda")
-     .reduce((total,m)=>total+movementCategoryAmountCRC(m,c),0);
-   return sum+Math.max(0,budget-paid);
-  },0);
+  const debtBudget=budgetRows.filter(r=>r.type==="Pago deuda").reduce((sum,r)=>sum+r.remainingCRC,0);
   const scheduled=dueDates.filter(x=>x.date>=rangeStart&&x.date<=end).reduce((sum,x)=>sum+x.amount,0);
   const extra=Math.max(0,debtBudget-scheduled);
   if(extra>.005){
@@ -6005,6 +6775,9 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
+ if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
+ if((data.projectPlans||[]).some(plan=>{const p=oneProjectById(plan.projectId);return p&&oneProjectEnabled(p)&&oneProjectPlanSummary(p,plan).remaining>.005;}))warnings.push("Las previsiones pendientes de Proyectos no se suman automáticamente: podrían estar incluidas en el presupuesto.");
+ if(oneV15QueryCore.hasUnreconciledBudget(data))warnings.push("Ajustes presupuestarios V13/V14 pendientes de reconciliar; la proyección usa únicamente el presupuesto base.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");
@@ -6532,8 +7305,7 @@ function oneGoalTxnEligibility(r,candidate=null,editingId=""){
 function oneGoalSelectedTransactions(level,value){
   return (data.reserveMovements||[]).filter(t=>{
     const p=periodForDate(t.date);
-    return p&&(level==="quarter"?budgetQuarter(p)===value:
-      level==="month"?p.budgetMonth===value:periodKey(p)===value);
+    return p&&oneV15PlanMatches(p,level,value);
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }
 function oneRenderGoalCards(){
@@ -6563,6 +7335,9 @@ function oneRenderGoalCards(){
       .slice(0,5);
     const status=archived?'<span class="one-goal-state'+(completed?' completed':'')+'">'+(completed?'Cumplida':'Archivada')+'</span>':"";
     const linkedBudget=categoryById(oneGoalBudgetCategory(r))?.name||"Sin vincular";
+    const budgetSnapshot=!archived?oneV15CurrentBudget(today):null;
+    const linkedRow=budgetSnapshot?.rows.find(x=>x.id===oneGoalBudgetCategory(r)&&x.type==="Gasto");
+    const linkedContext=linkedRow&&linkedRow.plannedCRC>0?'<div class="one-goal-linked"><span>Disponible en categoría · período actual</span><strong>'+safe(money(linkedRow.remainingCRC))+'</strong></div><small class="muted">Importe compartido por la categoría, no reservado para esta meta.</small>':"";
     const ops=history.map(t=>'<div class="one-goal-history-row"><span>'+dateLabel(t.date)+' · '+safe(t.type)+'</span><strong>'+originalMoney(t.amount,t.currency||"CRC")+'</strong></div>').join("");
     return '<article class="one-goal-card">'+
       '<div class="one-goal-card-top"><div><span class="one-goal-eyebrow">META</span><h3>'+safe(r.name)+'</h3></div>'+status+'</div>'+
@@ -6570,7 +7345,7 @@ function oneRenderGoalCards(){
       (target>0?'<div class="one-goal-bar" role="progressbar" aria-label="Progreso de '+safe(r.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><span style="width:'+pct.toFixed(1)+'%"></span></div>':'')+
       '<div class="one-goal-stats"><span>'+(target>0?Math.round(pct)+'% completado · Faltan '+money(remaining):'Sin monto objetivo')+'</span><span>'+safe(dateInfo)+'</span></div>'+
       '<p class="one-goal-hint">'+safe(hint)+'</p>'+
-      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+
+      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+linkedContext+
       '<div class="one-goal-actions">'+(archived?'':
         '<button class="btn small" type="button" data-goal-txn="'+safe(r.id)+'" data-goal-type="Aporte">+ Aportar</button>')+
         '<button class="btn secondary small" type="button" data-edit-reserve="'+safe(r.id)+'">Editar</button></div>'+
@@ -6973,6 +7748,12 @@ function oneProjectDetailRender(p){
  document.getElementById("oneProjectBudgetNote").textContent="Disponible considerando gastos reales y previsiones todavía pendientes: "+
   oneProjectMoney(p,forecastRemaining)+
   ". Cada gasto conciliado reduce el pendiente automáticamente, sin crear otro movimiento.";
+ const context=oneV15CurrentBudget(todayIso());
+ if(context){
+  const linked=oneProjectMovementRows(p).filter(({m})=>m.period===periodKey(context.p)&&m.date<=todayIso());
+  const total=linked.reduce((s,{m})=>s+movementAmountCRC(m),0);
+  if(total>.005)document.getElementById("oneProjectBudgetNote").textContent+=" Gasto vinculado del período financiero actual: "+money(total)+". Ya está registrado en Movimientos; no se suma nuevamente.";
+ }
  const buckets=p.buckets||[];
  const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
  const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
@@ -7334,7 +8115,7 @@ function renderReports(){
   document.querySelectorAll("[data-report-panel]").forEach(p=>p.hidden=p.dataset.reportPanel!==reportActiveTab);
   document.querySelectorAll("[data-report-tab]").forEach(b=>b.classList.toggle("active",b.dataset.reportTab===reportActiveTab));
   document.getElementById("reportPeriodTitle").textContent=`Detalle · ${selectedLabel(level,value)}`;
-  document.getElementById("periodReportTable").innerHTML=`<thead><tr><th>Periodo</th><th>Fecha</th><th>Ingresos plan</th><th>Ingresos reales</th><th>Egresos plan</th><th>Egresos reales</th><th>Variación</th><th>Saldo proyectado</th><th>Saldo real</th></tr></thead><tbody>${summary.rows.length?summary.rows.map(r=>`<tr><td>${monthLabel(r.budgetMonth)} · ${r.fortnight===1?"1.ª":"2.ª"}</td><td>${dateLabel(r.date)}</td><td class="num">${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</td><td class="num">${money(r.actualIncome)}</td><td class="num">${money(r.expenses)}</td><td class="num">${money(r.actualExpenses)}</td><td class="num ${r.expenses-r.actualExpenses<0?"negative":"positive"}">${money(r.expenses-r.actualExpenses)}</td><td class="num">${money(r.ending)}</td><td class="num">${r.actualBalance===null?"—":money(r.actualBalance)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">No hay periodos configurados para esta selección.</td></tr>`}</tbody>`;
+  document.getElementById("periodReportTable").innerHTML=`<thead><tr><th>Periodo</th><th>Fecha</th><th>Ingresos plan</th><th>Ingresos reales</th><th>Egresos plan</th><th>Egresos reales</th><th>Variación</th><th>Saldo proyectado</th><th>Saldo real</th></tr></thead><tbody>${summary.rows.length?summary.rows.map(r=>`<tr><td>${oneV15IsFlexiblePeriod(r)?safe(fortnightLabel(r)):`${monthLabel(r.budgetMonth)} · ${r.fortnight===1?"1.ª":"2.ª"}`}</td><td>${dateLabel(r.date)}</td><td class="num">${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</td><td class="num">${money(r.actualIncome)}</td><td class="num">${money(r.expenses)}</td><td class="num">${money(r.actualExpenses)}</td><td class="num ${r.expenses-r.actualExpenses<0?"negative":"positive"}">${money(r.expenses-r.actualExpenses)}</td><td class="num">${money(r.ending)}</td><td class="num">${r.actualBalance===null?"—":money(r.actualBalance)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">No hay periodos configurados para esta selección.</td></tr>`}</tbody>`;
   document.getElementById("categoryReportTable").innerHTML=reportCategoryTable(cats);
   renderReportPast(history);renderReportPresent(current);renderReportFuture(future);
   requestAnimationFrame(()=>drawActiveReportCharts({summary,cats,history,future,current}));
@@ -7377,14 +8158,14 @@ function drawActiveReportCharts(ctxData){
   const {cats,history,future,current}=ctxData,tab=reportActiveTab,labels=history.map(r=>reportShortMonth(r.month));
   if(tab==="overview"){
     drawReportGroupedBars(document.getElementById("reportOverviewFlowChart"),labels,history.map(r=>r.actualIncome),history.map(r=>r.actualExpense));
-    const timeline=allActualRows().slice(-12),tl=timeline.map(r=>`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportOverviewBalanceChart"),tl,[{values:timeline.map(r=>r.ending),color:"#5ca6e8"},{values:timeline.map(r=>r.actualBalance),color:"#4dab7a",dashed:true}]);
+    const timeline=allActualRows().slice(-12),tl=timeline.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportOverviewBalanceChart"),tl,[{values:timeline.map(r=>r.ending),color:"#5ca6e8"},{values:timeline.map(r=>r.actualBalance),color:"#4dab7a",dashed:true}]);
     const top=reportTopCategories(cats);drawReportHorizontalBars(document.getElementById("reportOverviewCategoryChart"),top.map(r=>r.category),top.map(r=>r.budget),top.map(r=>r.actual));const donut=reportDonutData(cats);drawReportDonut(document.getElementById("reportOverviewDonutChart"),donut.labels,donut.values);
   }else if(tab==="past"){
     drawReportGroupedBars(document.getElementById("reportPastFlowChart"),labels,history.map(r=>r.actualIncome),history.map(r=>r.actualExpense));drawReportLine(document.getElementById("reportPastNetChart"),labels,[{values:history.map(r=>r.netActual),color:"#5ca6e8"}]);
   }else if(tab==="present"){
     if(current){const ms=periodMovements(current,todayIso()),income=ms.filter(m=>m.type==="Ingreso").reduce((s,m)=>s+movementAmountCRC(m),0),expense=ms.filter(m=>m.type==="Gasto"||m.type==="Pago deuda").reduce((s,m)=>s+movementAmountCRC(m),0);drawReportWaterfall(document.getElementById("reportPresentWaterfallChart"),[num(current.openingCalc),income,expense])}
   }else if(tab==="future"){
-    const fl=future.map(r=>`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportFutureBalanceChart"),fl,[{values:future.map(r=>r.ending),color:"#5ca6e8"}]);drawReportGroupedBars(document.getElementById("reportFutureFlowChart"),fl,future.map(r=>num(r.incomeCRC)+num(r.otherIncomeCRC)),future.map(r=>num(r.expenses)),["#4dab7a","#d9a441"]);
+    const fl=future.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportFutureBalanceChart"),fl,[{values:future.map(r=>r.ending),color:"#5ca6e8"}]);drawReportGroupedBars(document.getElementById("reportFutureFlowChart"),fl,future.map(r=>num(r.incomeCRC)+num(r.otherIncomeCRC)),future.map(r=>num(r.expenses)),["#4dab7a","#d9a441"]);
   }else if(tab==="categories"){
     const top=reportTopCategories(cats,9);drawReportHorizontalBars(document.getElementById("reportCategoryBarChart"),top.map(r=>r.category),top.map(r=>r.budget),top.map(r=>r.actual));const donut=reportDonutData(cats,7);drawReportDonut(document.getElementById("reportCategoryDonutChart"),donut.labels,donut.values);
   }
@@ -7918,7 +8699,158 @@ function openDebt(d=null){
 renderReports=function(){};
 function bindReportStudio(){}
 
+// Run the real migration and restore path against an in-memory copy only.
+function oneV15ValidateTransitionShadow(raw,record,asOf){
+ const endFor=p=>periodEndDate(p,raw.periods,raw.settings);
+ const materialized=oneV15QueryCore.materializeTransition(raw,record,asOf,endFor);
+ const baseline=restorePrepare(clone(raw)),candidate=restorePrepare(materialized.ledger);
+ const legacyKeys=new Set(baseline.periods.map(periodKey));
+ const existing=candidate.periods.filter(p=>legacyKeys.has(periodKey(p)));
+ const comparable=p=>({key:periodKey(p),date:p.date,end:periodEndDate(p,baseline.periods,baseline.settings),categoryBudgets:p.categoryBudgets,categoryBudgetCurrencies:p.categoryBudgetCurrencies,categoryBudgetSources:p.categoryBudgetSources,categoryBudgetScheduledDates:p.categoryBudgetScheduledDates,opening:p.opening});
+ if(JSON.stringify(existing.map(comparable))!==JSON.stringify(baseline.periods.map(comparable)))throw Error("La simulación cambió un presupuesto original.");
+ if(JSON.stringify(candidate.movements)!==JSON.stringify(baseline.movements))throw Error("La simulación cambió movimientos.");
+ const newRows=candidate.periods.filter(p=>!legacyKeys.has(periodKey(p)));
+ if(newRows.length!==materialized.createdKeys.length||newRows.some(p=>!oneV15IsFlexiblePeriod(p)||!materialized.createdKeys.includes(periodKey(p))))throw Error("La simulación no conservó todos los períodos.");
+ for(const p of newRows)oneV15ValidateFlexiblePeriod(p);
+ return {count:newRows.length,first:newRows[0].date,last:newRows.at(-1).endDate};
+}
+
+// Only the isolated Lab candidate may explicitly commit a flexible calendar.
+function oneV15StageCalendarChange(raw,record,asOf,extend=false){
+ const endFor=p=>periodEndDate(p,raw.periods,raw.settings);
+ const materialized=extend?oneV15QueryCore.extendFlexibleCalendar(raw,record,asOf):oneV15QueryCore.materializeTransition(raw,record,asOf,endFor);
+ const baseline=restorePrepare(clone(raw)),candidate=restorePrepare(materialized.ledger);
+ const originalKeys=new Set(baseline.periods.map(periodKey)),existing=candidate.periods.filter(p=>originalKeys.has(periodKey(p)));
+ if(JSON.stringify(existing)!==JSON.stringify(baseline.periods)||JSON.stringify(candidate.movements)!==JSON.stringify(baseline.movements))throw Error("La transición modificaría registros existentes.");
+ for(const p of baseline.periods){
+  const next=existing.find(x=>periodKey(x)===periodKey(p));
+  if(!next||periodEndDate(p,baseline.periods,baseline.settings)!==periodEndDate(next,candidate.periods,candidate.settings))throw Error("La transición modificaría fechas existentes.");
+ }
+ const created=candidate.periods.filter(p=>!originalKeys.has(periodKey(p)));
+ if(created.length!==materialized.createdKeys.length||created.some(p=>!materialized.createdKeys.includes(periodKey(p))))throw Error("No se conservaron los nuevos períodos.");
+ for(const p of created)oneV15ValidateFlexiblePeriod(p);
+ const staged=clone(raw);staged.periods.push(...created);
+ staged.v15CalendarTransition={...record,status:"active",through:created.at(-1).endDate};
+ oneV15ValidatePeriodIdentities(staged.periods,staged.settings);
+ return staged;
+}
+function oneV15CommitCalendarLab(record,expected,extend=false){
+ if(!STORAGE_KEY.startsWith("rastro_lab_"))throw Error("Activación disponible únicamente en Lab.");
+ if(JSON.stringify(data)!==expected)throw Error("Los datos cambiaron. Volvé a abrir la configuración.");
+ oneStorageAssertCurrent();
+ const staged=oneV15StageCalendarChange(data,record,todayIso(),extend);
+ const previous=localStorage.getItem(STORAGE_KEY);
+ if(previous===null)throw Error("No existe historial local para respaldar.");
+ const backupKey=STORAGE_KEY+"_pre_calendar_"+id();
+ localStorage.setItem(backupKey,previous);
+ if(localStorage.getItem(backupKey)!==previous)throw Error("No se verificó el respaldo.");
+ oneStoragePersist(JSON.stringify(staged));data=staged;
+ syncQuarterSelectors();renderDashboard();renderPlan();renderMovements();renderReports();
+ return true;
+}
+
+// Calendar preparation and explicitly gated Lab activation.
+function oneV15CalendarInit(){
+ const dialog=document.getElementById("v15CalendarDialog"),form=document.getElementById("v15CalendarForm");
+ const frequency=document.getElementById("v15CalendarFrequency"),start=document.getElementById("v15CalendarStart");
+ const preview=document.getElementById("v15CalendarPreview"),saveBtn=document.getElementById("v15CalendarSave");
+ const status=document.getElementById("v15TransitionStatus"),prepare=document.getElementById("v15TransitionPrepare"),withdraw=document.getElementById("v15TransitionCancel");
+ const endFor=p=>periodEndDate(p,data.periods,data.settings);
+ const activate=document.getElementById("v15TransitionActivate"),extend=document.getElementById("v15TransitionExtend");
+ const labOnly=STORAGE_KEY.startsWith("rastro_lab_");
+ let snapshot=null,proposal=null,preflight=null;
+ function render(){
+  proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;
+  status.textContent="";
+  const active=data.v15CalendarTransition?.status==="active";
+  withdraw.hidden=!data.v15CalendarTransition||active;
+  activate.hidden=!labOnly||data.v15CalendarTransition?.status!=="prepared";activate.disabled=true;
+  extend.hidden=!labOnly||!active;extend.disabled=true;
+  if(active){
+   status.textContent="Calendario flexible activo en Lab · hasta "+dateLabel(data.v15CalendarTransition.through)+". Sindatos anteriores modificados.".replace("Sindatos","Sin datos");
+   preview.textContent="Ampliá la planificación 90 días sin modificar los períodos existentes.";
+   try{oneV15StageCalendarChange(data,data.v15CalendarTransition,todayIso(),true);extend.disabled=!labOnly}catch(error){status.textContent+=" · "+error.message;}
+   return;
+  }
+  try{
+   if(!restoreValidDate(start.value)||start.value<oneShiftDate(todayIso(),1))throw Error("Elegí una fecha futura.");
+   const draft=oneV15QueryCore.previewPlanningCalendar(data,start.value,frequency.value,90);
+   proposal={frequency:frequency.value,start:start.value,days:90};
+   preflight=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   const current=oneV15QueryCore.transitionStatus(data,data.v15CalendarTransition,todayIso(),endFor);
+   const issues={"legacy-overlap":"Coincide con períodos existentes.","transition-gap":"Hay un intervalo sin planificación.","not-future":"Elegí una fecha futura.","assigned-future-movements":"Hay movimientos futuros asignados al calendario original."};
+   status.textContent="Primera fecha disponible: "+dateLabel(preflight.earliest)+". "+(preflight.ready?"Sin solapamientos. Preparación disponible.":preflight.issues.map(x=>issues[x]||x).join(" "))+(current.status==="prepared"?" · Transición preparada (no activa).":current.status==="review"?" · Transición anterior pendiente de revisión.":"");
+   prepare.disabled=!preflight.ready;
+   if(labOnly&&current.status==="prepared"){try{oneV15StageCalendarChange(data,data.v15CalendarTransition,todayIso());activate.disabled=false}catch(error){status.textContent+=" · Activación bloqueada: "+error.message;}}
+   if(preflight.ready){
+    try{
+     const shadow=oneV15ValidateTransitionShadow(data,{...proposal,status:"prepared",boundary:preflight.boundary},todayIso());
+     status.textContent+=" · Ensayo local: "+shadow.count+" períodos conservados.";
+    }catch(error){status.textContent+=" · Ensayo pendiente: "+error.message;prepare.disabled=true;preflight=null;}
+   }
+   const rows=draft.periods.map(p=>{
+    const byCurrency=new Map();for(const e of p.incomes){const amount=(byCurrency.get(e.currency)||0)+e.minor;if(!Number.isSafeInteger(amount))throw Error("Monto fuera de rango");byCurrency.set(e.currency,amount)}
+    const amounts=[...byCurrency].map(([c,n])=>originalMoney(n/100,c)).join(" + ")||"Sin ingresos programados";
+    return '<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(dateLabel(p.start)+" – "+dateLabel(p.end))+'</span></span><strong>'+safe(amounts)+'</strong></div>';
+   }).join("");
+   preview.innerHTML='<div class="r8-section-heading"><span>Ingresos programados · estimación</span></div>'+rows+(draft.warnings.length?'<p class="muted">'+draft.warnings.length+' configuración(es) de ingresos pendiente(s) de revisión.</p>':"");
+   saveBtn.disabled=false;
+  }catch(error){proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;preview.textContent=error.message;status.textContent="Transición no disponible.";}
+ }
+ document.getElementById("v15CalendarOpen").addEventListener("click",()=>{
+  snapshot=JSON.stringify(data);
+  const saved=data.v15CalendarTransition||data.v15PlanningCalendarDraft,minimum=oneShiftDate(todayIso(),1);
+  frequency.value=["weekly","biweekly","semimonthly","monthly"].includes(saved?.frequency)?saved.frequency:"monthly";
+  start.min=minimum;start.value=restoreValidDate(saved?.start)&&saved.start>=minimum?saved.start:minimum;
+  render();document.getElementById("oneSettingsDialog").close();dialog.showModal();
+ });
+ document.getElementById("v15CalendarCancel").addEventListener("click",()=>dialog.close());
+ function commitLab(continuation){
+  if(!labOnly||!(continuation?data.v15CalendarTransition?.status==="active":data.v15CalendarTransition?.status==="prepared"))return;
+  if(!confirm(continuation?"¿Ampliar 90 días el calendario de Lab?":"¿Activar el calendario flexible únicamente en Lab? Se conservará un respaldo local."))return;
+  try{oneV15CommitCalendarLab(data.v15CalendarTransition,snapshot,continuation);snapshot=JSON.stringify(data);render();}
+  catch(error){status.textContent=error.message;}
+ }
+ activate.addEventListener("click",()=>commitLab(false));
+ extend.addEventListener("click",()=>commitLab(true));
+ for(const field of [frequency,start])field.addEventListener("change",render);
+ document.getElementById("v15TransitionDate").addEventListener("click",()=>{
+  try{
+   const check=oneV15QueryCore.transitionPreflight(data,{frequency:frequency.value,start:oneShiftDate(todayIso(),1),days:90},todayIso(),endFor);
+   start.value=check.earliest;render();
+  }catch(error){status.textContent=error.message;}
+ });
+ prepare.addEventListener("click",()=>{
+  render();if(!proposal||!preflight?.ready)return;
+  if(!confirm("¿Preparar esta transición? No activará el nuevo calendario ni modificará tus presupuestos."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const check=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   if(!check.ready||check.boundary!==preflight.boundary)throw Error("Las fechas originales cambiaron.");
+   const staged=clone(data);staged.v15CalendarTransition={...proposal,status:"prepared",boundary:check.boundary};
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
+ withdraw.addEventListener("click",()=>{
+  if(!confirm("¿Retirar la transición preparada? Los presupuestos originales no cambiarán."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const staged=clone(data);delete staged.v15CalendarTransition;
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
+ form.addEventListener("submit",event=>{
+  event.preventDefault();render();if(!proposal)return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const staged=clone(data);staged.v15PlanningCalendarDraft={...proposal,status:"draft"};
+   oneStoragePersist(JSON.stringify(staged));data=staged;dialog.close();
+  }catch(error){preview.textContent=error.message;}
+ });
+}
+
 function bind(){
+  oneV15CalendarInit();
   const settingsDialog=document.getElementById("oneSettingsDialog");
   const debtTypesDialog=document.getElementById("oneDebtTypesDialog");
   document.querySelector("#oneSettingsPaydayMount")?.appendChild(document.querySelector(".one-payday-panel"));
@@ -7970,6 +8902,16 @@ function bind(){
   document.getElementById("closeCategoryManager")?.addEventListener("click",()=>categoryManager?.close());
   document.querySelectorAll("#nav button[data-view]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
   syncQuarterSelectors();
+  const planPref=uiState.v15PlanSelection;
+  if(planPref&&["week","fortnight","month","quarter","half","year","custom"].includes(planPref.level)){
+    const level=document.getElementById("planLevel"),q=document.getElementById("planQuarter"),m=document.getElementById("planMonth");
+    level.value=planPref.level;
+    if(planningQuarters().includes(planPref.quarter))q.value=planPref.quarter;
+    if(availableBudgetMonths().includes(planPref.month))m.value=planPref.month;
+    syncHierarchicalFilter("plan",false);
+    const f=document.getElementById("planFortnight");
+    if([...f.options].some(o=>o.value===planPref.fortnight))f.value=planPref.fortnight;
+  }
   fillSelect(document.getElementById("mType"),MOVEMENT_TYPES);
   refreshMovementCategorySelect();
   fillSelect(document.getElementById("mAccount"),ACCOUNTS);
@@ -8057,7 +8999,7 @@ function bind(){
     const existing=editId?data.movements.find(m=>m.id===editId):null;
     if(editId&&!existing)return alert("El movimiento que intentás editar ya no existe.");
     const date=document.getElementById("mDate").value,p=periodForDate(date);
-    if(!p)return alert("La fecha no pertenece a los trimestres configurados. Configurá el período desde Presupuesto.");
+    if(!p||(oneV15HasFlexiblePeriods()&&date>periodEndDate(p)))return alert("La fecha no pertenece a un período configurado. Revisá Presupuesto.");
     const type=document.getElementById("mType").value,selectedCategoryId=document.getElementById("mCategory").value;
     const debtId=document.getElementById("mDebt").value,debtObj=data.debts.find(d=>d.id===debtId);
     if(type==="Pago deuda"&&!debtObj)return alert("Seleccioná la deuda o acreedor.");
@@ -8270,6 +9212,7 @@ function bind(){
     }
     if(e.target.dataset.plan){
       const [key,field]=e.target.dataset.plan.split("|"),p=periodByKey(key);
+      if(p&&field==="date"&&oneV15HasFlexiblePeriods()){e.target.value=p.date;return alert("No se modifican fechas de períodos cuando existe un calendario flexible.")}
       if(p){p[field]=field==="date"?e.target.value:num(e.target.value);const meta=deriveBudgetMeta(p);p.budgetMonth=meta.budgetMonth;p.fortnight=meta.fortnight;save();syncQuarterSelectors();renderPlan()}
     }
     if(e.target.dataset.planCurrency){
@@ -8455,12 +9398,14 @@ function bind(){
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La ampliación del calendario flexible todavía no está disponible.");
     const q=prompt("Nombre del trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido. Usa AAAA-T1, AAAA-T2, AAAA-T3 o AAAA-T4.");
     data.periods.push(...rows);syncIncomeProjectionsForData(data);save();syncQuarterSelectors();document.getElementById("planLevel").value="quarter";syncHierarchicalFilter("plan",false);document.getElementById("planQuarter").value=q;renderPlan()
   });
   document.getElementById("duplicateQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La duplicación entre calendarios requiere revisión.");
     const source=selectionQuarter("plan"),q=prompt("Nombre del nuevo trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const src=getQuarterPeriods(source),rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido.");
@@ -8776,6 +9721,9 @@ function oneEstimatedAvailable(today=todayIso()){
 }
 function oneRenderEstimatedAvailable(today=todayIso()){
   const slot=document.getElementById("dashboardHeroNote");if(!slot)return;
+  if(oneV15QueryCore.hasUnreconciledBudget(data)){
+    slot.innerHTML='<div class="one-available-kicker">Disponible estimado</div><strong class="one-available-value">—</strong><span class="one-available-caption">Revisá los ajustes de presupuesto V13/V14 antes de estimar el disponible.</span>';return;
+  }
   const info=oneEstimatedAvailable(today);
   if(!info.ready){
     const hint=!info.hasBalance?
@@ -8804,7 +9752,13 @@ function oneRenderEstimatedAvailable(today=todayIso()){
 /* Resumen de meses financieros completos, derivado del historial sin mutarlo. */
 function oneMonthlyCloseData(month,asOf=todayIso()){
   const periods=(data.periods||[]).filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===month);
-  if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
+  if(periods.some(oneV15IsFlexiblePeriod)){
+    if(periods.some(p=>!oneV15IsFlexiblePeriod(p)))return null;
+    const ordered=[...periods].sort((a,b)=>a.date.localeCompare(b.date));
+    const first=month+"-01",last=oneShiftDate(oneMonthShift(month,1)+"-01",-1);
+    if(ordered[0]?.date!==first||ordered.at(-1)?.endDate!==last||
+       ordered.some((p,i)=>periodEndDate(p)>=asOf||(i>0&&p.date!==oneShiftDate(ordered[i-1].endDate,1))))return null;
+  }else if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
      !periods.some(p=>Number(p.fortnight)===1)||!periods.some(p=>Number(p.fortnight)===2)||
      periods.some(p=>periodEndDate(p)>=asOf))return null;
   const movements=selectedMovements("month",month).filter(m=>m.date<=asOf&&
@@ -8945,18 +9899,16 @@ renderDashboard=function(){
     hist.length===1?`Saldo operativo de hoy: ${money(hist[0].balance)} · historial en formación`:
     "Aún no hay saldos operativos reales registrados";
 
-  const spendPlan=Math.max(0,summary.plannedExpense-oneSavingsBudgetPlanned(summary.rows));
-  const usage=spendPlan?summary.realExpense/spendPlan:null;
-  const insight=document.getElementById("dashboardInsight");
-  if(usage===null){
-    insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
-  }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
-  }else if(usage<=1){
-    insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
-  }else{
-    insight.innerHTML=`<div class="v7-insight-icon">!</div><h3>El gasto superó el plan</h3><p>Los gastos reales están ${money(summary.realExpense-spendPlan)} por encima del presupuesto de gastos, sin contar el ahorro apartado.</p><span class="v7-status-pill">○ Requiere atención</span>`;
-  }
+  const snapshot=oneV15CurrentBudget(todayIso()),insight=document.getElementById("dashboardInsight"),a=snapshot?.analysis;
+  const title=!a?"Presupuesto pendiente de revisión":a.over.length||a.unbudgeted.length?"Revisá tu presupuesto":a.ahead.length?"Gasto por encima del ritmo de referencia":snapshot.hasPlan?"Dentro del presupuesto":"Definí tu presupuesto";
+  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):oneV15QueryCore.hasUnreconciledBudget(data)?"Ajustes V13/V14 pendientes":"Sin período vigente";
+  const text=a?(a.over.length||a.unbudgeted.length?
+    a.over.length+" categoría(s) con exceso · "+a.unbudgeted.length+" sin presupuesto.":
+    a.ahead.length?a.ahead.length+" categoría(s) por encima del ritmo lineal por días.":
+    snapshot.hasPlan?"No hay excesos ni gastos sin asignación en el período actual.":"Asigná montos para comenzar la comparación."):
+    "No hay un período vigente con información verificable.";
+  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+safe(title)+'</h3><p>'+safe(label)+' · '+safe(text)+'</p>'+
+    (a&&snapshot.hasPlan?'<span class="v7-status-pill">Pendiente: '+safe(money(a.remaining/100))+'</span>':"");
 
   const debts=activeDebts().map(d=>({...d,nextDate:v7NextPayDate(d)})).filter(d=>d.nextDate).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,3);
   document.getElementById("dashboardCommitments").innerHTML=debts.length?debts.map(d=>{
@@ -8976,7 +9928,7 @@ renderDashboard=function(){
   const expCanvas=document.getElementById("expenseChart");
   renderCobrosReminderWidget();
   if(expCanvas){
-    const chartLabels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+    const chartLabels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
     drawBarChart(expCanvas,chartLabels.length?chartLabels:["Sin datos"],chartLabels.length?rows.map(r=>r.expenses):[0],chartLabels.length?rows.map(r=>r.actualExpenses):[0]);
   }
 };
@@ -8985,9 +9937,14 @@ const renderPlanLegacy=renderPlan;
 renderPlan=function(){
   renderPlanLegacy();
   const {level,value}=hierarchicalSelection("plan");
+  if(["week","custom"].includes(level))return;
   const label=value?selectedLabel(level,value):"Sin periodo";
   document.getElementById("planTitle").textContent="Presupuesto";
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}`;
+  const extended=level==="half"||level==="year";
+  const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
+  const mixed=data.periods.some(p=>oneV15IsFlexiblePeriod(p)&&oneV15PlanMatches(p,level,value));
+  const partial=extended&&!mixed&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${mixed&&extended?" · Agrupación por mes de referencia":partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);
@@ -9004,7 +9961,7 @@ function m2SyncMovementPeriod(reset=false){
   const select=document.getElementById("movementPeriod");
   if(value&&Array.from(select.options).some(o=>o.value===value))select.value=value;
   const fortnight=document.getElementById("movementFortnight");
-  if(fortnight)Array.from(fortnight.options).forEach(o=>o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena");
+  if(fortnight)Array.from(fortnight.options).forEach(o=>{if(o.value==="1"||o.value==="2")o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena"});
   document.querySelectorAll("[data-one-move-level]").forEach(b=>{
     const active=b.dataset.oneMoveLevel===level;
     b.classList.toggle("active",active);
@@ -9073,6 +10030,12 @@ renderMovements=function(){
   document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${v7SafeText(selectedLabel(level,value))}</div>
     <div class="v7-donut-placeholder" style="--v7-pct:${topPct}%"><div class="v7-donut-center"><strong>${money(expense)}</strong><span>Gastos</span></div></div>
     <div class="v7-mini-bars">${ranked.length?ranked.map(([name,val])=>`<div class="v7-mini-bar"><div><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span>${v7SafeText(name)}</span><span>${tot?Math.round(val/tot*100):0}%</span></div><div class="v7-mini-bar-track"><span style="width:${tot?Math.min(100,val/tot*100):0}%"></span></div></div><strong style="font-size:.66rem;text-align:right">${money(val)}</strong></div>`).join(""):`<div class="muted" style="font-size:.72rem">Todavía no hay gastos reales en este periodo.</div>`}</div>`;
+  // Context is the current financial period, never the filtered feed.
+  const currentBudget=oneV15CurrentBudget(todayIso());
+  if(currentBudget){
+    const html=oneV15IntelligenceHtml(currentBudget.rows,currentBudget.p.date,periodEndDate(currentBudget.p),todayIso());
+    if(html)document.getElementById("movementQuick").insertAdjacentHTML("beforeend",'<div class="r8-card-dates">Presupuesto vigente · '+safe(dateLabel(currentBudget.p.date))+' – '+safe(dateLabel(periodEndDate(currentBudget.p)))+' (todos los movimientos del período)</div>'+html);
+  }
   m2RenderAccountSummary(rows);m2RenderTemplates();m2RenderAudit();
   oneRenderGoalMovementPreview(level,value);
 };
@@ -9374,6 +10337,7 @@ function oneInitPaydayControls(){
     const a=Number(first.value),b=Number(second.value);
     if(!Number.isInteger(a)||!Number.isInteger(b)||a<1||a>27||b<=a||b>31)return alert("Ingresá dos días válidos; el segundo debe ser posterior al primero.");
     if(!confirm("¿Aplicar las fechas de salario desde el mes actual? Los movimientos, montos y meses anteriores no se eliminan."))return;
+    if(oneV15HasFlexiblePeriods())return alert("Revisá primero el calendario flexible; no se cambiarán las fechas existentes.");
     data.settings.payDays={first:a,second:b};oneUpdatePaydayPeriods(todayIso().slice(0,7));
     save();syncQuarterSelectors();m2SyncMovementPeriod();renderPlan();renderMovements();renderDashboard();sync();
   });
@@ -9517,7 +10481,7 @@ function initV7(){
       const period=periodByKey(next.value);if(!period)return;
       document.getElementById("movementMonth").value=period.budgetMonth;
       syncHierarchicalFilter("movement",false);
-      document.getElementById("movementFortnight").value=String(period.fortnight);
+      document.getElementById("movementFortnight").value=oneV15PeriodOption(period);
     }
     updateMovementPeriod();
   };

@@ -1,0 +1,3 @@
+# V15.6e financial consumers candidate
+
+Flexible period labels in reports and charts use actual dates. Monthly close requires complete calendar-month coverage without gaps, and mixed reference-month groups are not mislabeled as completed months. Extended group labels distinguish reference-month grouping. Forecast uses explicit period ends and distinguishes estimated daily expenditure from confirmed allocations. No activation, no CSS changes, no production deployment. Mobile ingest, calendar extension, actual ledger, visual validation and full report regression remain pending.

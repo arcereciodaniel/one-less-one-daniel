@@ -231,6 +231,9 @@ function oneEstimatedAvailable(today=todayIso()){
 }
 function oneRenderEstimatedAvailable(today=todayIso()){
   const slot=document.getElementById("dashboardHeroNote");if(!slot)return;
+  if(oneV15QueryCore.hasUnreconciledBudget(data)){
+    slot.innerHTML='<div class="one-available-kicker">Disponible estimado</div><strong class="one-available-value">—</strong><span class="one-available-caption">Revisá los ajustes de presupuesto V13/V14 antes de estimar el disponible.</span>';return;
+  }
   const info=oneEstimatedAvailable(today);
   if(!info.ready){
     const hint=!info.hasBalance?
@@ -259,7 +262,13 @@ function oneRenderEstimatedAvailable(today=todayIso()){
 /* Resumen de meses financieros completos, derivado del historial sin mutarlo. */
 function oneMonthlyCloseData(month,asOf=todayIso()){
   const periods=(data.periods||[]).filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===month);
-  if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
+  if(periods.some(oneV15IsFlexiblePeriod)){
+    if(periods.some(p=>!oneV15IsFlexiblePeriod(p)))return null;
+    const ordered=[...periods].sort((a,b)=>a.date.localeCompare(b.date));
+    const first=month+"-01",last=oneShiftDate(oneMonthShift(month,1)+"-01",-1);
+    if(ordered[0]?.date!==first||ordered.at(-1)?.endDate!==last||
+       ordered.some((p,i)=>periodEndDate(p)>=asOf||(i>0&&p.date!==oneShiftDate(ordered[i-1].endDate,1))))return null;
+  }else if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
      !periods.some(p=>Number(p.fortnight)===1)||!periods.some(p=>Number(p.fortnight)===2)||
      periods.some(p=>periodEndDate(p)>=asOf))return null;
   const movements=selectedMovements("month",month).filter(m=>m.date<=asOf&&
@@ -400,18 +409,16 @@ renderDashboard=function(){
     hist.length===1?`Saldo operativo de hoy: ${money(hist[0].balance)} · historial en formación`:
     "Aún no hay saldos operativos reales registrados";
 
-  const spendPlan=Math.max(0,summary.plannedExpense-oneSavingsBudgetPlanned(summary.rows));
-  const usage=spendPlan?summary.realExpense/spendPlan:null;
-  const insight=document.getElementById("dashboardInsight");
-  if(usage===null){
-    insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
-  }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
-  }else if(usage<=1){
-    insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
-  }else{
-    insight.innerHTML=`<div class="v7-insight-icon">!</div><h3>El gasto superó el plan</h3><p>Los gastos reales están ${money(summary.realExpense-spendPlan)} por encima del presupuesto de gastos, sin contar el ahorro apartado.</p><span class="v7-status-pill">○ Requiere atención</span>`;
-  }
+  const snapshot=oneV15CurrentBudget(todayIso()),insight=document.getElementById("dashboardInsight"),a=snapshot?.analysis;
+  const title=!a?"Presupuesto pendiente de revisión":a.over.length||a.unbudgeted.length?"Revisá tu presupuesto":a.ahead.length?"Gasto por encima del ritmo de referencia":snapshot.hasPlan?"Dentro del presupuesto":"Definí tu presupuesto";
+  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):oneV15QueryCore.hasUnreconciledBudget(data)?"Ajustes V13/V14 pendientes":"Sin período vigente";
+  const text=a?(a.over.length||a.unbudgeted.length?
+    a.over.length+" categoría(s) con exceso · "+a.unbudgeted.length+" sin presupuesto.":
+    a.ahead.length?a.ahead.length+" categoría(s) por encima del ritmo lineal por días.":
+    snapshot.hasPlan?"No hay excesos ni gastos sin asignación en el período actual.":"Asigná montos para comenzar la comparación."):
+    "No hay un período vigente con información verificable.";
+  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+safe(title)+'</h3><p>'+safe(label)+' · '+safe(text)+'</p>'+
+    (a&&snapshot.hasPlan?'<span class="v7-status-pill">Pendiente: '+safe(money(a.remaining/100))+'</span>':"");
 
   const debts=activeDebts().map(d=>({...d,nextDate:v7NextPayDate(d)})).filter(d=>d.nextDate).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,3);
   document.getElementById("dashboardCommitments").innerHTML=debts.length?debts.map(d=>{
@@ -431,7 +438,7 @@ renderDashboard=function(){
   const expCanvas=document.getElementById("expenseChart");
   renderCobrosReminderWidget();
   if(expCanvas){
-    const chartLabels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+    const chartLabels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
     drawBarChart(expCanvas,chartLabels.length?chartLabels:["Sin datos"],chartLabels.length?rows.map(r=>r.expenses):[0],chartLabels.length?rows.map(r=>r.actualExpenses):[0]);
   }
 };
@@ -440,9 +447,14 @@ const renderPlanLegacy=renderPlan;
 renderPlan=function(){
   renderPlanLegacy();
   const {level,value}=hierarchicalSelection("plan");
+  if(["week","custom"].includes(level))return;
   const label=value?selectedLabel(level,value):"Sin periodo";
   document.getElementById("planTitle").textContent="Presupuesto";
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}`;
+  const extended=level==="half"||level==="year";
+  const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
+  const mixed=data.periods.some(p=>oneV15IsFlexiblePeriod(p)&&oneV15PlanMatches(p,level,value));
+  const partial=extended&&!mixed&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${mixed&&extended?" · Agrupación por mes de referencia":partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);
@@ -459,7 +471,7 @@ function m2SyncMovementPeriod(reset=false){
   const select=document.getElementById("movementPeriod");
   if(value&&Array.from(select.options).some(o=>o.value===value))select.value=value;
   const fortnight=document.getElementById("movementFortnight");
-  if(fortnight)Array.from(fortnight.options).forEach(o=>o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena");
+  if(fortnight)Array.from(fortnight.options).forEach(o=>{if(o.value==="1"||o.value==="2")o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena"});
   document.querySelectorAll("[data-one-move-level]").forEach(b=>{
     const active=b.dataset.oneMoveLevel===level;
     b.classList.toggle("active",active);
@@ -528,6 +540,12 @@ renderMovements=function(){
   document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${v7SafeText(selectedLabel(level,value))}</div>
     <div class="v7-donut-placeholder" style="--v7-pct:${topPct}%"><div class="v7-donut-center"><strong>${money(expense)}</strong><span>Gastos</span></div></div>
     <div class="v7-mini-bars">${ranked.length?ranked.map(([name,val])=>`<div class="v7-mini-bar"><div><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span>${v7SafeText(name)}</span><span>${tot?Math.round(val/tot*100):0}%</span></div><div class="v7-mini-bar-track"><span style="width:${tot?Math.min(100,val/tot*100):0}%"></span></div></div><strong style="font-size:.66rem;text-align:right">${money(val)}</strong></div>`).join(""):`<div class="muted" style="font-size:.72rem">Todavía no hay gastos reales en este periodo.</div>`}</div>`;
+  // Context is the current financial period, never the filtered feed.
+  const currentBudget=oneV15CurrentBudget(todayIso());
+  if(currentBudget){
+    const html=oneV15IntelligenceHtml(currentBudget.rows,currentBudget.p.date,periodEndDate(currentBudget.p),todayIso());
+    if(html)document.getElementById("movementQuick").insertAdjacentHTML("beforeend",'<div class="r8-card-dates">Presupuesto vigente · '+safe(dateLabel(currentBudget.p.date))+' – '+safe(dateLabel(periodEndDate(currentBudget.p)))+' (todos los movimientos del período)</div>'+html);
+  }
   m2RenderAccountSummary(rows);m2RenderTemplates();m2RenderAudit();
   oneRenderGoalMovementPreview(level,value);
 };

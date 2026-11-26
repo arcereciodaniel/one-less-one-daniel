@@ -1,4 +1,155 @@
+// Run the real migration and restore path against an in-memory copy only.
+function oneV15ValidateTransitionShadow(raw,record,asOf){
+ const endFor=p=>periodEndDate(p,raw.periods,raw.settings);
+ const materialized=oneV15QueryCore.materializeTransition(raw,record,asOf,endFor);
+ const baseline=restorePrepare(clone(raw)),candidate=restorePrepare(materialized.ledger);
+ const legacyKeys=new Set(baseline.periods.map(periodKey));
+ const existing=candidate.periods.filter(p=>legacyKeys.has(periodKey(p)));
+ const comparable=p=>({key:periodKey(p),date:p.date,end:periodEndDate(p,baseline.periods,baseline.settings),categoryBudgets:p.categoryBudgets,categoryBudgetCurrencies:p.categoryBudgetCurrencies,categoryBudgetSources:p.categoryBudgetSources,categoryBudgetScheduledDates:p.categoryBudgetScheduledDates,opening:p.opening});
+ if(JSON.stringify(existing.map(comparable))!==JSON.stringify(baseline.periods.map(comparable)))throw Error("La simulación cambió un presupuesto original.");
+ if(JSON.stringify(candidate.movements)!==JSON.stringify(baseline.movements))throw Error("La simulación cambió movimientos.");
+ const newRows=candidate.periods.filter(p=>!legacyKeys.has(periodKey(p)));
+ if(newRows.length!==materialized.createdKeys.length||newRows.some(p=>!oneV15IsFlexiblePeriod(p)||!materialized.createdKeys.includes(periodKey(p))))throw Error("La simulación no conservó todos los períodos.");
+ for(const p of newRows)oneV15ValidateFlexiblePeriod(p);
+ return {count:newRows.length,first:newRows[0].date,last:newRows.at(-1).endDate};
+}
+
+// Only the isolated Lab candidate may explicitly commit a flexible calendar.
+function oneV15StageCalendarChange(raw,record,asOf,extend=false){
+ const endFor=p=>periodEndDate(p,raw.periods,raw.settings);
+ const materialized=extend?oneV15QueryCore.extendFlexibleCalendar(raw,record,asOf):oneV15QueryCore.materializeTransition(raw,record,asOf,endFor);
+ const baseline=restorePrepare(clone(raw)),candidate=restorePrepare(materialized.ledger);
+ const originalKeys=new Set(baseline.periods.map(periodKey)),existing=candidate.periods.filter(p=>originalKeys.has(periodKey(p)));
+ if(JSON.stringify(existing)!==JSON.stringify(baseline.periods)||JSON.stringify(candidate.movements)!==JSON.stringify(baseline.movements))throw Error("La transición modificaría registros existentes.");
+ for(const p of baseline.periods){
+  const next=existing.find(x=>periodKey(x)===periodKey(p));
+  if(!next||periodEndDate(p,baseline.periods,baseline.settings)!==periodEndDate(next,candidate.periods,candidate.settings))throw Error("La transición modificaría fechas existentes.");
+ }
+ const created=candidate.periods.filter(p=>!originalKeys.has(periodKey(p)));
+ if(created.length!==materialized.createdKeys.length||created.some(p=>!materialized.createdKeys.includes(periodKey(p))))throw Error("No se conservaron los nuevos períodos.");
+ for(const p of created)oneV15ValidateFlexiblePeriod(p);
+ const staged=clone(raw);staged.periods.push(...created);
+ staged.v15CalendarTransition={...record,status:"active",through:created.at(-1).endDate};
+ oneV15ValidatePeriodIdentities(staged.periods,staged.settings);
+ return staged;
+}
+function oneV15CommitCalendarLab(record,expected,extend=false){
+ if(!STORAGE_KEY.startsWith("rastro_lab_"))throw Error("Activación disponible únicamente en Lab.");
+ if(JSON.stringify(data)!==expected)throw Error("Los datos cambiaron. Volvé a abrir la configuración.");
+ oneStorageAssertCurrent();
+ const staged=oneV15StageCalendarChange(data,record,todayIso(),extend);
+ const previous=localStorage.getItem(STORAGE_KEY);
+ if(previous===null)throw Error("No existe historial local para respaldar.");
+ const backupKey=STORAGE_KEY+"_pre_calendar_"+id();
+ localStorage.setItem(backupKey,previous);
+ if(localStorage.getItem(backupKey)!==previous)throw Error("No se verificó el respaldo.");
+ oneStoragePersist(JSON.stringify(staged));data=staged;
+ syncQuarterSelectors();renderDashboard();renderPlan();renderMovements();renderReports();
+ return true;
+}
+
+// Calendar preparation and explicitly gated Lab activation.
+function oneV15CalendarInit(){
+ const dialog=document.getElementById("v15CalendarDialog"),form=document.getElementById("v15CalendarForm");
+ const frequency=document.getElementById("v15CalendarFrequency"),start=document.getElementById("v15CalendarStart");
+ const preview=document.getElementById("v15CalendarPreview"),saveBtn=document.getElementById("v15CalendarSave");
+ const status=document.getElementById("v15TransitionStatus"),prepare=document.getElementById("v15TransitionPrepare"),withdraw=document.getElementById("v15TransitionCancel");
+ const endFor=p=>periodEndDate(p,data.periods,data.settings);
+ const activate=document.getElementById("v15TransitionActivate"),extend=document.getElementById("v15TransitionExtend");
+ const labOnly=STORAGE_KEY.startsWith("rastro_lab_");
+ let snapshot=null,proposal=null,preflight=null;
+ function render(){
+  proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;
+  status.textContent="";
+  const active=data.v15CalendarTransition?.status==="active";
+  withdraw.hidden=!data.v15CalendarTransition||active;
+  activate.hidden=!labOnly||data.v15CalendarTransition?.status!=="prepared";activate.disabled=true;
+  extend.hidden=!labOnly||!active;extend.disabled=true;
+  if(active){
+   status.textContent="Calendario flexible activo en Lab · hasta "+dateLabel(data.v15CalendarTransition.through)+". Sindatos anteriores modificados.".replace("Sindatos","Sin datos");
+   preview.textContent="Ampliá la planificación 90 días sin modificar los períodos existentes.";
+   try{oneV15StageCalendarChange(data,data.v15CalendarTransition,todayIso(),true);extend.disabled=!labOnly}catch(error){status.textContent+=" · "+error.message;}
+   return;
+  }
+  try{
+   if(!restoreValidDate(start.value)||start.value<oneShiftDate(todayIso(),1))throw Error("Elegí una fecha futura.");
+   const draft=oneV15QueryCore.previewPlanningCalendar(data,start.value,frequency.value,90);
+   proposal={frequency:frequency.value,start:start.value,days:90};
+   preflight=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   const current=oneV15QueryCore.transitionStatus(data,data.v15CalendarTransition,todayIso(),endFor);
+   const issues={"legacy-overlap":"Coincide con períodos existentes.","transition-gap":"Hay un intervalo sin planificación.","not-future":"Elegí una fecha futura.","assigned-future-movements":"Hay movimientos futuros asignados al calendario original."};
+   status.textContent="Primera fecha disponible: "+dateLabel(preflight.earliest)+". "+(preflight.ready?"Sin solapamientos. Preparación disponible.":preflight.issues.map(x=>issues[x]||x).join(" "))+(current.status==="prepared"?" · Transición preparada (no activa).":current.status==="review"?" · Transición anterior pendiente de revisión.":"");
+   prepare.disabled=!preflight.ready;
+   if(labOnly&&current.status==="prepared"){try{oneV15StageCalendarChange(data,data.v15CalendarTransition,todayIso());activate.disabled=false}catch(error){status.textContent+=" · Activación bloqueada: "+error.message;}}
+   if(preflight.ready){
+    try{
+     const shadow=oneV15ValidateTransitionShadow(data,{...proposal,status:"prepared",boundary:preflight.boundary},todayIso());
+     status.textContent+=" · Ensayo local: "+shadow.count+" períodos conservados.";
+    }catch(error){status.textContent+=" · Ensayo pendiente: "+error.message;prepare.disabled=true;preflight=null;}
+   }
+   const rows=draft.periods.map(p=>{
+    const byCurrency=new Map();for(const e of p.incomes){const amount=(byCurrency.get(e.currency)||0)+e.minor;if(!Number.isSafeInteger(amount))throw Error("Monto fuera de rango");byCurrency.set(e.currency,amount)}
+    const amounts=[...byCurrency].map(([c,n])=>originalMoney(n/100,c)).join(" + ")||"Sin ingresos programados";
+    return '<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(dateLabel(p.start)+" – "+dateLabel(p.end))+'</span></span><strong>'+safe(amounts)+'</strong></div>';
+   }).join("");
+   preview.innerHTML='<div class="r8-section-heading"><span>Ingresos programados · estimación</span></div>'+rows+(draft.warnings.length?'<p class="muted">'+draft.warnings.length+' configuración(es) de ingresos pendiente(s) de revisión.</p>':"");
+   saveBtn.disabled=false;
+  }catch(error){proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;preview.textContent=error.message;status.textContent="Transición no disponible.";}
+ }
+ document.getElementById("v15CalendarOpen").addEventListener("click",()=>{
+  snapshot=JSON.stringify(data);
+  const saved=data.v15CalendarTransition||data.v15PlanningCalendarDraft,minimum=oneShiftDate(todayIso(),1);
+  frequency.value=["weekly","biweekly","semimonthly","monthly"].includes(saved?.frequency)?saved.frequency:"monthly";
+  start.min=minimum;start.value=restoreValidDate(saved?.start)&&saved.start>=minimum?saved.start:minimum;
+  render();document.getElementById("oneSettingsDialog").close();dialog.showModal();
+ });
+ document.getElementById("v15CalendarCancel").addEventListener("click",()=>dialog.close());
+ function commitLab(continuation){
+  if(!labOnly||!(continuation?data.v15CalendarTransition?.status==="active":data.v15CalendarTransition?.status==="prepared"))return;
+  if(!confirm(continuation?"¿Ampliar 90 días el calendario de Lab?":"¿Activar el calendario flexible únicamente en Lab? Se conservará un respaldo local."))return;
+  try{oneV15CommitCalendarLab(data.v15CalendarTransition,snapshot,continuation);snapshot=JSON.stringify(data);render();}
+  catch(error){status.textContent=error.message;}
+ }
+ activate.addEventListener("click",()=>commitLab(false));
+ extend.addEventListener("click",()=>commitLab(true));
+ for(const field of [frequency,start])field.addEventListener("change",render);
+ document.getElementById("v15TransitionDate").addEventListener("click",()=>{
+  try{
+   const check=oneV15QueryCore.transitionPreflight(data,{frequency:frequency.value,start:oneShiftDate(todayIso(),1),days:90},todayIso(),endFor);
+   start.value=check.earliest;render();
+  }catch(error){status.textContent=error.message;}
+ });
+ prepare.addEventListener("click",()=>{
+  render();if(!proposal||!preflight?.ready)return;
+  if(!confirm("¿Preparar esta transición? No activará el nuevo calendario ni modificará tus presupuestos."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const check=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   if(!check.ready||check.boundary!==preflight.boundary)throw Error("Las fechas originales cambiaron.");
+   const staged=clone(data);staged.v15CalendarTransition={...proposal,status:"prepared",boundary:check.boundary};
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
+ withdraw.addEventListener("click",()=>{
+  if(!confirm("¿Retirar la transición preparada? Los presupuestos originales no cambiarán."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const staged=clone(data);delete staged.v15CalendarTransition;
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
+ form.addEventListener("submit",event=>{
+  event.preventDefault();render();if(!proposal)return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const staged=clone(data);staged.v15PlanningCalendarDraft={...proposal,status:"draft"};
+   oneStoragePersist(JSON.stringify(staged));data=staged;dialog.close();
+  }catch(error){preview.textContent=error.message;}
+ });
+}
+
 function bind(){
+  oneV15CalendarInit();
   const settingsDialog=document.getElementById("oneSettingsDialog");
   const debtTypesDialog=document.getElementById("oneDebtTypesDialog");
   document.querySelector("#oneSettingsPaydayMount")?.appendChild(document.querySelector(".one-payday-panel"));
@@ -50,6 +201,16 @@ function bind(){
   document.getElementById("closeCategoryManager")?.addEventListener("click",()=>categoryManager?.close());
   document.querySelectorAll("#nav button[data-view]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
   syncQuarterSelectors();
+  const planPref=uiState.v15PlanSelection;
+  if(planPref&&["week","fortnight","month","quarter","half","year","custom"].includes(planPref.level)){
+    const level=document.getElementById("planLevel"),q=document.getElementById("planQuarter"),m=document.getElementById("planMonth");
+    level.value=planPref.level;
+    if(planningQuarters().includes(planPref.quarter))q.value=planPref.quarter;
+    if(availableBudgetMonths().includes(planPref.month))m.value=planPref.month;
+    syncHierarchicalFilter("plan",false);
+    const f=document.getElementById("planFortnight");
+    if([...f.options].some(o=>o.value===planPref.fortnight))f.value=planPref.fortnight;
+  }
   fillSelect(document.getElementById("mType"),MOVEMENT_TYPES);
   refreshMovementCategorySelect();
   fillSelect(document.getElementById("mAccount"),ACCOUNTS);
@@ -137,7 +298,7 @@ function bind(){
     const existing=editId?data.movements.find(m=>m.id===editId):null;
     if(editId&&!existing)return alert("El movimiento que intentás editar ya no existe.");
     const date=document.getElementById("mDate").value,p=periodForDate(date);
-    if(!p)return alert("La fecha no pertenece a los trimestres configurados. Configurá el período desde Presupuesto.");
+    if(!p||(oneV15HasFlexiblePeriods()&&date>periodEndDate(p)))return alert("La fecha no pertenece a un período configurado. Revisá Presupuesto.");
     const type=document.getElementById("mType").value,selectedCategoryId=document.getElementById("mCategory").value;
     const debtId=document.getElementById("mDebt").value,debtObj=data.debts.find(d=>d.id===debtId);
     if(type==="Pago deuda"&&!debtObj)return alert("Seleccioná la deuda o acreedor.");
@@ -350,6 +511,7 @@ function bind(){
     }
     if(e.target.dataset.plan){
       const [key,field]=e.target.dataset.plan.split("|"),p=periodByKey(key);
+      if(p&&field==="date"&&oneV15HasFlexiblePeriods()){e.target.value=p.date;return alert("No se modifican fechas de períodos cuando existe un calendario flexible.")}
       if(p){p[field]=field==="date"?e.target.value:num(e.target.value);const meta=deriveBudgetMeta(p);p.budgetMonth=meta.budgetMonth;p.fortnight=meta.fortnight;save();syncQuarterSelectors();renderPlan()}
     }
     if(e.target.dataset.planCurrency){
@@ -535,12 +697,14 @@ function bind(){
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La ampliación del calendario flexible todavía no está disponible.");
     const q=prompt("Nombre del trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido. Usa AAAA-T1, AAAA-T2, AAAA-T3 o AAAA-T4.");
     data.periods.push(...rows);syncIncomeProjectionsForData(data);save();syncQuarterSelectors();document.getElementById("planLevel").value="quarter";syncHierarchicalFilter("plan",false);document.getElementById("planQuarter").value=q;renderPlan()
   });
   document.getElementById("duplicateQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La duplicación entre calendarios requiere revisión.");
     const source=selectionQuarter("plan"),q=prompt("Nombre del nuevo trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const src=getQuarterPeriods(source),rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido.");

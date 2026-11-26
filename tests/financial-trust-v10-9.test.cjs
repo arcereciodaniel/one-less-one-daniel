@@ -69,7 +69,13 @@ test("V10.9: detecta duplicados y referencias huérfanas sin reparar ni crear mo
   assert.equal(JSON.stringify(a),before);
   assert.equal(x.persisted(),disk);
   const slot=x.w.document.getElementById("oneDataHealthReport");
-  assert.equal(slot.querySelectorAll("li").length,4);
+  // The V15 audit adds missing-period links but must not repeat existing diagnoses.
+  assert.equal(report.issues.length,5);
+  assert.equal(slot.querySelectorAll("li").length,5);
+  for(const code of ["duplicate-id:movements","missing-category-link","missing-goal-link","missing-period-link"]){
+   assert.equal(report.issues.filter(x=>x.code===code).length,1,code);
+  }
+  assert.equal(report.issues.find(x=>x.code==="missing-period-link").count,2);
   assert.deepEqual(x.errors,[]);
  }finally{x.close()}
 });

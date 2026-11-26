@@ -115,6 +115,7 @@ function oneInitPaydayControls(){
     const a=Number(first.value),b=Number(second.value);
     if(!Number.isInteger(a)||!Number.isInteger(b)||a<1||a>27||b<=a||b>31)return alert("Ingresá dos días válidos; el segundo debe ser posterior al primero.");
     if(!confirm("¿Aplicar las fechas de salario desde el mes actual? Los movimientos, montos y meses anteriores no se eliminan."))return;
+    if(oneV15HasFlexiblePeriods())return alert("Revisá primero el calendario flexible; no se cambiarán las fechas existentes.");
     data.settings.payDays={first:a,second:b};oneUpdatePaydayPeriods(todayIso().slice(0,7));
     save();syncQuarterSelectors();m2SyncMovementPeriod();renderPlan();renderMovements();renderDashboard();sync();
   });
@@ -258,7 +259,7 @@ function initV7(){
       const period=periodByKey(next.value);if(!period)return;
       document.getElementById("movementMonth").value=period.budgetMonth;
       syncHierarchicalFilter("movement",false);
-      document.getElementById("movementFortnight").value=String(period.fortnight);
+      document.getElementById("movementFortnight").value=oneV15PeriodOption(period);
     }
     updateMovementPeriod();
   };

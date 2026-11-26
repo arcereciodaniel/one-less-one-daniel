@@ -10,6 +10,7 @@ const PARTS = Object.freeze([
   "00-model-and-setup.js",
   "10-persistence-and-currency.js",
   "20-dashboard-budget.js",
+  "25-temporal-query.js",
   "30-debts-and-collections.js",
   "35-future.js",
   "36-scenarios.js",
@@ -39,7 +40,7 @@ function buildApp() {
   const withStyles = replaceExactlyOnce(template, CSS_TOKEN, "<style>" + css + "</style>");
   const generated = replaceExactlyOnce(withStyles, SCRIPT_TOKEN, "<script>" + js + "</script>");
   assert(generated.includes('const STORAGE_KEY = "daniel_finanzas_local_v1";'), "No se encuentra la clave de datos Daniel");
-  assert(generated.includes('<small class="brand-version">v12.1.3</small>'), "La versión principal es incorrecta");
+  assert(generated.includes('<small class="brand-version">v16.0.0</small>'), "La versión principal es incorrecta");
   return generated;
 }
 

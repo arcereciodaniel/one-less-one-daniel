@@ -1,0 +1,22 @@
+name: V15.6d period consumers candidate
+on:
+  push:
+    branches: [dev/v15-6d-period-consumers]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node --test tests/v15-*.test.cjs tests/v11-source-build.test.cjs
+      - run: node tests/quincenas-metas-presupuesto.test.cjs
+      - run: node tests/movimientos-integrados.test.cjs
+      - run: node --test tests/v11-3-future.test.cjs tests/v12-1-financing-ui.test.cjs tests/v12-1-header-layout.test.cjs tests/lab-consolidation.test.cjs

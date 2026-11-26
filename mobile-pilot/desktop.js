@@ -165,7 +165,7 @@
       mobilePilotSource:"iphone",description:String(p.description||"").slice(0,200),...fxSnapshot};
     if(["Gasto","Ingreso","Pago deuda"].includes(p.type)){
       const period=periodForDate(date);
-      if(!period||date>periodEndDate(period))throw Error("Este día no tiene período presupuestario. Configurá el trimestre primero.");
+      if(!period||date>periodEndDate(period))throw Error("Este día no tiene período presupuestario. Revisá el calendario en Presupuesto.");
       const debt=p.type==="Pago deuda"?data.debts.find(d=>d.id===p.debtId&&debtStatus(d)==="active"):null;
       if(p.type==="Pago deuda"&&!debt)throw Error("Deuda no disponible.");
       // Revalidar frente a datos locales al importar, no confiar solo en
@@ -250,6 +250,10 @@
           }
           const importedRow=[...(persisted.movements||[]),...(persisted.reserveMovements||[]),
             ...(persisted.sharedCharges||[])].find(x=>x.mobilePilotId===id);
+          if(["Gasto","Ingreso","Pago deuda"].includes(item.movement?.type)){
+            const assigned=periodForDate(item.movement.date);
+            if(!assigned||item.movement.date>periodEndDate(assigned)||importedRow?.period!==periodKey(assigned))throw Error("No se verificó el período presupuestario del movimiento.");
+          }
           if(item.movement?.currency==="USD"&&importedRow?.fxDate&&importedRow.fxDate<item.movement.date)priorFx++;
           imported++;
         }else duplicates++;

@@ -19,7 +19,7 @@
   <div class="topbar">
     <div class="brand" aria-label="One Less One, by rastro.">
       <div class="r8-brand-lockup"><span class="r8-wordmark">One Less One</span><span class="r8-byline">by <strong>rastro.</strong></span></div>
-      <small class="brand-version">v12.1.3</small>
+      <small class="brand-version">v16.0.0</small>
     </div>
     <nav id="nav">
       <button data-view="dashboard" class="active"><span class="nav-icon" aria-hidden="true">⌂</span><span>Inicio</span></button>
@@ -197,13 +197,34 @@
       <div class="r8-plan-title-actions">
         <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
-        <div class="r8-view-switch" aria-label="Nivel de presupuesto">
-          <button type="button" data-r8-plan-level="quarter">Trimestre</button>
-          <button type="button" data-r8-plan-level="month">Mes</button>
-          <button type="button" data-r8-plan-level="fortnight">Quincena</button>
+        <div class="r8-view-switch">
+          <select id="planLevel" aria-label="Período de presupuesto">
+            <option value="week">Semana</option>
+            <option value="fortnight">Quincena</option>
+            <option value="month" selected>Mes</option>
+            <option value="quarter">Trimestre</option>
+            <option value="half">Semestre</option>
+            <option value="year">Año</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="period-filter" id="v15PlanDateControls" hidden>
+          <div><label for="v15PlanStart">Desde</label><input id="v15PlanStart" type="date"></div>
+          <div><label for="v15PlanEnd">Hasta</label><input id="v15PlanEnd" type="date"></div>
         </div>
       </div>
     </div>
+    <dialog id="v15AllocationDialog" class="one-budget-copy-dialog" aria-labelledby="v15AllocationTitle">
+      <form id="v15AllocationForm">
+        <div class="one-budget-copy-head"><h2 id="v15AllocationTitle">Distribuir presupuesto</h2></div>
+        <label for="v15AllocationCategory">Categoría</label><select id="v15AllocationCategory" required></select>
+        <label for="v15AllocationWeek">Semana</label><select id="v15AllocationWeek" required></select>
+        <label for="v15AllocationAmount">Monto · <span id="v15AllocationCurrency"></span></label><input id="v15AllocationAmount" type="number" min="0" step="0.01" required>
+        <label for="v15AllocationMode">Ajuste</label><select id="v15AllocationMode"><option value="maintain">Mantener total</option><option value="increase">Aumentar total</option></select>
+        <div id="v15AllocationPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+        <div class="one-budget-copy-actions"><button class="btn secondary" type="button" id="v15AllocationReview" hidden>Revisar distribución</button><button class="btn secondary" type="button" id="v15AllocationUndo" hidden>Revertir</button><button class="btn secondary" type="button" id="v15AllocationCancel">Cancelar</button><button class="btn" type="submit" id="v15AllocationConfirm">Confirmar</button></div>
+      </form>
+    </dialog>
     <dialog id="copyBudgetDialog" class="one-budget-copy-dialog" aria-labelledby="copyBudgetTitle">
       <form id="copyBudgetForm">
         <div class="one-budget-copy-head"><h2 id="copyBudgetTitle">Copiar presupuesto anterior</h2><button type="button" id="closeCopyBudgetDialog" aria-label="Cerrar">×</button></div>
@@ -217,13 +238,6 @@
       <summary>Opciones de período, categorías y planificación</summary>
     <div class="toolbar v7-plan-toolbar">
       <div class="period-filter" id="planFilters">
-        <div><label>Vista</label>
-          <select id="planLevel">
-            <option value="quarter">Trimestre</option>
-            <option value="month" selected>Mes</option>
-            <option value="fortnight">Quincena</option>
-          </select>
-        </div>
         <div id="planQuarterWrap"><label>Trimestre</label><select id="planQuarter"></select></div>
         <div id="planMonthWrap" class="month-select" hidden><label>Mes</label><select id="planMonth"></select></div>
         <div id="planFortnightWrap" hidden><label>Quincena</label><select id="planFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>
@@ -661,7 +675,7 @@
   </section>
 
 </main>
-<footer>One Less One · by rastro. · v12.1.3 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
+<footer>One Less One · by rastro. · v16.0.0 · CRC/USD · Datos locales · No envía información a ningún servidor.</footer>
 </div>
 
 
@@ -771,6 +785,21 @@
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
+<dialog id="v15CalendarDialog" class="one-budget-copy-dialog" aria-labelledby="v15CalendarTitle">
+ <form id="v15CalendarForm">
+  <div class="one-budget-copy-head"><h2 id="v15CalendarTitle">Calendario presupuestario</h2></div>
+  <label for="v15CalendarFrequency">Frecuencia de planificación</label><select id="v15CalendarFrequency"><option value="weekly">Semanal</option><option value="biweekly">Cada 2 semanas</option><option value="semimonthly">Quincenal calendario (1 y 16)</option><option value="monthly">Mensual</option></select>
+  <label for="v15CalendarStart">Desde</label><input type="date" id="v15CalendarStart" required>
+  <p class="muted">Propuesta de 90 días. Los ingresos programados conservan sus propias fechas. No modifica los presupuestos existentes.</p>
+  <div id="v15CalendarPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+  <details class="r8-unused"><summary>Transición al nuevo calendario</summary>
+    <div id="v15TransitionStatus" class="r8-card-dates" role="status"></div>
+    <button class="btn secondary small" type="button" id="v15TransitionDate">Usar primera fecha disponible</button>
+    <div class="one-budget-copy-actions"><button class="btn secondary small" type="button" id="v15TransitionCancel" hidden>Retirar transición</button><button class="btn secondary small" type="button" id="v15TransitionPrepare" disabled>Preparar transición</button><button class="btn secondary small" type="button" id="v15TransitionActivate" hidden disabled>Activar en Lab</button><button class="btn secondary small" type="button" id="v15TransitionExtend" hidden disabled>Ampliar 90 días</button></div>
+  </details>
+  <div class="one-budget-copy-actions"><button class="btn secondary" id="v15CalendarCancel" type="button">Cerrar</button><button class="btn" id="v15CalendarSave" type="submit">Guardar propuesta</button></div>
+ </form>
+</dialog>
 <dialog id="oneSettingsDialog" class="one-settings-dialog" aria-labelledby="oneSettingsTitle">
  <div class="dialog-body">
   <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
@@ -784,6 +813,7 @@
   <div class="one-settings-group">
    <h3>Moneda y calendario</h3>
    <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="v15CalendarOpen" class="one-settings-action"><span><strong>Calendario presupuestario</strong><small>Planificación futura · propuesta</small></span><span aria-hidden="true">›</span></button>
    <div id="oneSettingsPaydayMount"></div>
   </div>
   <div class="one-settings-group">

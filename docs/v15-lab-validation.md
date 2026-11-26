@@ -1,0 +1,3 @@
+# V15.6 integrated validation
+
+Separate downloadable demo HTML, not a production deployment. New distinct preview data/UI keys, synthetic test fixture, network-blocking CSP, no mobile script, disabled restore controls. Original CSS reused. Mixed-calendar desktop inbox simulation verifies exact legacy/flexible keys, rejects dates beyond coverage, and deduplicates retried records. The artifact is produced only after automated gates pass. No actual device or personal ledger verification; review visual behavior before V15.7. File-based browser storage may vary.

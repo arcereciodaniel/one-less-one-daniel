@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root,file),"utf8");
 
 test("V12: los trece módulos componen exactamente el archivo de Daniel",()=>{
- assert.equal(PARTS.length,14);
+ assert.equal(PARTS.length,15);
  const generated=buildApp();
  assert.equal(generated,read("index.html"));
  assert.equal(labFromDaniel(generated),read("lab/index.html"));
@@ -41,6 +41,6 @@ test("V12: claves de datos intactas, Lab separado y móvil sin migración",()=>{
  assert(lab.includes('const UI_STORAGE_KEY = "rastro_lab_v7_1_ui_v1";'));
  assert(main.includes('src="mobile-pilot/desktop.js"'));
  assert(lab.includes('src="../mobile-pilot/desktop.js"'));
- assert(main.includes('<small class="brand-version">v12.1.3</small>'));
- assert(lab.includes('<small class="brand-version">v12.1.3 LAB</small>'));
+ assert(main.includes('<small class="brand-version">v16.0.0</small>'));
+ assert(lab.includes('<small class="brand-version">v16.0.0 LAB</small>'));
 });
