@@ -50,6 +50,16 @@ function bind(){
   document.getElementById("closeCategoryManager")?.addEventListener("click",()=>categoryManager?.close());
   document.querySelectorAll("#nav button[data-view]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
   syncQuarterSelectors();
+  const planPref=uiState.v15PlanSelection;
+  if(planPref&&["fortnight","month","quarter","half","year"].includes(planPref.level)){
+    const level=document.getElementById("planLevel"),q=document.getElementById("planQuarter"),m=document.getElementById("planMonth");
+    level.value=planPref.level;
+    if(planningQuarters().includes(planPref.quarter))q.value=planPref.quarter;
+    if(availableBudgetMonths().includes(planPref.month))m.value=planPref.month;
+    syncHierarchicalFilter("plan",false);
+    const f=document.getElementById("planFortnight");
+    if([...f.options].some(o=>o.value===planPref.fortnight))f.value=planPref.fortnight;
+  }
   fillSelect(document.getElementById("mType"),MOVEMENT_TYPES);
   refreshMovementCategorySelect();
   fillSelect(document.getElementById("mAccount"),ACCOUNTS);

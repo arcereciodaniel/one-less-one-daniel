@@ -62,8 +62,7 @@ function oneGoalTxnEligibility(r,candidate=null,editingId=""){
 function oneGoalSelectedTransactions(level,value){
   return (data.reserveMovements||[]).filter(t=>{
     const p=periodForDate(t.date);
-    return p&&(level==="quarter"?budgetQuarter(p)===value:
-      level==="month"?p.budgetMonth===value:periodKey(p)===value);
+    return p&&oneV15PlanMatches(p,level,value);
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }
 function oneRenderGoalCards(){

@@ -675,7 +675,25 @@ function selectedMovements(level,value){
   if(level==="month")return data.movements.filter(m=>movementBudgetMonth(m)===value);
   return data.movements.filter(m=>movementBudgetQuarter(m)===value);
 }
+// V15.3: only financial month labels, never calendar redistribution.
+function oneV15FinancialGroup(month,level){
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||"")))return "";
+  if(level==="year")return month.slice(0,4)+"-01";
+  if(level==="half")return month.slice(0,4)+(Number(month.slice(5))<=6?"-01":"-07");
+  return month;
+}
+function oneV15PlanMatches(p,level,value){
+  if(level==="quarter")return budgetQuarter(p)===value;
+  if(level==="month")return p.budgetMonth===value;
+  if(level==="half"||level==="year")return !!value&&oneV15FinancialGroup(p.budgetMonth,level)===value;
+  return periodKey(p)===value;
+}
+function oneV15PlanGroups(level){
+  return [...new Set(availableBudgetMonths().map(m=>oneV15FinancialGroup(m,level)).filter(Boolean))].sort();
+}
 function selectedLabel(level,value){
+  if(value&&level==="half")return (value.endsWith("-01")?"I":"II")+" semestre · "+value.slice(0,4);
+  if(value&&level==="year")return value.slice(0,4);
   return filterOptions(level).find(x=>x.value===value)?.label||value||"";
 }
 function categoryReportFiltered(level,value){
@@ -879,6 +897,7 @@ function hierarchicalSelection(prefix){
   if(level==="quarter")return {level,value:document.getElementById(prefix+"Quarter")?.value||""};
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
+  if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
   const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
   const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
   return {level,value:p?periodKey(p):"",month,fortnight};

@@ -442,7 +442,10 @@ renderPlan=function(){
   const {level,value}=hierarchicalSelection("plan");
   const label=value?selectedLabel(level,value):"Sin periodo";
   document.getElementById("planTitle").textContent="Presupuesto";
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}`;
+  const extended=level==="half"||level==="year";
+  const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
+  const partial=extended&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);

@@ -183,7 +183,7 @@ function r8BudgetSection(types,heading,period){
 function renderPlan(){
   const {level,value}=hierarchicalSelection("plan");
   const allRows=allAdaptiveProjectedRows(),staticRows=allProjectedRows();
-  const rows=level==="quarter"?allRows.filter(r=>r.planningQuarter===value):level==="month"?allRows.filter(r=>r.budgetMonth===value):allRows.filter(r=>periodKey(r)===value);
+  const rows=allRows.filter(r=>oneV15PlanMatches(r,level,value));
   const months=[...new Set(rows.map(r=>r.budgetMonth))];
   const today=todayIso();
   const live=allRows.find(p=>p.date<=today&&today<=periodEndDate(p));
@@ -194,7 +194,7 @@ function renderPlan(){
   const income=rows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
   const expenses=rows.reduce((sum,r)=>sum+num(r.expenses),0);
   const finalClosing=rows.at(-1)?.ending??firstOpening;
-  const oldRows=level==="quarter"?staticRows.filter(r=>r.planningQuarter===value):level==="month"?staticRows.filter(r=>r.budgetMonth===value):staticRows.filter(r=>periodKey(r)===value);
+  const oldRows=staticRows.filter(r=>oneV15PlanMatches(r,level,value));
   const staticClosing=oldRows.at(-1)?.ending??firstOpening;
   const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?`${monthLabel(rows[0].budgetMonth)} · ${rows[0].fortnight===1?"1.ª":"2.ª"} quincena`:selectedLabel(level,value);
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
@@ -202,12 +202,11 @@ function renderPlan(){
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
   document.getElementById("planSub").textContent="Planificación y control por períodos financieros.";
   document.getElementById("planClosingTitle").textContent="Cierre proyectado del periodo";
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>{
-    const selected=b.dataset.r8PlanLevel===level;
-    b.classList.toggle("active",selected);
-    b.setAttribute("aria-pressed",String(selected));
-  });
-  const possible=level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const extended=level==="half"||level==="year";
+  const possible=extended?oneV15PlanGroups(level):level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const selector=document.getElementById("planLevel");
+  const preference={level,quarter:document.getElementById("planQuarter").value,month:document.getElementById("planMonth").value,fortnight:document.getElementById("planFortnight").value};
+  if(selector&&JSON.stringify(uiState.v15PlanSelection)!==JSON.stringify(preference)){uiState.v15PlanSelection=preference;saveUiState()}
   const pos=possible.indexOf(value);
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>{
     b.disabled=pos<0||pos+Number(b.dataset.r8PeriodShift)<0||pos+Number(b.dataset.r8PeriodShift)>=possible.length;
@@ -294,7 +293,6 @@ function renderPlan(){
 }
 
 function initR8(){
-  const levelControl=document.getElementById("planLevel");
   const copyDialog=document.getElementById("copyBudgetDialog");
   document.getElementById("closeCopyBudgetDialog")?.addEventListener("click",()=>copyDialog.close());
   document.getElementById("cancelCopyBudget")?.addEventListener("click",()=>copyDialog.close());
@@ -303,15 +301,14 @@ function initR8(){
     if(oneApplyCopyBudgetMonth(copyDialog?.dataset.targetMonth||""))copyDialog.close();
   });
   updateMovementFields();
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>b.addEventListener("click",()=>{
-    const next=b.dataset.r8PlanLevel;if(!next||!levelControl)return;
-    levelControl.value=next;
-    levelControl.dispatchEvent(new Event("change",{bubbles:true}));
-  }));
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.addEventListener("click",()=>{
     const shift=Number(b.dataset.r8PeriodShift)||0;
     const {level,value}=hierarchicalSelection("plan");
-    if(level==="quarter"){
+    if(level==="half"||level==="year"){
+      const groups=oneV15PlanGroups(level),target=groups[groups.indexOf(value)+shift];
+      const month=target&&availableBudgetMonths().find(m=>oneV15FinancialGroup(m,level)===target);
+      if(month){document.getElementById("planMonth").value=month;document.getElementById("planQuarter").value=budgetQuarterFromMonth(month);syncHierarchicalFilter("plan",false)}
+    }else if(level==="quarter"){
       const qs=planningQuarters(),i=qs.indexOf(value),target=qs[i+shift];
       if(target)document.getElementById("planQuarter").value=target;
     }else if(level==="month"){

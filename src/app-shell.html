@@ -197,10 +197,14 @@
       <div class="r8-plan-title-actions">
         <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
-        <div class="r8-view-switch" aria-label="Nivel de presupuesto">
-          <button type="button" data-r8-plan-level="quarter">Trimestre</button>
-          <button type="button" data-r8-plan-level="month">Mes</button>
-          <button type="button" data-r8-plan-level="fortnight">Quincena</button>
+        <div class="r8-view-switch">
+          <select id="planLevel" aria-label="Período de presupuesto">
+            <option value="fortnight">Quincena</option>
+            <option value="month" selected>Mes</option>
+            <option value="quarter">Trimestre</option>
+            <option value="half">Semestre</option>
+            <option value="year">Año</option>
+          </select>
         </div>
       </div>
     </div>
@@ -217,13 +221,6 @@
       <summary>Opciones de período, categorías y planificación</summary>
     <div class="toolbar v7-plan-toolbar">
       <div class="period-filter" id="planFilters">
-        <div><label>Vista</label>
-          <select id="planLevel">
-            <option value="quarter">Trimestre</option>
-            <option value="month" selected>Mes</option>
-            <option value="fortnight">Quincena</option>
-          </select>
-        </div>
         <div id="planQuarterWrap"><label>Trimestre</label><select id="planQuarter"></select></div>
         <div id="planMonthWrap" class="month-select" hidden><label>Mes</label><select id="planMonth"></select></div>
         <div id="planFortnightWrap" hidden><label>Quincena</label><select id="planFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>

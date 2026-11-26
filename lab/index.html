@@ -2206,10 +2206,14 @@ header .topbar>.one-utility-bar button:focus-visible{
       <div class="r8-plan-title-actions">
         <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
-        <div class="r8-view-switch" aria-label="Nivel de presupuesto">
-          <button type="button" data-r8-plan-level="quarter">Trimestre</button>
-          <button type="button" data-r8-plan-level="month">Mes</button>
-          <button type="button" data-r8-plan-level="fortnight">Quincena</button>
+        <div class="r8-view-switch">
+          <select id="planLevel" aria-label="Período de presupuesto">
+            <option value="fortnight">Quincena</option>
+            <option value="month" selected>Mes</option>
+            <option value="quarter">Trimestre</option>
+            <option value="half">Semestre</option>
+            <option value="year">Año</option>
+          </select>
         </div>
       </div>
     </div>
@@ -2226,13 +2230,6 @@ header .topbar>.one-utility-bar button:focus-visible{
       <summary>Opciones de período, categorías y planificación</summary>
     <div class="toolbar v7-plan-toolbar">
       <div class="period-filter" id="planFilters">
-        <div><label>Vista</label>
-          <select id="planLevel">
-            <option value="quarter">Trimestre</option>
-            <option value="month" selected>Mes</option>
-            <option value="fortnight">Quincena</option>
-          </select>
-        </div>
         <div id="planQuarterWrap"><label>Trimestre</label><select id="planQuarter"></select></div>
         <div id="planMonthWrap" class="month-select" hidden><label>Mes</label><select id="planMonth"></select></div>
         <div id="planFortnightWrap" hidden><label>Quincena</label><select id="planFortnight"><option value="1">Quincena 1</option><option value="2">Quincena 2</option></select></div>
@@ -4519,7 +4516,25 @@ function selectedMovements(level,value){
   if(level==="month")return data.movements.filter(m=>movementBudgetMonth(m)===value);
   return data.movements.filter(m=>movementBudgetQuarter(m)===value);
 }
+// V15.3: only financial month labels, never calendar redistribution.
+function oneV15FinancialGroup(month,level){
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month||"")))return "";
+  if(level==="year")return month.slice(0,4)+"-01";
+  if(level==="half")return month.slice(0,4)+(Number(month.slice(5))<=6?"-01":"-07");
+  return month;
+}
+function oneV15PlanMatches(p,level,value){
+  if(level==="quarter")return budgetQuarter(p)===value;
+  if(level==="month")return p.budgetMonth===value;
+  if(level==="half"||level==="year")return !!value&&oneV15FinancialGroup(p.budgetMonth,level)===value;
+  return periodKey(p)===value;
+}
+function oneV15PlanGroups(level){
+  return [...new Set(availableBudgetMonths().map(m=>oneV15FinancialGroup(m,level)).filter(Boolean))].sort();
+}
 function selectedLabel(level,value){
+  if(value&&level==="half")return (value.endsWith("-01")?"I":"II")+" semestre · "+value.slice(0,4);
+  if(value&&level==="year")return value.slice(0,4);
   return filterOptions(level).find(x=>x.value===value)?.label||value||"";
 }
 function categoryReportFiltered(level,value){
@@ -4723,6 +4738,7 @@ function hierarchicalSelection(prefix){
   if(level==="quarter")return {level,value:document.getElementById(prefix+"Quarter")?.value||""};
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
+  if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
   const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
   const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
   return {level,value:p?periodKey(p):"",month,fortnight};
@@ -4941,7 +4957,7 @@ function r8BudgetSection(types,heading,period){
 function renderPlan(){
   const {level,value}=hierarchicalSelection("plan");
   const allRows=allAdaptiveProjectedRows(),staticRows=allProjectedRows();
-  const rows=level==="quarter"?allRows.filter(r=>r.planningQuarter===value):level==="month"?allRows.filter(r=>r.budgetMonth===value):allRows.filter(r=>periodKey(r)===value);
+  const rows=allRows.filter(r=>oneV15PlanMatches(r,level,value));
   const months=[...new Set(rows.map(r=>r.budgetMonth))];
   const today=todayIso();
   const live=allRows.find(p=>p.date<=today&&today<=periodEndDate(p));
@@ -4952,7 +4968,7 @@ function renderPlan(){
   const income=rows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
   const expenses=rows.reduce((sum,r)=>sum+num(r.expenses),0);
   const finalClosing=rows.at(-1)?.ending??firstOpening;
-  const oldRows=level==="quarter"?staticRows.filter(r=>r.planningQuarter===value):level==="month"?staticRows.filter(r=>r.budgetMonth===value):staticRows.filter(r=>periodKey(r)===value);
+  const oldRows=staticRows.filter(r=>oneV15PlanMatches(r,level,value));
   const staticClosing=oldRows.at(-1)?.ending??firstOpening;
   const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?`${monthLabel(rows[0].budgetMonth)} · ${rows[0].fortnight===1?"1.ª":"2.ª"} quincena`:selectedLabel(level,value);
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
@@ -4960,12 +4976,11 @@ function renderPlan(){
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
   document.getElementById("planSub").textContent="Planificación y control por períodos financieros.";
   document.getElementById("planClosingTitle").textContent="Cierre proyectado del periodo";
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>{
-    const selected=b.dataset.r8PlanLevel===level;
-    b.classList.toggle("active",selected);
-    b.setAttribute("aria-pressed",String(selected));
-  });
-  const possible=level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const extended=level==="half"||level==="year";
+  const possible=extended?oneV15PlanGroups(level):level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));
+  const selector=document.getElementById("planLevel");
+  const preference={level,quarter:document.getElementById("planQuarter").value,month:document.getElementById("planMonth").value,fortnight:document.getElementById("planFortnight").value};
+  if(selector&&JSON.stringify(uiState.v15PlanSelection)!==JSON.stringify(preference)){uiState.v15PlanSelection=preference;saveUiState()}
   const pos=possible.indexOf(value);
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>{
     b.disabled=pos<0||pos+Number(b.dataset.r8PeriodShift)<0||pos+Number(b.dataset.r8PeriodShift)>=possible.length;
@@ -5052,7 +5067,6 @@ function renderPlan(){
 }
 
 function initR8(){
-  const levelControl=document.getElementById("planLevel");
   const copyDialog=document.getElementById("copyBudgetDialog");
   document.getElementById("closeCopyBudgetDialog")?.addEventListener("click",()=>copyDialog.close());
   document.getElementById("cancelCopyBudget")?.addEventListener("click",()=>copyDialog.close());
@@ -5061,15 +5075,14 @@ function initR8(){
     if(oneApplyCopyBudgetMonth(copyDialog?.dataset.targetMonth||""))copyDialog.close();
   });
   updateMovementFields();
-  document.querySelectorAll("[data-r8-plan-level]").forEach(b=>b.addEventListener("click",()=>{
-    const next=b.dataset.r8PlanLevel;if(!next||!levelControl)return;
-    levelControl.value=next;
-    levelControl.dispatchEvent(new Event("change",{bubbles:true}));
-  }));
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.addEventListener("click",()=>{
     const shift=Number(b.dataset.r8PeriodShift)||0;
     const {level,value}=hierarchicalSelection("plan");
-    if(level==="quarter"){
+    if(level==="half"||level==="year"){
+      const groups=oneV15PlanGroups(level),target=groups[groups.indexOf(value)+shift];
+      const month=target&&availableBudgetMonths().find(m=>oneV15FinancialGroup(m,level)===target);
+      if(month){document.getElementById("planMonth").value=month;document.getElementById("planQuarter").value=budgetQuarterFromMonth(month);syncHierarchicalFilter("plan",false)}
+    }else if(level==="quarter"){
       const qs=planningQuarters(),i=qs.indexOf(value),target=qs[i+shift];
       if(target)document.getElementById("planQuarter").value=target;
     }else if(level==="month"){
@@ -6532,8 +6545,7 @@ function oneGoalTxnEligibility(r,candidate=null,editingId=""){
 function oneGoalSelectedTransactions(level,value){
   return (data.reserveMovements||[]).filter(t=>{
     const p=periodForDate(t.date);
-    return p&&(level==="quarter"?budgetQuarter(p)===value:
-      level==="month"?p.budgetMonth===value:periodKey(p)===value);
+    return p&&oneV15PlanMatches(p,level,value);
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }
 function oneRenderGoalCards(){
@@ -7970,6 +7982,16 @@ function bind(){
   document.getElementById("closeCategoryManager")?.addEventListener("click",()=>categoryManager?.close());
   document.querySelectorAll("#nav button[data-view]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
   syncQuarterSelectors();
+  const planPref=uiState.v15PlanSelection;
+  if(planPref&&["fortnight","month","quarter","half","year"].includes(planPref.level)){
+    const level=document.getElementById("planLevel"),q=document.getElementById("planQuarter"),m=document.getElementById("planMonth");
+    level.value=planPref.level;
+    if(planningQuarters().includes(planPref.quarter))q.value=planPref.quarter;
+    if(availableBudgetMonths().includes(planPref.month))m.value=planPref.month;
+    syncHierarchicalFilter("plan",false);
+    const f=document.getElementById("planFortnight");
+    if([...f.options].some(o=>o.value===planPref.fortnight))f.value=planPref.fortnight;
+  }
   fillSelect(document.getElementById("mType"),MOVEMENT_TYPES);
   refreshMovementCategorySelect();
   fillSelect(document.getElementById("mAccount"),ACCOUNTS);
@@ -8987,7 +9009,10 @@ renderPlan=function(){
   const {level,value}=hierarchicalSelection("plan");
   const label=value?selectedLabel(level,value):"Sin periodo";
   document.getElementById("planTitle").textContent="Presupuesto";
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}`;
+  const extended=level==="half"||level==="year";
+  const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
+  const partial=extended&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);
