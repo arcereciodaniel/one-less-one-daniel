@@ -880,6 +880,12 @@ function oneLivingAdjustmentMessage(next,activeRange,today){
 function oneFlexRuntime(){
   const get=id=>document.getElementById(id),cfg=()=>oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings));
   let anchor="",mode="",universal=cfg().enabled||(data.livingBudgets||[]).length>0||(data.flexBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null,breakdownMode="week";
+  const scopePref=uiState.oloDateView||{};
+  if(["week","fortnight","month","quarter","half","year","custom"].includes(scopePref.mode)&&restoreValidDate(scopePref.anchor)){
+    mode=scopePref.mode;anchor=scopePref.anchor;universal=true;
+    if(mode==="custom"){try{storedRange=oneUniversalCustom(scopePref.start,scopePref.end)}catch{mode="month"}}
+  }
+  const rememberScope=()=>{uiState.oloDateView={mode:mode||cfg().mode,anchor:anchor||todayIso(),...(mode==="custom"&&storedRange?{start:storedRange.start,end:storedRange.end}:{})};saveUiState()};
   const pref=uiState.oloBudgetView||{};
   let planMode=["week","fortnight","month","quarter","half","year","custom"].includes(pref.mode)?pref.mode:(data.settings.financialPeriods?.mode||"month");
   let planAnchor=restoreValidDate(pref.anchor)?pref.anchor:todayIso(),planCustom=null,planBreak=["week","fortnight","month","quarter","half","year"].includes(pref.breakdown)?pref.breakdown:"";
@@ -893,7 +899,7 @@ function oneFlexRuntime(){
   const actualRows=r=>oneFlexDateRows(data.movements,r);
   const enabled=()=>universal||cfg().enabled,activePlan=()=>enabled()&&!legacyPlan,activeMove=()=>enabled()&&!legacyMove;
   const labels={week:"Semana",fortnight:"Quincena",month:"Mes",quarter:"Trimestre",half:"Semestre",year:"Año",custom:"Personalizado"};
-  const controls=(where,r,active=true)=>'<div class="one-budget-secondary-filter"><div class="r8-view-switch"><button class="r8-period-arrow" type="button" data-flex-step="-1" aria-label="Anterior" '+(mode==="custom"?"disabled":"")+'>‹</button><button class="r8-period-arrow" type="button" data-flex-step="1" aria-label="Siguiente" '+(mode==="custom"?"disabled":"")+'>›</button><select aria-label="Período" data-flex-mode="'+where+'">'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'" '+(k===(mode||cfg().mode)?"selected":"")+'>'+v+'</option>').join("")+'</select><button type="button" data-flex-today>Hoy</button></div><small>'+safe(label(r))+'</small></div>'+(mode==="custom"?'<div class="one-budget-custom"><input aria-label="Desde" type="date" data-flex-start value="'+r.start+'"><input aria-label="Hasta" type="date" data-flex-end value="'+r.end+'"><button type="button" class="btn secondary small" data-flex-custom>Aplicar</button></div>':"");
+  const controls=(where,r,selected=mode||cfg().mode)=>'<div class="one-budget-secondary-filter"><div class="r8-view-switch"><button class="r8-period-arrow" type="button" data-flex-step="-1" data-olo-scope="'+where+'" aria-label="Anterior" '+(selected==="custom"?"disabled":"")+'>‹</button><button class="r8-period-arrow" type="button" data-flex-step="1" data-olo-scope="'+where+'" aria-label="Siguiente" '+(selected==="custom"?"disabled":"")+'>›</button><select aria-label="Período" data-flex-mode="'+where+'">'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'" '+(k===selected?"selected":"")+'>'+v+'</option>').join("")+'</select><button type="button" data-flex-today data-olo-scope="'+where+'">Hoy</button></div><small>'+safe(label(r))+'</small></div>'+(selected==="custom"?'<div class="one-budget-custom"><input aria-label="Desde" type="date" data-flex-start value="'+r.start+'"><input aria-label="Hasta" type="date" data-flex-end value="'+r.end+'"><button type="button" class="btn secondary small" data-flex-custom>Aplicar</button></div>':"");
   const hide=(el,v)=>{if(el)el.hidden=v};
   // One visible budget, using the original R8 cards and editable values.
   const planHeader=()=>{
@@ -927,7 +933,8 @@ function oneFlexRuntime(){
     if(!choices.includes(planBreak))planBreak="";
     const parts=planBreak?oneLivingPartition(r,cfg(),planBreak):[];
     const heading=planMode==="month"?monthLabel(r.start.slice(0,7)):labels[planMode]||"Período";
-    nativePlanBody.innerHTML='<section class="r8-month one-budget-native"><div class="r8-month-heading"><h2>'+safe(heading)+'</h2><div class="r8-month-actions">'+(choices.length?'<select id="oloPlanBreakdown" aria-label="Desglose"><option value="">Sin desglose</option>'+choices.map(k=>'<option value="'+k+'" '+(k===planBreak?"selected":"")+'>'+labels[k]+'</option>').join("")+'</select>':"")+'<button type="button" class="r8-month-copy" data-olo-export>Exportar</button></div></div><div class="one-budget-card-grid">'+(parts.length&&parts.length<=80?parts.map(p=>{const sub=oneUniversalMetrics(p,today);return budgetCard(p,p.partial?labels[planBreak]+" parcial":labels[planBreak],sub,oneLivingContextReport(p,sub,cfg(),today))}).join(""):budgetCard(r,labels[planMode]||"Período",m,report,true))+'</div>'+(parts.length>80?'<small class="muted">Elegí un desglose más amplio.</small>':"")+(m.categories.some(x=>x.partial)?'<small class="muted">* Asignación parcial o sin cobertura.</small>':"")+'</section>';
+    const parentTotals=parts.length?'<div class="r8-month-flow one-budget-parent-totals">Ingresos: <strong>'+(m.plannedIncome===null?"—":safe(money(m.plannedIncome)))+'</strong> · Gastos: <strong>'+(m.plannedOut===null?"—":safe(money(m.plannedOut)))+'</strong></div>':"";
+    nativePlanBody.innerHTML='<section class="r8-month one-budget-native"><div class="r8-month-heading"><h2>'+safe(heading)+'</h2><div class="r8-month-actions">'+(choices.length?'<select id="oloPlanBreakdown" aria-label="Desglose"><option value="">Sin desglose</option>'+choices.map(k=>'<option value="'+k+'" '+(k===planBreak?"selected":"")+'>'+labels[k]+'</option>').join("")+'</select>':"")+'<button type="button" class="r8-month-copy" data-olo-export>Exportar</button></div></div>'+parentTotals+'<div class="one-budget-card-grid">'+(parts.length&&parts.length<=80?parts.map(p=>{const sub=oneUniversalMetrics(p,today);return budgetCard(p,p.partial?labels[planBreak]+" parcial":labels[planBreak],sub,oneLivingContextReport(p,sub,cfg(),today))}).join(""):budgetCard(r,labels[planMode]||"Período",m,report,true))+'</div>'+(parts.length>80?'<small class="muted">Elegí un desglose más amplio.</small>':"")+(m.categories.some(x=>x.partial)?'<small class="muted">* Asignación parcial o sin cobertura.</small>':"")+'</section>';
     oneRenderGoalBudgetPreview("flex",r);
   };
   const livingStatusHtml=status=>status?'<span class="one-living-status '+safe(status.code)+'">'+safe(status.label)+(status.amount>.005?' · '+safe(money(status.amount)):"")+'</span>':"—";
@@ -954,6 +961,12 @@ function oneFlexRuntime(){
     }).join("");
     return '<section class="v7-card one-living-breakdown">'+heading+'<p class="muted">Los bloques no se superponen. Se recortan al límite de la vista. * Cobertura parcial.</p>'+rows+'</section>';
   };
+  const initialScope=where=>{
+    const {level,value}=hierarchicalSelection(where==="move"?"movement":"dashboard");
+    const rows=(data.periods||[]).filter(p=>level==="quarter"?budgetQuarter(p)===value:level==="month"?(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===value:periodKey(p)===value).sort((a,b)=>a.date.localeCompare(b.date));
+    const r=rows.length?{start:rows[0].date,end:periodEndDate(rows.at(-1)),next:addDaysIso(periodEndDate(rows.at(-1)),1)}:oneUniversalRange(todayIso(),cfg(),level||"month");
+    return {r,level:labels[level]?level:"month"};
+  };
   globalThis.oneFlexMovementRange=()=>activeMove()?range():null;
   globalThis.oneFlexMovementScope=()=>activeMove()?actualRows(range()):null;
   const oldPlan=renderPlan,oldMoves=renderMovements,oldHome=renderDashboard;
@@ -963,9 +976,9 @@ function oneFlexRuntime(){
   renderDashboard=function(){
     const active=enabled()&&!legacyHome;
     hide(get("expenseChart"),false);hide(get("expenseChartLegend"),false);hide(chartNote,true);
-    oldHome();homeControls.hidden=!active;hide(get("dashboardFilters"),active);
+    oldHome();homeControls.hidden=false;hide(get("dashboardFilters"),true);
     if(active){const r=range();homeControls.innerHTML=controls("home",r);oneFlexDashboard(r,oneFlexRange(todayIso(),cfg()),label,true)}
-    else {homeControls.innerHTML="";const f=get("dashboardFilters");if(f&&!f.querySelector("[data-olo-enter]"))f.insertAdjacentHTML("beforeend",'<button class="btn secondary small" type="button" data-olo-enter="home">Más períodos</button>')}
+    else {const x=initialScope("home");homeControls.innerHTML=controls("home",x.r,x.level)}
   };
   renderPlan=function(){
     // Keep legacy render hooks for existing record/quarter maintenance; never show the old cards.
@@ -976,10 +989,10 @@ function oneFlexRuntime(){
   };
   renderMovements=function(){
     oldMoves();const panel=get("oneFlexMoves");if(!panel)return;
-    const active=activeMove();panel.hidden=!active;
-    const original=document.querySelector("#view-movements .one-move-period-control");hide(original,active);
+    const active=activeMove();panel.hidden=false;
+    hide(document.querySelector("#view-movements .one-move-period-control"),true);
     if(active){const r=range();panel.innerHTML=controls("move",r);const insight=document.querySelector("#movementQuick .one-move-insight-period");if(insight)insight.textContent=label(r);oneRenderGoalMovementPreview("flex",r)}
-    else {panel.innerHTML="";if(original&&!original.querySelector("[data-olo-enter]"))original.insertAdjacentHTML("beforeend",'<button class="btn secondary small" type="button" data-olo-enter="move">Más períodos</button>')}
+    else {const x=initialScope("move");panel.innerHTML=controls("move",x.r,x.level)}
   };
   const redraw=()=>{renderPlan();renderMovements();renderDashboard();if(get("view-future")?.classList.contains("active"))renderFuture()},form=get("oneFlexSettingsForm");
   const fields={first:"oneFlexFirst",second:"oneFlexSecond",weekday:"oneFlexWeekday",day:"oneFlexDay",quarterMonth:"oneFlexQuarterMonth"};
@@ -988,14 +1001,20 @@ function oneFlexRuntime(){
   const update=()=>{const c=read();form.querySelectorAll("[data-flex-fields]").forEach(el=>{el.hidden=!el.dataset.flexFields.split(" ").includes(c.mode);el.querySelectorAll("input,select").forEach(x=>x.disabled=el.hidden)});get("oneFlexPreview").textContent=c.mode==="fortnight"&&!valid(c)?"Ingresá dos días válidos y diferentes.":"Período actual: "+label(oneFlexRange(todayIso(),c))};
   const fill=()=>{const c=cfg();get("oneFlexEnabled").checked=true;get("oneFlexMode").value=c.mode;Object.entries(fields).forEach(([k,id])=>get(id).value=c[k]);update()};
   form.addEventListener("input",update);
-  form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;universal=true;legacyPlan=legacyMove=legacyHome=false;planMode=raw.mode;planAnchor=todayIso();planCustom=null;planBreak="";rememberPlan();fill();redraw();get("oneFlexStatus").textContent="Guardado."});
+  form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;universal=true;legacyPlan=legacyMove=legacyHome=false;planMode=raw.mode;planAnchor=todayIso();planCustom=null;planBreak="";rememberPlan();rememberScope();fill();redraw();get("oneFlexStatus").textContent="Guardado."});
   get("oneSettingsBtn").addEventListener("click",fill);
   document.addEventListener("change",e=>{if(e.target.matches("[data-living-breakdown]")&&scales.includes(e.target.value)){breakdownMode=e.target.value;renderPlan();return;}if(e.target.matches("[data-flex-mode]")&&labels[e.target.value]){
-    const prior=range();if(storedRange)anchor=storedRange.start;mode=e.target.value;universal=true;legacyPlan=legacyMove=legacyHome=false;
-    storedRange=mode==="custom"?oneUniversalCustom(prior.start,prior.end):null;redraw();
+    const prior=enabled()?range():initialScope(e.target.dataset.flexMode).r;anchor=prior.start<=todayIso()&&todayIso()<=prior.end?todayIso():prior.start;mode=e.target.value;universal=true;legacyPlan=legacyMove=legacyHome=false;
+    storedRange=mode==="custom"?oneUniversalCustom(prior.start,prior.end):null;rememberScope();redraw();
   }});
-  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-custom]");if(!b)return;const panel=b.parentNode;try{storedRange=oneUniversalCustom(panel.querySelector("[data-flex-start]").value,panel.querySelector("[data-flex-end]").value);anchor=storedRange.start;redraw()}catch(err){alert(err.message)}});
-  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-step],[data-flex-today],[data-flex-legacy],[data-olo-enter]");if(!b)return;if(b.hasAttribute("data-olo-enter")){universal=true;mode="month";anchor=todayIso();storedRange=null;legacyHome=legacyMove=false;redraw();return;}if(b.hasAttribute("data-flex-step")){const r=range();anchor=b.dataset.flexStep==="1"?r.next:addDaysIso(r.start,-1);storedRange=null}else if(b.hasAttribute("data-flex-today")){anchor=todayIso();if(mode==="custom")mode=cfg().mode;storedRange=null}else if(b.dataset.flexLegacy==="plan")legacyPlan=!legacyPlan;else if(b.dataset.flexLegacy==="move")legacyMove=!legacyMove;else if(b.dataset.flexLegacy==="home")legacyHome=!legacyHome;redraw()});
+  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-custom]");if(!b)return;const panel=b.parentNode;try{storedRange=oneUniversalCustom(panel.querySelector("[data-flex-start]").value,panel.querySelector("[data-flex-end]").value);anchor=storedRange.start;rememberScope();redraw()}catch(err){alert(err.message)}});
+  document.addEventListener("click",e=>{
+    const b=e.target.closest("[data-flex-step],[data-flex-today]");if(!b)return;
+    const x=enabled()?{r:range(),level:mode||cfg().mode}:initialScope(b.dataset.oloScope);
+    if(b.hasAttribute("data-flex-step")){mode=x.level;anchor=b.dataset.flexStep==="1"?x.r.next:addDaysIso(x.r.start,-1)}
+    else{mode=x.level==="custom"?"month":x.level;anchor=todayIso()}
+    storedRange=null;universal=true;legacyHome=legacyMove=false;rememberScope();redraw();
+  });
 
   // Distribution editor: draft only until explicit confirmation.
   const distDialog=document.createElement("dialog");distDialog.id="oneLivingDistributionDialog";distDialog.className="one-settings-dialog";document.body.appendChild(distDialog);
@@ -1172,7 +1191,7 @@ function oneFlexRuntime(){
     livingDialog.innerHTML='<form id="oneLivingForm" class="dialog-body one-flex-settings"><div class="one-budget-edit-head"><h2>'+safe(c.name)+'</h2><button class="btn secondary small" type="button" data-living-close aria-label="Cerrar">×</button></div><p class="muted">'+safe(label(r))+'</p><div class="one-flex-entry" data-living-category="'+safe(c.id)+'"><label>Monto</label><input type="number" min="0" max="1000000000000" step="0.01" data-original="'+safe(initial)+'" value="'+safe(initial)+'" placeholder="0" aria-label="Monto"><small>'+currency+'</small></div><div class="one-budget-edit-actions"><button class="btn secondary" type="button" data-living-close>Cancelar</button><button class="btn" type="submit">Guardar</button></div></form>';
     livingDialog.showModal();livingDialog.querySelector("input")?.focus();livingDialog.querySelector("input")?.select();
   };
-  nativePlanHeader.addEventListener("change",e=>{if(e.target.id!=="oloPlanPeriod")return;const prior=planRange();planAnchor=prior.start;planMode=e.target.value;planCustom=planMode==="custom"?oneUniversalCustom(prior.start,prior.end):null;planBreak="";rememberPlan();renderPlan()});
+  nativePlanHeader.addEventListener("change",e=>{if(e.target.id!=="oloPlanPeriod")return;const prior=planRange();planAnchor=prior.start<=todayIso()&&todayIso()<=prior.end?todayIso():prior.start;planMode=e.target.value;planCustom=planMode==="custom"?oneUniversalCustom(prior.start,prior.end):null;planBreak="";rememberPlan();renderPlan()});
   nativePlanHeader.addEventListener("click",e=>{const b=e.target.closest("[data-olo-plan-step],[data-olo-plan-today],[data-olo-plan-custom]");if(!b)return;try{if(b.hasAttribute("data-olo-plan-today")){planAnchor=todayIso();if(planMode==="custom"){planMode="month";planCustom=null}}else if(b.hasAttribute("data-olo-plan-custom")){planCustom=oneUniversalCustom(get("oloPlanStart").value,get("oloPlanEnd").value);planAnchor=planCustom.start}else{const r=planRange();planAnchor=b.dataset.oloPlanStep==="1"?r.next:addDaysIso(r.start,-1)}rememberPlan();renderPlan()}catch(err){alert(err.message)}});
   nativePlanBody.addEventListener("change",e=>{if(e.target.id==="oloPlanBreakdown"){planBreak=e.target.value;rememberPlan();renderPlan()}});
   nativePlanBody.addEventListener("click",e=>{

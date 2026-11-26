@@ -242,3 +242,5 @@ test("V14.5: one budget interface is visible from first load; interval persists 
  assert.equal(d.getElementById("oloPlanPeriod").value,"week");assert.equal(JSON.parse(w.localStorage.getItem("daniel_finanzas_ui_v1")).oloBudgetView.mode,"week");
  assert.equal(e.serialized(),before);assert.deepEqual(e.errors,[]);
 });
+
+test("V14.5: Home and Movements have one visible date filter without legacy toggles",()=>{const e=boot(),d=e.w.document;assert.equal(d.getElementById("dashboardFilters").hidden,true);assert.equal(d.getElementById("oneFlexHome").hidden,false);assert.equal(d.querySelector(".one-move-period-control").hidden,true);assert.equal(d.getElementById("oneFlexMoves").hidden,false);assert(!d.querySelector("[data-olo-enter]"));assert.deepEqual(e.errors,[]);});
