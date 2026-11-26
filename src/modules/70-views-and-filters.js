@@ -673,8 +673,8 @@ function oneFlexRuntime(){
     const help=exact?"Presupuesto flexible propio de este rango.":coverage.complete?"Presupuesto consolidado de períodos completos, sin duplicar el plan quincenal.":"El rango no está cubierto por presupuestos completos. Mostramos los movimientos reales sin inventar repartos.";
     const action=exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
     const history=plans().length?'<details class="v7-card"><summary>Mis presupuestos flexibles · '+plans().length+'</summary>'+[...plans()].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>'<div class="one-flex-history"><span>'+safe(labels[p.mode]+' · '+label(p))+'</span><button class="btn secondary small" type="button" data-flex-open="'+safe(p.id)+'">Abrir</button></div>').join("")+'</details>':"";
-    const notice='<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro todavía utiliza el plan anterior.</p>';
-    return `<div class="plan-quarter-summary">${summary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3>${action}</div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a})=>`<tr><td>${safe(c.name)}</td><td class="num">${coverage.complete?money(p):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${history}`;
+    const notice='<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro utiliza los planes flexibles cuando existen, sin duplicar el presupuesto anterior.</p>';
+    return `<div class="plan-quarter-summary">${summary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a})=>`<tr><td>${safe(c.name)}</td><td class="num">${coverage.complete?money(p):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${history}`;
   };
   globalThis.oneFlexMovementRange=()=>activeMove()?range():null;
   globalThis.oneFlexMovementScope=()=>activeMove()?actualRows(range()):null;
@@ -704,7 +704,7 @@ function oneFlexRuntime(){
     if(active){const r=range();panel.innerHTML=controls("move",r);const insight=document.querySelector("#movementQuick .one-move-insight-period");if(insight)insight.textContent=label(r);oneRenderGoalMovementPreview("flex",r)}
     else if(enabled)panel.innerHTML='<button class="btn secondary small" type="button" data-flex-legacy="move">Volver a vista flexible</button>';
   };
-  const redraw=()=>{renderPlan();renderMovements();renderDashboard()},form=get("oneFlexSettingsForm");
+  const redraw=()=>{renderPlan();renderMovements();renderDashboard();if(get("view-future")?.classList.contains("active"))renderFuture()},form=get("oneFlexSettingsForm");
   const fields={first:"oneFlexFirst",second:"oneFlexSecond",weekday:"oneFlexWeekday",day:"oneFlexDay",quarterMonth:"oneFlexQuarterMonth"};
   const read=()=>({enabled:get("oneFlexEnabled").checked,mode:get("oneFlexMode").value,...Object.fromEntries(Object.entries(fields).map(([k,id])=>[k,Number(get(id).value)]))});
   const valid=c=>Number.isInteger(c.first)&&Number.isInteger(c.second)&&c.first>=1&&c.first<=27&&c.second>c.first&&c.second<=31;
@@ -763,7 +763,13 @@ function oneFlexRuntime(){
     dialog.close();editing=null;redraw();
   });
   document.addEventListener("click",e=>{
-    const b=e.target.closest("[data-flex-new],[data-flex-edit],[data-flex-open]");if(!b)return;
+    const b=e.target.closest("[data-flex-new],[data-flex-edit],[data-flex-open],[data-flex-export]");if(!b)return;
+    if(b.hasAttribute("data-flex-export")){
+      const r=range(),m=oneFlexMetrics(r,todayIso()),currency=displayCurrency();
+      const amount=v=>v===null?"":Math.round(fromCRC(v,currency)*100)/100;
+      const rows=[["Desde","Hasta","Categoría","Tipo","Moneda de visualización","Presupuesto","Real hasta hoy","Diferencia favorable","Cobertura del plan"],...m.categories.filter(x=>x.p>0||x.a>0).map(x=>[r.start,r.end,x.c.name,x.c.type,currency,amount(x.p),amount(x.a),amount(x.p===null?null:x.c.type==="Ingreso"?x.a-x.p:x.p-x.a),m.coverage.complete?"Completa":"Incompleta"])];
+      download("presupuesto-"+r.start+"-"+r.end+".csv","\ufeff"+rows.map(row=>row.map(csvEscape).join(",")).join("\n"),"text/csv");return;
+    }
     if(b.hasAttribute("data-flex-open")){
       const p=plans().find(x=>x.id===b.dataset.flexOpen);if(!p)return;
       mode=p.mode;anchor=p.start;storedRange={start:p.start,end:p.end,next:addDaysIso(p.end,1)};legacyPlan=false;redraw();return;

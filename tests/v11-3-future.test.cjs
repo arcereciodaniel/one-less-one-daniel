@@ -169,3 +169,29 @@ test("V11.3: proyectos previstos y cobros sin ingreso real no entran al saldo",(
  assert.equal(e.read().movements.length,2);
  assert.deepEqual(e.errors,[]);
 });
+
+
+test("V13.3: native plan overrides intersecting legacy periods and does not mutate ledger",()=>{
+ const sample=seed();sample.settings.financialPeriods={enabled:true,mode:"month",day:1};
+ sample.flexBudgets=[{id:"native",mode:"month",start:"2026-11-01",end:"2026-11-30",entries:[{categoryId:"cat-exp",amount:20000,currency:"CRC"},{categoryId:"cat-debt",amount:30000,currency:"CRC"},{categoryId:"cat-salary",amount:200000,currency:"CRC"}]}];
+ const e=boot(sample),before=e.serialized(),m=e.w.oneFutureForecast(AS_OF,30);
+ assert.equal(m.flexible,true);assert.equal(m.base,100000);assert.equal(m.recurringIncome,200000);assert.equal(m.budgetExpense,15000);assert.equal(m.scheduledDebt,20000);
+ assert.equal(m.balance,265000);assert.equal(m.daysWithoutBudget,13);assert.equal(e.serialized(),before);assert.deepEqual(e.errors,[]);
+ const long=e.w.oneFutureForecast(AS_OF,90);assert.equal(m.balance,long.points[30].balance);
+});
+test("V13.3: a native plan counts dated real income and future expense only once",()=>{
+ const sample=seed();sample.settings.financialPeriods={enabled:true,mode:"month",day:1};
+ sample.flexBudgets=[{id:"native",mode:"month",start:"2026-11-01",end:"2026-11-30",entries:[{categoryId:"cat-exp",amount:20000,currency:"CRC"},{categoryId:"cat-salary",amount:200000,currency:"CRC"}]}];
+ sample.movements.push({id:"mobile",seq:3,type:"Gasto",date:"2026-11-20",amount:6000,currency:"CRC",categoryId:"cat-exp",period:"P0",mobilePilotSource:"iphone"},{id:"salary",seq:4,type:"Ingreso",date:"2026-11-28",amount:100000,currency:"CRC",categoryId:"cat-salary",period:"P1"});
+ sample.movementSeq=4;
+ const e=boot(sample),m=e.w.oneFutureForecast(AS_OF,30);
+ assert.equal(m.recurringIncome,100000);assert.equal(m.budgetExpense,9000);assert.equal(m.items.filter(x=>x.kind==="confirmed"&&x.amount===-6000).length,1);
+ assert.equal(m.items.filter(x=>x.kind==="confirmed"&&x.amount===100000).length,1);assert.equal(m.balance,265000);assert.deepEqual(e.errors,[]);
+});
+test("V13.3: overlapping legacy coverage is not silently prorated; disabled beta retains legacy",()=>{
+ const a={date:"2026-11-14",end:"2026-11-27"},b={date:"2026-11-28",end:"2026-12-13"},n={start:"2026-11-20",end:"2026-11-26"};
+ const e=boot(),w=e.w;
+ assert.deepEqual(Array.from(w.oneFuturePlanSources([a,b],[n],p=>p.end,true),p=>p.start),["2026-11-20","2026-11-28"]);
+ assert.deepEqual(Array.from(w.oneFuturePlanSources([a,b],[n],p=>p.end,false),p=>p.start),["2026-11-14","2026-11-28"]);
+ assert.equal(w.oneFutureIncomeAllocations(300,["2027-02-28","2027-02-28","2027-03-15"])[0].amount,200);
+});
