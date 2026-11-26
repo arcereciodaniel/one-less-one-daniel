@@ -1,0 +1,3 @@
+# V15.6f — candidate Lab-only activation and continuation
+
+Activation requires an explicit prepared transition, a checked simulation of complete pre-existing normalized periods, movements and end dates, an independent verified local backup, and one checked storage write. Daniel is blocked. New rows alone are copied into the original ledger. Extension adds 90 days with stable weekly anchor and immutable old rows, rejecting lapsed or conflicting horizons. Mobile desktop import checks the stored period identity before acknowledging. No cloud changes. No deployment. Actual mobile mixed-calendar testing, independent Lab preview and real-data reconciliation remain required before production.

@@ -211,16 +211,40 @@ function materializeTransition(raw,record,asOf,endFor){
  const check=transitionStatus(raw,record,asOf,endFor);
  if(check.status!=="prepared"||!check.ready)throw Error("Transition requires review");
  const staged=JSON.parse(JSON.stringify(raw));
- const created=check.periods.map(p=>{
-  const month=p.start.slice(0,7),quarter=month.slice(0,4)+"-T"+Math.ceil(Number(month.slice(5))/3);
-  return {key:"v15-period-"+p.start+"-"+p.end,periodKind:"flexible",frequency:record.frequency,date:p.start,endDate:p.end,budgetMonth:month,quarter,fortnight:0,opening:null,openingCurrency:"CRC",income:0,incomeCurrency:"CRC",otherIncome:0,otherIncomeCurrency:"CRC",budgets:{},budgetCurrencies:{},categoryBudgets:{},categoryBudgetCurrencies:{},categoryBudgetSources:{},categoryBudgetScheduledDates:{}};
- });
+ const created=flexibleRows(check.periods,record.frequency);
  const ids=new Set(staged.periods.map(keyFor));
  for(const p of created){if(ids.has(p.key))throw Error("Period identity collision");ids.add(p.key);}
  staged.periods.push(...created);
  return {ledger:staged,createdKeys:created.map(p=>p.key)};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition};
+
+function flexibleRows(periods,frequency){
+ return periods.map(p=>{
+  const month=p.start.slice(0,7),quarter=month.slice(0,4)+"-T"+Math.ceil(Number(month.slice(5))/3);
+  return {key:"v15-period-"+p.start+"-"+p.end,periodKind:"flexible",frequency,date:p.start,endDate:p.end,budgetMonth:month,quarter,fortnight:0,opening:null,openingCurrency:"CRC",income:0,incomeCurrency:"CRC",otherIncome:0,otherIncomeCurrency:"CRC",budgets:{},budgetCurrencies:{},categoryBudgets:{},categoryBudgetCurrencies:{},categoryBudgetSources:{},categoryBudgetScheduledDates:{}};
+ });
+}
+
+function extendFlexibleCalendar(raw,record,asOf,days=90){
+ if(!validDate(asOf)||!record||record.status!=="active"||!validDate(record.start)||!Number.isInteger(days)||days<1||days>366)throw Error("Invalid active calendar");
+ const rows=raw.periods.filter(p=>p.periodKind==="flexible").sort((a,b)=>a.date.localeCompare(b.date));
+ if(!rows.length||rows.some(p=>p.frequency!==record.frequency)||rows[0].date!==record.start)throw Error("Review active calendar");
+ for(let i=1;i<rows.length;i++)if(rows[i].date!==shiftDate(rows[i-1].endDate,1))throw Error("Calendar gap or overlap");
+ const last=rows.at(-1),start=shiftDate(last.endDate,1);
+ if(start<=asOf||raw.periods.some(p=>p.date>last.date))throw Error("Review calendar boundary before extending");
+ if((raw.movements||[]).some(m=>validDate(m.date)&&m.date>=start))throw Error("Review future movements before extending");
+ let segments;
+ if(["weekly","biweekly"].includes(record.frequency)){
+  const step=record.frequency==="weekly"?7:14,offset=(Date.parse(start)-Date.parse(record.start))/86400000,first=Math.min(days,step-(offset%step));
+  segments=[{start,end:shiftDate(start,first-1)}];
+  if(days>first)segments.push(...planningCalendar(shiftDate(start,first),record.frequency,days-first));
+ }else segments=planningCalendar(start,record.frequency,days);
+ const created=flexibleRows(segments,record.frequency),staged=JSON.parse(JSON.stringify(raw)),ids=new Set(staged.periods.map(keyFor));
+ for(const p of created){if(ids.has(p.key))throw Error("Period identity collision");ids.add(p.key)}
+ staged.periods.push(...created);
+ return {ledger:staged,createdKeys:created.map(p=>p.key)};
+}
+return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;
