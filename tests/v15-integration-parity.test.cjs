@@ -62,8 +62,11 @@ function boot(custom=seed(),lab=false){
  };
  w.alert=x=>errors.push("ALERT "+x);w.confirm=()=>true;w.prompt=()=>null;
  w.fetch=async()=>{throw Error("Sin red")};
+ const now=new w.Date();
+ custom.settings.fxCheckedOn=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
  w.localStorage.setItem(storageKey,JSON.stringify(custom));
- w.eval(script);
+ // Test-only accessor in the same lexical scope; never shipped in application code.
+ w.eval(script+"\n;globalThis.__v15LedgerJSON=()=>JSON.stringify(data);");
  return {w,errors,get:id=>w.document.getElementById(id),
   serialized:()=>w.localStorage.getItem(storageKey),
   read:()=>JSON.parse(w.localStorage.getItem(storageKey))};
@@ -79,7 +82,7 @@ for(const lab of [false,true])test("V15.2 parity with original "+(lab?"Lab":"Dan
  raw.livingBudgets=[{categoryId:"cat-exp",date:"2026-12-03",amount:500,currency:"CRC"}];
  const e=boot(raw,lab),w=e.w;
  try{
- const ledger=w.eval("JSON.parse(JSON.stringify(data))");
+ const ledger=JSON.parse(w.__v15LedgerJSON());
  const before=e.serialized(),memory=JSON.stringify(ledger),dom=e.get("planMonths").innerHTML;
  const balance=w.actualBalanceAt(AS_OF),projected=JSON.stringify(w.allProjectedRows());
  const endFor=p=>w.periodEndDate(p,ledger.periods,ledger.settings);
@@ -90,7 +93,7 @@ for(const lab of [false,true])test("V15.2 parity with original "+(lab?"Lab":"Dan
  assert.equal(result.range.end,"2026-12-27");
  assert.equal(result.totals.find(x=>x.categoryId==="cat-exp").minor,20000000);
  assert.equal(result.totals.find(x=>x.categoryId==="cat-debt"&&x.currency==="USD").minor,1234);
- const original=w.eval('allProjectedRows().filter(p=>p.budgetMonth==="2026-12")');
+ const original=w.allProjectedRows().filter(p=>p.budgetMonth==="2026-12");
  const comparable=type=>result.totals.filter(x=>ledger.categories.find(c=>c.id===x.categoryId)?.type===type).reduce((s,x)=>s+w.currentToCRC(x.minor/100,x.currency,type==="Ingreso"?"receive":"pay"),0);
  assert.ok(Math.abs(comparable("Ingreso")-original.reduce((s,p)=>s+p.incomeCRC,0))<.00001);
  assert.ok(Math.abs(comparable("Gasto")+comparable("Pago deuda")-original.reduce((s,p)=>s+p.expenses,0))<.00001);
@@ -99,7 +102,7 @@ for(const lab of [false,true])test("V15.2 parity with original "+(lab?"Lab":"Dan
  assert.equal(actualCalendar.partialPeriods.length,2);
  assert.equal(auditLedger(ledger).requiresReconciliation,true);
  assert.equal(JSON.stringify(ledger),memory);
- assert.equal(JSON.stringify(w.eval("data")),memory);
+ assert.equal(w.__v15LedgerJSON(),memory);
  assert.equal(e.serialized(),before);
  assert.equal(e.get("planMonths").innerHTML,dom);
  assert.equal(w.actualBalanceAt(AS_OF),balance);
