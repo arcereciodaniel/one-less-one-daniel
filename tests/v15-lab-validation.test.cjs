@@ -46,7 +46,7 @@ function seed(){
   projects:[],projectLinks:[],projectPlans:[],movementTemplates:[],movementAudit:[]
  };
 }
-function boot(custom=seed(),lab=false,mobileEntries=null){
+function boot(custom=seed(),lab=false,mobileEntries=null,clock=null){
  const html=fs.readFileSync(lab?"lab/index.html":"index.html","utf8"), script=html.match(/<script>\s*([\s\S]*?)<\/script>/)?.[1];
  assert(script,"Falta JavaScript integrado");
  const storageKey=lab?"rastro_lab_v7_1_data_v1":"daniel_finanzas_local_v1";
@@ -62,6 +62,7 @@ function boot(custom=seed(),lab=false,mobileEntries=null){
  };
  w.alert=x=>errors.push("ALERT "+x);w.confirm=()=>true;w.prompt=()=>null;
  w.fetch=async()=>{throw Error("Sin red")};
+ if(clock){const RealDate=w.Date,stamp=RealDate.parse(clock+'T12:00:00Z');w.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[stamp]))}static now(){return stamp}};}
  const now=new w.Date();
  custom.settings.fxCheckedOn=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
  w.localStorage.setItem(storageKey,JSON.stringify(custom));
@@ -108,16 +109,17 @@ test("V15.6 integrated mobile: mixed periods, boundary rejection and deduplicati
  const flex=mixed.periods.filter(p=>p.periodKind==="flexible");
  const mk=(id,date,type,categoryId)=>({id,movement:{date,type,categoryId,currency:"CRC",amount:1234,description:"Prueba ficticia"}});
  const entries=[mk("iphone-v15-legacy-000001","2026-11-16","Gasto","cat-exp"),mk("iphone-v15-flex-00000001",flex[0].date,"Gasto","cat-exp"),mk("iphone-v15-flex-00000002",flex[1].date,"Ingreso","cat-salary"),mk("iphone-v15-outside-00001",new Date(Date.parse(flex.at(-1).endDate)+86400000).toISOString().slice(0,10),"Gasto","cat-exp")];
- const e=boot(mixed,false,entries),w=e.w;
+ const e=boot(mixed,false,entries,entries.at(-1).movement.date),w=e.w;
  try{
   e.get("oneMobileSync").click();
   await new Promise(r=>setTimeout(r,200));
   const saved=e.read(),find=id=>saved.movements.find(m=>m.mobilePilotId===id);
   assert.equal(find("iphone-v15-legacy-000001").period,"P0");
-  assert.equal(find("iphone-v15-flex-00000001").period,flex[0].key);
-  assert.equal(find("iphone-v15-flex-00000002").period,flex[1].key);
+  assert.equal(find("iphone-v15-flex-00000001")?.period,flex[0].key,e.get("oneMobileIssuesList").textContent);
+  assert.equal(find("iphone-v15-flex-00000002")?.period,flex[1].key,e.get("oneMobileIssuesList").textContent);
   assert.equal(find("iphone-v15-outside-00001"),undefined);
   assert.equal(entries.length,1);assert.equal(e.acks.length,3);
+  assert.match(e.get("oneMobileIssuesList").textContent,/no tiene período presupuestario/);
   entries.push(mk("iphone-v15-flex-00000001",flex[0].date,"Gasto","cat-exp"));
   e.get("oneMobileSync").click();await new Promise(r=>setTimeout(r,100));
   assert.equal(e.read().movements.filter(m=>m.mobilePilotId==="iphone-v15-flex-00000001").length,1);
@@ -142,13 +144,13 @@ test("V15.6 isolated preview: no external assets or mobile, distinct storage, sy
  w.localStorage.setItem("daniel_finanzas_local_v1","protected");
  w.localStorage.setItem("rastro_lab_v7_1_data_v1","protected");
  const scripts=[...w.document.querySelectorAll("script")].map(x=>x.textContent);
- w.eval(scripts.join("\n"));
+ w.eval(scripts.join("\n")+"\n;globalThis.__previewNavigate=navigate;");
  const raw=JSON.parse(w.localStorage.getItem("rastro_lab_v15_6_preview_data_v1"));
  assert.equal(raw.periods[0].categoryBudgets["cat-exp"],80000);
  assert.equal(w.localStorage.getItem("daniel_finanzas_local_v1"),"protected");
  assert.equal(w.localStorage.getItem("rastro_lab_v7_1_data_v1"),"protected");
  assert.equal(w.document.getElementById("oneMobilePilot"),null);
  assert.equal(w.document.getElementById("oneSettingsRestore").disabled,true);
- w.navigate("plan");assert(w.document.getElementById("planMonths").querySelector(".r8-fortnight-card"));
+ w.__previewNavigate("plan");assert(w.document.getElementById("planMonths").querySelector(".r8-fortnight-card"));
  }finally{w.close()}
 });
