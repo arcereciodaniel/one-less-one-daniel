@@ -1,0 +1,3 @@
+# V14.2 · Smart Distribution
+
+Expandable subperiods are clipped to the selected parent without overlap. Each block can be edited directly or through a distribution editor. Increasing a block increases the parent total by default. Keep total optionally redistributes the remaining blocks proportionally, retaining the last edit and cents. Only changed blocks are saved; no real movements change. Distribution uses CRC explicitly, while unchanged original currencies remain intact; V14.1 interval editor retains USD. Unknown coverage is marked; fixed total requires known amounts. Calendar months may intersect three configured fortnight blocks. Forecast integration remains deferred to V14.4.

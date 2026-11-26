@@ -2016,3 +2016,6 @@ header .topbar>.one-utility-bar button:focus-visible{
 
 /* V13.2 shared date scope */
 #dashboardFilters[hidden],#oneFlexHome[hidden],#expenseChart[hidden],#expenseChartLegend[hidden],#oneFlexChartNote[hidden]{display:none!important}#oneFlexHome{width:100%;margin:0}#oneFlexHome .one-flex-toolbar{justify-content:flex-start}
+
+/* V14.2: shared light/dark layout. */
+.one-living-breakdown{margin-top:14px}.one-living-part{border-top:1px solid var(--border,rgba(128,128,128,.25));padding:10px 0}.one-living-part>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}.one-living-part>summary span:before{content:"›";display:inline-block;margin-right:8px}.one-living-part[open]>summary span:before{content:"⌄"}.one-living-part small{font-size:11px;opacity:.7}.one-living-detail{padding:10px 0 2px 16px}.one-living-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0}.one-living-detail .btn{margin-top:8px}

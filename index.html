@@ -2028,6 +2028,9 @@ header .topbar>.one-utility-bar button:focus-visible{
 
 /* V13.2 shared date scope */
 #dashboardFilters[hidden],#oneFlexHome[hidden],#expenseChart[hidden],#expenseChartLegend[hidden],#oneFlexChartNote[hidden]{display:none!important}#oneFlexHome{width:100%;margin:0}#oneFlexHome .one-flex-toolbar{justify-content:flex-start}
+
+/* V14.2: shared light/dark layout. */
+.one-living-breakdown{margin-top:14px}.one-living-part{border-top:1px solid var(--border,rgba(128,128,128,.25));padding:10px 0}.one-living-part>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}.one-living-part>summary span:before{content:"›";display:inline-block;margin-right:8px}.one-living-part[open]>summary span:before{content:"⌄"}.one-living-part small{font-size:11px;opacity:.7}.one-living-detail{padding:10px 0 2px 16px}.one-living-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0}.one-living-detail .btn{margin-top:8px}
 </style>
 <link rel="stylesheet" href="mobile-pilot/desktop.css">
 </head>
@@ -9350,9 +9353,49 @@ function oneUniversalMetrics(r,through=""){
  return {...base,coverage,categories,plannedIncome,plannedOut,pending:coverage.complete?categories.filter(x=>x.c.type!=="Ingreso").reduce((s,x)=>s+Math.max(0,x.p-x.a),0):null};
 }
 
+function oneLivingPartition(range,config,mode){
+ if(!["week","fortnight","month","quarter","half","year"].includes(mode))throw Error("Escala inválida.");
+ const parent=oneUniversalCustom(range.start,range.end),out=[];
+ let cursor=parent.start;
+ while(cursor<=parent.end){
+  const whole=oneUniversalRange(cursor,config,mode),end=whole.end<parent.end?whole.end:parent.end;
+  const part=oneUniversalCustom(cursor,end);
+  out.push({...part,partial:cursor!==whole.start||end!==whole.end});
+  cursor=part.next;
+ }
+ return out;
+}
+
+function oneLivingRedistribute(values,index,total){
+ if(!Array.isArray(values)||values.length<2||!Number.isInteger(index)||index<0||index>=values.length||!Number.isFinite(total)||total<0||values.some(v=>!Number.isFinite(v)||v<0))throw Error("Montos inválidos.");
+ const target=Math.round(total*100),fixed=Math.round(values[index]*100);
+ if(fixed>target)throw Error("El importe seleccionado supera el presupuesto total.");
+ const rest=target-fixed,others=values.map((v,i)=>({i,weight:i===index?0:Math.round(v*100)})).filter(x=>x.i!==index);
+ const sum=others.reduce((a,b)=>a+b.weight,0);
+ let cursor=0,previous=0;
+ const next=values.slice();next[index]=fixed/100;
+ for(const x of others){
+  cursor+=sum?x.weight:1;
+  const end=Math.round(rest*cursor/(sum||others.length));
+  next[x.i]=(end-previous)/100;previous=end;
+ }
+ return next;
+}
+
+function oneLivingDistributionChanges(rows,categoryId,parts,original,values,currency){
+ if(parts.length!==values.length||original.length!==values.length||values.some(v=>!Number.isFinite(v)||v<0||v>1e12))throw Error("Revisá los montos.");
+ let next=rows||[];
+ for(let i=0;i<parts.length;i++){
+  if(original[i]!==null&&Math.round(original[i]*100)===Math.round(values[i]*100))continue;
+  if(original[i]===null&&values[i]===0)continue;
+  next=oneLivingReplace(next,categoryId,parts[i],values[i],currency);
+ }
+ return next;
+}
+
 function oneFlexRuntime(){
   const get=id=>document.getElementById(id),cfg=()=>oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings));
-  let anchor="",mode="",universal=(data.livingBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null;
+  let anchor="",mode="",universal=(data.livingBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null,breakdownMode="week";
   const plans=()=>Array.isArray(data.flexBudgets)?data.flexBudgets:[];
   const range=()=>storedRange||oneUniversalRange(anchor||todayIso(),cfg(),mode==="custom"?cfg().mode:mode||cfg().mode),label=r=>dateLabel(r.start)+" – "+dateLabel(r.end);
   const actualRows=r=>oneFlexDateRows(data.movements,r);
@@ -9367,10 +9410,25 @@ function oneFlexRuntime(){
     const {income,expense,debt,reimbursements}=metrics;
     const summary=[["Ingresos reales",income],["Gastos y pagos de deuda",expense+debt],["Neto de movimientos",income+reimbursements-expense-debt]];
     const help=universal?(coverage.complete?"Distribución estimada de gastos por días; ingresos según fechas de pago conocidas. Los ingresos sin fecha solo se incluyen en su rango completo.":"Hay días sin cobertura de presupuesto. No se inventan importes faltantes."):exact?"Presupuesto flexible propio de este rango.":coverage.complete?"Presupuesto consolidado de períodos completos, sin duplicar el plan quincenal.":"El rango no está cubierto por presupuestos completos. Mostramos los movimientos reales sin inventar repartos.";
-    const action=universal?'<button class="btn" type="button" data-living-edit>Editar presupuesto</button>':exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
+    const action=universal?'<button class="btn" type="button" data-living-edit>Editar presupuesto</button><button class="btn secondary" type="button" data-living-distribute>Distribuir</button>':exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
     const history=plans().length?'<details class="v7-card"><summary>Mis presupuestos flexibles · '+plans().length+'</summary>'+[...plans()].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>'<div class="one-flex-history"><span>'+safe(labels[p.mode]+' · '+label(p))+'</span><button class="btn secondary small" type="button" data-flex-open="'+safe(p.id)+'">Abrir</button></div>').join("")+'</details>':"";
     const notice=universal?'<p class="muted">Living Budget · Los cambios reemplazan la asignación de la categoría solo en estas fechas. Los totales superiores se recalculan. Futuro todavía no incorpora estos ajustes.</p>':'<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro utiliza los planes flexibles cuando existen, sin duplicar el presupuesto anterior.</p>';
-    return `<div class="plan-quarter-summary">${summary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados. * Importe conocido de cobertura parcial.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a,partial})=>`<tr><td>${safe(c.name)}</td><td class="num">${p!==null?money(p)+(partial?" *":""):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${history}`;
+    const knownOut=metrics.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null).reduce((sum,x)=>sum+x.p,0);
+    const budgetSummary=universal?[["Presupuesto de salidas"+(coverage.complete?"":" · conocido"),knownOut],...summary]:summary;
+    return `<div class="plan-quarter-summary">${budgetSummary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados. * Importe conocido de cobertura parcial.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a,partial})=>`<tr><td>${safe(c.name)}${universal&&c.type!=="Ingreso"?` <button class="btn secondary small" type="button" data-living-distribute="${safe(c.id)}">Distribuir</button>`:""}</td><td class="num">${p!==null?money(p)+(partial?" *":""):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${universal?renderBreakdown(r):""}${history}`;
+  };
+  const scales=["week","fortnight","month","quarter","half","year"];
+  const scaleOptions=selected=>scales.map(k=>'<option value="'+k+'" '+(selected===k?"selected":"")+'>'+labels[k]+'</option>').join("");
+  const renderBreakdown=r=>{
+    if(r.start===r.end)return "";
+    const parts=oneLivingPartition(r,cfg(),breakdownMode);
+    const heading='<div class="one-flex-toolbar"><h3>Desglose por períodos</h3><label>Expandir por <select data-living-breakdown>'+scaleOptions(breakdownMode)+'</select></label></div>';
+    if(parts.length>80)return '<section class="v7-card">'+heading+'<p class="muted">Elegí una escala más amplia para ver hasta 80 bloques.</p></section>';
+    const rows=parts.map(p=>{
+      const m=oneUniversalMetrics(p,todayIso()),known=m.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null),total=known.reduce((sum,x)=>sum+x.p,0);
+      return '<details class="one-living-part"><summary><span><strong>'+safe(label(p))+'</strong>'+(p.partial?' <small>Parcial</small>':'')+'</span><strong>'+(known.length?money(total):"—")+(m.coverage.complete?"":" *")+'</strong></summary><div class="one-living-detail"><p class="muted">Gastos y aportes registrados: '+money(m.actualOut)+'</p>'+known.filter(x=>x.p>0||x.a>0||x.hasOverride).map(x=>'<div class="one-living-line"><span>'+safe(x.c.name)+'</span><strong>'+money(x.p)+'</strong></div>').join("")+'<button class="btn secondary small" type="button" data-living-part-start="'+p.start+'" data-living-part-end="'+p.end+'">Editar este intervalo</button></div></details>';
+    }).join("");
+    return '<section class="v7-card one-living-breakdown">'+heading+'<p class="muted">Los bloques no se superponen. Se recortan al límite de la vista. * Cobertura parcial.</p>'+rows+'</section>';
   };
   globalThis.oneFlexMovementRange=()=>activeMove()?range():null;
   globalThis.oneFlexMovementScope=()=>activeMove()?actualRows(range()):null;
@@ -9409,12 +9467,77 @@ function oneFlexRuntime(){
   form.addEventListener("input",update);
   form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;legacyPlan=legacyMove=legacyHome=false;fill();redraw();get("oneFlexStatus").textContent="Configuración guardada. Tus movimientos y presupuestos históricos siguen intactos."});
   get("oneSettingsBtn").addEventListener("click",fill);
-  document.addEventListener("change",e=>{if(e.target.matches("[data-flex-mode]")&&labels[e.target.value]){
+  document.addEventListener("change",e=>{if(e.target.matches("[data-living-breakdown]")&&scales.includes(e.target.value)){breakdownMode=e.target.value;renderPlan();return;}if(e.target.matches("[data-flex-mode]")&&labels[e.target.value]){
     const prior=range();if(storedRange)anchor=storedRange.start;mode=e.target.value;universal=true;legacyPlan=legacyMove=legacyHome=false;
     storedRange=mode==="custom"?oneUniversalCustom(prior.start,prior.end):null;redraw();
   }});
   document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-custom]");if(!b)return;const panel=b.parentNode;try{storedRange=oneUniversalCustom(panel.querySelector("[data-flex-start]").value,panel.querySelector("[data-flex-end]").value);anchor=storedRange.start;redraw()}catch(err){alert(err.message)}});
   document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-step],[data-flex-today],[data-flex-legacy]");if(!b)return;if(b.hasAttribute("data-flex-step")){const r=range();anchor=b.dataset.flexStep==="1"?r.next:addDaysIso(r.start,-1);storedRange=null}else if(b.hasAttribute("data-flex-today")){anchor=todayIso();if(mode==="custom")mode=cfg().mode;storedRange=null}else if(b.dataset.flexLegacy==="plan")legacyPlan=!legacyPlan;else if(b.dataset.flexLegacy==="move")legacyMove=!legacyMove;else if(b.dataset.flexLegacy==="home")legacyHome=!legacyHome;redraw()});
+
+  // Distribution editor: draft only until explicit confirmation.
+  const distDialog=document.createElement("dialog");distDialog.id="oneLivingDistributionDialog";distDialog.className="one-settings-dialog";document.body.appendChild(distDialog);
+  let distribution=null;
+  const distTotal=vs=>vs.reduce((sum,v)=>sum+Math.round((v||0)*100),0)/100;
+  const distLabel=v=>"₡"+Number(v).toLocaleString("es-CR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const readDistribution=()=>{
+    const d=distribution,parts=oneLivingPartition(d.r,cfg(),d.scale);
+    if(parts.length>80)throw Error("Elegí una escala más amplia: máximo 80 bloques.");
+    d.parts=parts;d.original=parts.map(p=>{
+      const x=oneUniversalMetrics(p,todayIso()).categories.find(x=>x.c.id===d.categoryId);
+      return x?.p===null||x?.p===undefined?null:Math.round(x.p*100)/100;
+    });
+    d.values=d.original.map(v=>v??0);d.initial=distTotal(d.values);d.last=-1;
+  };
+  const updateDistribution=()=>{
+    const d=distribution,delta=Math.round((distTotal(d.values)-d.initial)*100)/100;
+    distDialog.querySelector("[data-dist-total]").textContent=distLabel(distTotal(d.values));
+    distDialog.querySelector("[data-dist-impact]").textContent=delta===0?"El total del período se mantiene.":"El total del período "+(delta>0?"aumenta ":"disminuye ")+distLabel(Math.abs(delta))+".";
+    distDialog.querySelector("[data-dist-redistribute]").disabled=d.last<0||d.parts.length<2||d.original.some(v=>v===null);
+  };
+  const renderDistribution=()=>{
+    const d=distribution;
+    distDialog.innerHTML='<form id="oneLivingDistributionForm" class="dialog-body one-flex-settings"><div class="one-flex-toolbar"><h2>Distribuir presupuesto</h2><button class="btn secondary small" type="button" data-dist-close>Cerrar</button></div><p class="muted">'+safe(label(d.r))+' · CRC · Editá cada bloque. Los cambios guardados quedan en colones; los montos sin cambios conservan su moneda original.</p><div class="one-flex-toolbar"><label>Categoría <select data-dist-category>'+d.cats.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===d.categoryId?"selected":"")+'>'+safe(c.name)+'</option>').join("")+'</select></label><label>Dividir por <select data-dist-scale>'+scaleOptions(d.scale)+'</select></label></div>'+d.parts.map((p,i)=>'<div class="one-flex-entry"><label>'+safe(label(p))+(p.partial?' <small>Bloque parcial</small>':'')+(d.original[i]===null?' <small>Sin importe conocido</small>':'')+'</label><input type="number" min="0" max="1000000000000" step="0.01" data-dist-index="'+i+'" value="'+safe(String(d.values[i]))+'" aria-label="Monto '+safe(label(p))+'"><small>CRC</small></div>').join("")+'<div class="one-living-line"><span>Total original conocido</span><strong>'+safe(distLabel(d.initial))+'</strong></div><div class="one-living-line"><span>Total actualizado</span><strong data-dist-total></strong></div><p class="muted" data-dist-impact aria-live="polite"></p><p class="muted">Mantener total redistribuye proporcionalmente los otros bloques, conservando el último editado. Solo disponible con importes conocidos.</p><div class="one-flex-toolbar"><button class="btn secondary" type="button" data-dist-redistribute>Mantener total</button><button class="btn secondary" type="button" data-dist-close>Cancelar</button><button class="btn" type="submit">Guardar distribución</button></div></form>';
+    updateDistribution();
+  };
+  const openDistribution=(r,categoryId)=>{
+    const cats=oneUniversalMetrics(r,todayIso()).categories.filter(x=>x.c.type!=="Ingreso"&&(x.c.active!==false&&x.c.budgetable!==false||x.p>0||x.hasOverride)).map(x=>x.c);
+    if(!cats.length)return alert("No hay categorías de gasto o deuda para distribuir.");
+    const days=oneLivingDays(r).length;
+    distribution={r:{start:r.start,end:r.end},cats,categoryId:cats.some(c=>c.id===categoryId)?categoryId:cats[0].id,scale:days>2400?"quarter":days>540?"month":"week"};
+    try{readDistribution();renderDistribution();distDialog.showModal()}catch(err){alert(err.message)}
+  };
+  distDialog.addEventListener("input",e=>{
+    const input=e.target;if(!input.matches("[data-dist-index]"))return;
+    const i=Number(input.dataset.distIndex),v=Number(input.value);
+    if(input.value===""||!Number.isFinite(v)||v<0||v>1e12)return;
+    distribution.values[i]=v;distribution.last=i;updateDistribution();
+  });
+  distDialog.addEventListener("change",e=>{
+    const input=e.target;if(!input.matches("[data-dist-category],[data-dist-scale]"))return;
+    const d=distribution,oldId=d.categoryId,oldScale=d.scale;
+    if(d.values.some((v,i)=>Math.round(v*100)!==Math.round((d.original[i]||0)*100))&&!confirm("¿Descartar los cambios todavía no guardados?")){input.value=input.matches("[data-dist-category]")?oldId:oldScale;return}
+    if(input.matches("[data-dist-category]"))d.categoryId=input.value;else d.scale=input.value;
+    try{readDistribution();renderDistribution()}catch(err){d.categoryId=oldId;d.scale=oldScale;readDistribution();renderDistribution();alert(err.message)}
+  });
+  distDialog.addEventListener("click",e=>{
+    if(e.target.closest("[data-dist-close]")){distDialog.close();return}
+    if(!e.target.closest("[data-dist-redistribute]"))return;
+    try{const d=distribution;d.values=oneLivingRedistribute(d.values,d.last,d.initial);renderDistribution()}catch(err){alert(err.message)}
+  });
+  distDialog.addEventListener("submit",e=>{
+    if(e.target.id!=="oneLivingDistributionForm")return;e.preventDefault();
+    const d=distribution,previous=data.livingBudgets;
+    try{
+      const inputs=[...distDialog.querySelectorAll("[data-dist-index]")];
+      if(inputs.some(x=>x.value===""))throw Error("Completá los montos.");
+      d.values=inputs.map(x=>Number(x.value));
+      const next=oneLivingDistributionChanges(previous,d.categoryId,d.parts,d.original,d.values,"CRC");
+      if(next===previous){distDialog.close();return}
+      if(!confirm("¿Guardar distribución? Total conocido: "+distLabel(d.initial)+" → "+distLabel(distTotal(d.values))+". Los ajustes quedan en CRC. Los movimientos no cambiarán."))return;
+      data.livingBudgets=next;save();
+    }catch(err){if(previous===undefined)delete data.livingBudgets;else data.livingBudgets=previous;return alert("No se guardó la distribución. "+err.message)}
+    distDialog.close();universal=true;redraw();
+  });
 
   // Dated replacements: one effective allocation per category and date.
   const livingDialog=document.createElement("dialog");livingDialog.className="one-settings-dialog";livingDialog.id="oneLivingBudgetDialog";document.body.appendChild(livingDialog);
@@ -9498,7 +9621,9 @@ function oneFlexRuntime(){
     dialog.close();editing=null;redraw();
   });
   document.addEventListener("click",e=>{
-    const b=e.target.closest("[data-flex-new],[data-flex-edit],[data-flex-open],[data-flex-export],[data-living-edit]");if(!b)return;
+    const b=e.target.closest("[data-flex-new],[data-flex-edit],[data-flex-open],[data-flex-export],[data-living-edit],[data-living-distribute],[data-living-part-start]");if(!b)return;
+    if(b.hasAttribute("data-living-distribute")){openDistribution(range(),b.dataset.livingDistribute);return;}
+    if(b.hasAttribute("data-living-part-start")){openLivingEditor(oneUniversalCustom(b.dataset.livingPartStart,b.dataset.livingPartEnd));return;}
     if(b.hasAttribute("data-living-edit")){openLivingEditor(range());return;}
     if(b.hasAttribute("data-flex-export")){
       const r=range(),m=universal?oneUniversalMetrics(r,todayIso()):oneFlexMetrics(r,todayIso()),currency=displayCurrency();
