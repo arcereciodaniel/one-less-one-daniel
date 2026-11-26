@@ -5906,6 +5906,8 @@ function oneFutureIncomeAllocations(amount,dates){
  return [...count].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,n])=>({date,amount:amount*n/dates.length}));
 }
 
+function oneFutureMoney(value){return Number(value.toFixed(2))}
+
 function oneFutureForecast(asOf=todayIso(),days=90){
  if(!restoreValidDate(asOf)||!ONE_FUTURE_WINDOWS.includes(days))throw Error("Ventana de proyección inválida.");
  const until=addDaysIso(asOf,days),tomorrow=addDaysIso(asOf,1);
@@ -6048,11 +6050,16 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   if(balance<lowest){lowest=balance;lowestDate=date}
  }
  const byKind=kind=>items.filter(item=>item.kind===kind).reduce((s,item)=>s+Math.abs(item.amount),0);
- return {asOf,until,days,base,balance,lowest,lowestDate,income,outgo,
-  points,items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
+ // Keep full precision during daily accumulation and round only published
+ // flexible monetary totals and chart points, not each daily allocation.
+ // This avoids cumulative cent loss and preserves the legacy forecast.
+ const monetary=flexible?oneFutureMoney:v=>v;
+ return {asOf,until,days,base:monetary(base),balance:monetary(balance),lowest:monetary(lowest),lowestDate,income:monetary(income),outgo:monetary(outgo),
+  points:flexible?points.map(p=>({...p,balance:monetary(p.balance),delta:monetary(p.delta),income:monetary(p.income),outgo:monetary(p.outgo)})):points,
+  items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
   coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,flexible,
-  recurringIncome:byKind("income"),scheduledDebt:byKind("debt"),
-  budgetExpense:byKind("budget")+byKind("budget-savings")+byKind("budget-debt")};
+  recurringIncome:monetary(byKind("income")),scheduledDebt:monetary(byKind("debt")),
+  budgetExpense:monetary(byKind("budget")+byKind("budget-savings")+byKind("budget-debt"))};
 }
 function oneFutureChart(points){
  const width=760,height=245,pad={left:110,right:18,top:20,bottom:40};

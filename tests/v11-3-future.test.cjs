@@ -195,3 +195,12 @@ test("V13.3: overlapping legacy coverage is not silently prorated; disabled beta
  assert.deepEqual(Array.from(w.oneFuturePlanSources([a,b],[n],p=>p.end,false),p=>p.start),["2026-11-14","2026-11-28"]);
  assert.equal(w.oneFutureIncomeAllocations(300,["2027-02-28","2027-02-28","2027-03-15"])[0].amount,200);
 });
+
+test("V13.3.1: monetary totals round once, not each daily fraction",()=>{
+ const e=boot(),w=e.w;
+ const sum=amount=>Array(13).fill(amount/13).reduce((s,v)=>s+v,0);
+ assert.equal(w.oneFutureMoney(sum(15000)),15000);
+ assert.equal(w.oneFutureMoney(sum(9000)),9000);
+ assert.equal(w.oneFutureMoney(265000.00000000006),265000);
+ assert.equal(w.oneFutureMoney(-0.123456),-0.12);
+});
