@@ -1,0 +1,26 @@
+name: V16.1 flexible system prototype
+on:
+  push:
+    branches: [dev/v16-1-flexible-system]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prototype:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node --test tests/v16-1-flexible-system.test.cjs
+      - run: node scripts/build-v16-1-preview.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: One-Less-One-V16.1-DEMO
+          path: preview-v16-1/
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,12 @@
+# V16.1 — Sistema flexible, prototipo funcional aislado
+
+El alcance abarca todo OLO: Inicio, Presupuesto y Movimientos primero; Futuro y Proyectos comparten el contrato temporal, pero no se implementan sus cálculos en esta fase. No se modifica main, Lab publicado, el Worker, datos reales ni CSS de producción. El prototipo usa CSS nativo más reglas locales, datos ficticios y memoria volátil sin red ni importación.
+
+## Contrato temporal
+Una selección compartida: nivel (semana/quincena/mes/trimestre/semestre/año), mes de referencia, fecha ancla y alcance (todos/un intervalo). Actual es un atajo explícito que vuelve al período de hoy; no bloquea navegación. Todos muestra los bloques del mes seleccionado en semana/quincena, o el intervalo agregado en niveles mayores. La selección se mantiene al cambiar de módulo. Las semanas comienzan lunes y se recortan en los límites de mes; quincenas calendario 1–15 y 16–fin son una hipótesis visual, no una migración del calendario salarial histórico. Se debe aprobar esta semántica antes de diseñar compatibilidad con quincenas financieras existentes.
+
+## Proyección de demostración
+Una asignación de fecha pertenece a un único bloque. Los ingresos, gastos, deuda y ahorro se distinguen por categoría; no hay frecuencia fija por categoría. Las asignaciones sin fecha concreta conservan su intervalo: se incluyen completas en vistas que cubren el intervalo y quedan pendientes de distribución en vistas más pequeñas, sin prorratear ni repetir sus importes en totales. Los egresos no presupuestados aparecen sin crear presupuesto automáticamente. La edición de demostración agrega asignaciones fechadas en memoria; no es el editor definitivo y no implementa reemplazo, redistribución, recurrencia ni monedas múltiples. Movimientos muestra hechos ficticios por fecha, no proyección real de caja.
+
+## Siguientes pasos
+Validación visual de selector, navegación y tarjetas en temas claro/oscuro; confirmar las reglas de semana y quincena. V16.2: adaptar registros canónicos de V16.0 sin alterar históricos ni sumar asignaciones antiguas dos veces, resolver CRC/USD, fechas de ingreso/deuda, aportes y splits, y comparar saldos. V16.3: editor transaccional y recurrencias. V16.4: inteligencia y revisión de categorías. V16.5: conectar cálculos de todos los módulos, incluyendo Futuro y Proyectos. V17.0: validación y publicación. No presentar la prueba con datos ficticios como aplicación completa.
