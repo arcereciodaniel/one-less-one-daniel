@@ -39,7 +39,7 @@ function buildApp() {
   const withStyles = replaceExactlyOnce(template, CSS_TOKEN, "<style>" + css + "</style>");
   const generated = replaceExactlyOnce(withStyles, SCRIPT_TOKEN, "<script>" + js + "</script>");
   assert(generated.includes('const STORAGE_KEY = "daniel_finanzas_local_v1";'), "No se encuentra la clave de datos Daniel");
-  assert(generated.includes('<small class="brand-version">v12.1.3</small>'), "La versión principal es incorrecta");
+  assert(generated.includes('<small class="brand-version">v14.5</small>'), "La versión principal es incorrecta");
   return generated;
 }
 
@@ -49,10 +49,10 @@ function main() {
   if (process.argv.includes("--check")) {
     assert.equal(fs.readFileSync(output, "utf8"), generated,
       "index.html no coincide con los módulos. Ejecutá node scripts/build-lab.cjs");
-    console.log("Fuente modular V12 y Daniel sincronizados.");
+    console.log("Fuente modular V14 y Daniel sincronizados.");
   } else {
     fs.writeFileSync(output, generated);
-    console.log("Daniel generado desde los módulos V12.");
+    console.log("Daniel generado desde los módulos V14.");
   }
 }
 
