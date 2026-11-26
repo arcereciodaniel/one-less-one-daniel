@@ -244,7 +244,29 @@ function extendFlexibleCalendar(raw,record,asOf,days=90){
  staged.periods.push(...created);
  return {ledger:staged,createdKeys:created.map(p=>p.key)};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
+// V15.7: advisory budget analysis. Inputs are canonical CRC amounts; no persistence.
+function budgetIntelligence(rows,start,end,asOf,{pace=true,complete=true}={}){
+ if(!validDate(start)||!validDate(end)||!validDate(asOf)||start>end||!Array.isArray(rows))throw Error("Invalid budget intelligence scope");
+ const day=86400000,days=(Date.parse(end)-Date.parse(start))/day+1;
+ const status=asOf<start?"future":asOf>end?"closed":"current";
+ const elapsed=status==="future"?0:status==="closed"?days:(Date.parse(asOf)-Date.parse(start))/day+1;
+ const cents=n=>{if(typeof n!=="number"||!Number.isFinite(n)||n<0||!Number.isSafeInteger(Math.round(n*100)))throw Error("Invalid budget intelligence amount");return Math.round(n*100)};
+ const ids=new Set(),out=[];
+ for(const r of rows){
+  if(!r||typeof r.id!=="string"||!r.id||ids.has(r.id)||!["Gasto","Pago deuda"].includes(r.type))throw Error("Invalid budget intelligence category");
+  ids.add(r.id);
+  if(r.plannedCRC===null||!complete)continue;
+  const planned=cents(r.plannedCRC),spent=cents(r.spentCRC),saving=cents(r.savingsCRC??0),used=spent+saving;
+  if(!Number.isSafeInteger(used))throw Error("Unsafe budget intelligence total");
+  const excess=Math.max(0,used-planned),remaining=Math.max(0,planned-used);
+  const expected=pace&&status==="current"&&elapsed<days&&r.type==="Gasto"&&r.paceEligible===true&&saving===0&&planned>0?Math.round(planned*(elapsed/days)):null;
+  const ahead=expected===null||excess>0?0:Math.max(0,used-expected);
+  out.push({id:r.id,type:r.type,planned,spent,saving,used,excess,remaining,expected,ahead,unbudgeted:planned===0&&used>0});
+ }
+ const sum=(field,list=out)=>{const n=list.reduce((s,r)=>s+r[field],0);if(!Number.isSafeInteger(n))throw Error("Unsafe aggregate");return n};
+ return {status,days,elapsed,complete,rows:out,unbudgeted:out.filter(r=>r.unbudgeted),over:out.filter(r=>r.excess>0&&!r.unbudgeted),ahead:out.filter(r=>r.ahead>0),remaining:status==="closed"?null:sum("remaining"),remainingDebt:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Pago deuda")),remainingOther:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Gasto"))};
+}
+return {budgetIntelligence,auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;

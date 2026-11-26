@@ -140,6 +140,42 @@ function oneApplyCopyBudgetMonth(month){
   return true;
 }
 
+// V15.7: reuse the existing collapsed detail style. Advice never changes a budget.
+function oneV15IntelligenceHtml(rows,start,end,asOf,pace=true){
+ try{
+  const result=oneV15QueryCore.budgetIntelligence(rows,start,end,asOf,{pace});
+  const names=new Map(rows.map(r=>[r.id,r.name]));
+  const line=(label,amount)=>'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(label)+'</span></span><strong>'+safe(money(amount/100))+'</strong></div>';
+  const group=(label,items,field)=>items.length?'<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+items.map(r=>line(names.get(r.id)||r.id,r[field])).join("")+'</div>':"";
+  const sections=group("Sin presupuesto",result.unbudgeted,"used")+group("Exceso del presupuesto",result.over,"excess")+group("Por encima del ritmo de referencia",result.ahead,"ahead");
+  const pending=result.remaining===null?"":'<div class="r8-section"><div class="r8-section-heading"><span>Presupuesto pendiente de utilizar</span><strong>'+safe(money(result.remaining/100))+'</strong></div>'+line("Pagos de deuda presupuestados",result.remainingDebt)+line("Otros gastos y ahorro",result.remainingOther)+'</div>';
+  if(!sections&&!result.remaining)return "";
+  const notes=(result.ahead.length?'<div class="r8-card-dates">Ritmo lineal por días; no es un pronóstico ni un exceso del total.</div>':"")+(pending?'<div class="r8-card-dates">Importes presupuestados, no saldos bancarios ni vencimientos confirmados.</div>':"");
+  return '<details class="r8-unused" data-v15-intelligence><summary>Revisar presupuesto</summary>'+sections+pending+notes+'</details>';
+ }catch{return ""}
+}
+function oneV15PeriodIntelligence(p,asOf){
+ const ms=periodMovements(p,asOf);
+ const cats=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false);
+ const rows=cats.map(c=>{
+  const savings=oneBudgetSavingsActual(p,c.id,asOf);
+  const spent=ms.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
+  return {id:c.id,name:c.name,type:c.type,plannedCRC:periodCategoryBudgetCRC(p,c.id,"pay"),spentCRC:spent,savingsCRC:savings,paceEligible:c.type==="Gasto"&&!savings&&!oneSavingsCategories().some(x=>x.id===c.id)};
+ }).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ return oneV15IntelligenceHtml(rows,p.date,periodEndDate(p),asOf);
+}
+function oneV15DateIntelligence(query,range,asOf){
+ // An incomplete query must never infer that an unknown allocation is zero.
+ if(query?.coverage!=="complete"||query.requiresReconciliation)return "";
+ const movements=data.movements.filter(m=>m.date>=range.start&&m.date<=range.end&&m.date<=asOf);
+ const contributions=(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date>=range.start&&t.date<=range.end&&t.date<=asOf);
+ const rows=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false).map(c=>({
+  id:c.id,name:c.name,type:c.type,plannedCRC:query.totals.filter(x=>x.categoryId===c.id).reduce((s,x)=>s+currentToCRC(x.minor/100,x.currency,"pay"),0),
+  spentCRC:movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0),
+  savingsCRC:contributions.filter(t=>oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0),paceEligible:false
+ })).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ return oneV15IntelligenceHtml(rows,range.start,range.end,asOf,false);
+}
 function r8BudgetLine(category,period){
   const key=periodKey(period),cid=category.id,currency=normalizeCurrency(period.categoryBudgetCurrencies?.[cid]||"CRC");
   const amount=num(period.categoryBudgets?.[cid]);
@@ -242,7 +278,7 @@ function oneV15RenderDatePlan(level,r){
   };
   const status=complete?"Presupuesto definido":result?"Presupuesto sin asignación completa":"Presupuesto pendiente de revisión";
   const note=((data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"")+(result?.allocationReview?.length?" · Distribuciones en revisión":"");
-  document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+'</div></article></div></section>';
+  document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+oneV15DateIntelligence(result,r,today)+'</div></article></div></section>';
 }
 
 // V15.4: native, collapsed breakdowns. No writes to the financial model.
@@ -519,6 +555,7 @@ function renderPlan(){
           <div class="r8-card-closing ${tone}">${money(r.ending)}</div>
           ${r8BudgetSection("Ingreso","Ingresos",r)}
           ${r8BudgetSection(["Gasto","Pago deuda"],"Gastos, deudas y ahorro",r)}
+          ${oneV15PeriodIntelligence(r,today)}
           ${oneV15IsFlexiblePeriod(r)&&r.frequency==="weekly"?"":oneV15WeekDetail(r)}
         </div>
         <div class="r8-card-footer">
