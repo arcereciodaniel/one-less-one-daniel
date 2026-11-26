@@ -19,6 +19,6 @@ test("V16 standalone audit and publishing safeguards",()=>{
  assert.match(html,/Auditoría V16\.0 RC1/);assert.match(html,/connect-src 'none'/);assert.doesNotMatch(html,/localStorage|sessionStorage|<script\s+src=|fetch\(/);
  assert.match(pages,/publicar:\n    if: github.ref == 'refs\/heads\/main'/);
  assert.match(pages,/tests\/v15-\*\.test\.cjs tests\/v16-release-candidate\.test\.cjs/);
- assert.match(pages,/Solo V16\.0\.0 estable puede publicarse/);
- assert.match(mobile,/desplegar:\n    if: github.ref == 'refs\/heads\/main'/);
+ assert.match(pages,/Solo una version estable puede publicarse/);
+ assert.match(mobile,/branches: \[main\]/);
 });
