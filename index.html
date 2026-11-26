@@ -3955,7 +3955,7 @@ function oneStorageGuardInit(){
 // V10.9: diagnóstico conservador y de solo lectura; nunca repara ni modifica transacciones.
 function oneHealthCheck(raw){
  const issues=[],rows=raw||{},get=key=>Array.isArray(rows[key])?rows[key]:[];
- const countIssue=(count,message)=>{if(count>0)issues.push({count,message})};
+ const countIssue=(count,message,code)=>{if(count>0)issues.push({count,message,...(code?{code}:{})})};
  for(const kind of ["periods","movements","categories","debts","reserves","reserveMovements","sharedCharges","sharedChargeGroups","reconciliations","projects","projectLinks","projectPlans"]){
   const seen=new Set();let duplicate=0;
   for(const item of get(kind)){
@@ -3963,7 +3963,7 @@ function oneHealthCheck(raw){
    if(!recordId)continue;
    if(seen.has(recordId))duplicate++;else seen.add(recordId);
   }
-  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.");
+  countIssue(duplicate,"ID duplicado en "+kind+"; conviene revisar el respaldo antes de editar.","duplicate-id:"+kind);
  }
  const cats=new Set(get("categories").map(c=>c.id)),funds=new Set(get("reserves").map(r=>r.id)),
   groups=new Set(get("sharedChargeGroups").map(g=>g.id)),debts=new Set(get("debts").map(d=>d.id));
@@ -3986,13 +3986,13 @@ function oneHealthCheck(raw){
   if(!restoreValidDate(c.date))badDate++;
   if(!Number.isFinite(Number(c.amount))||Number(c.amount)<0)badAmount++;
  }
- countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.");
- countIssue(orphanDebt,"referencia(s) a deudas inexistentes.");
- countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.");
+ countIssue(orphanCategory,"referencia(s) a categorías que ya no existen.","missing-category-link");
+ countIssue(orphanDebt,"referencia(s) a deudas inexistentes.","missing-debt-link");
+ countIssue(orphanGoal,"movimiento(s) vinculados a metas inexistentes.","missing-goal-link");
  countIssue(orphanGroup,"cobro(s) vinculados a grupos inexistentes.");
  countIssue(badDate,"fecha(s) inválidas en movimientos, cobros o metas.");
  countIssue(badAmount,"monto(s) inválidos o negativos no esperados.");
- countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.");
+ countIssue(missingUsdRate,"movimiento(s) USD antiguos sin tasas guardadas; revisá su valoración histórica.","missing-historical-fx");
  const projectIds=new Set(get("projects").map(p=>p.id)),movementIds=new Set(get("movements").map(m=>m.id));
  const linkedIds=new Set();let badProjectLinks=0,duplicateProjectLinks=0;
  for(const link of get("projectLinks")){
@@ -4042,7 +4042,14 @@ function oneRenderDataHealth(){
  if(!slot)return null;
  const report=oneHealthCheck(data),date=todayIso();
  const release=oneV15QueryCore.releaseAudit(data);
- if(!release.ready)report.issues.unshift(...release.issues.map(x=>({count:x.count,message:"Auditoría V15 · "+x.code+" · "+(x.severity==="blocker"?"requiere revisión antes de publicar":"verificación pendiente")})));
+ const additional=[];
+ // Combine equivalent diagnostics by code; do not count a finding twice.
+ for(const x of release.issues){
+  const existing=report.issues.find(item=>item.code===x.code);
+  if(existing){existing.count=Math.max(existing.count,x.count);existing.severity=x.severity;continue;}
+  additional.push({count:x.count,code:x.code,severity:x.severity,message:"Auditoría V15 · "+x.code+" · "+(x.severity==="blocker"?"requiere revisión antes de publicar":"verificación pendiente")});
+ }
+ report.issues.unshift(...additional);
  const status=document.createElement("p");status.className="one-health-status";
  status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
  status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
