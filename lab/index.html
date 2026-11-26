@@ -2223,6 +2223,17 @@ header .topbar>.one-utility-bar button:focus-visible{
         </div>
       </div>
     </div>
+    <dialog id="v15AllocationDialog" class="one-budget-copy-dialog" aria-labelledby="v15AllocationTitle">
+      <form id="v15AllocationForm">
+        <div class="one-budget-copy-head"><h2 id="v15AllocationTitle">Distribuir presupuesto</h2></div>
+        <label for="v15AllocationCategory">Categoría</label><select id="v15AllocationCategory" required></select>
+        <label for="v15AllocationWeek">Semana</label><select id="v15AllocationWeek" required></select>
+        <label for="v15AllocationAmount">Monto · <span id="v15AllocationCurrency"></span></label><input id="v15AllocationAmount" type="number" min="0" step="0.01" required>
+        <label for="v15AllocationMode">Ajuste</label><select id="v15AllocationMode"><option value="maintain">Mantener total</option><option value="increase">Aumentar total</option></select>
+        <div id="v15AllocationPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+        <div class="one-budget-copy-actions"><button class="btn secondary" type="button" id="v15AllocationUndo" hidden>Revertir</button><button class="btn secondary" type="button" id="v15AllocationCancel">Cancelar</button><button class="btn" type="submit" id="v15AllocationConfirm">Confirmar</button></div>
+      </form>
+    </dialog>
     <dialog id="copyBudgetDialog" class="one-budget-copy-dialog" aria-labelledby="copyBudgetTitle">
       <form id="copyBudgetForm">
         <div class="one-budget-copy-head"><h2 id="copyBudgetTitle">Copiar presupuesto anterior</h2><button type="button" id="closeCopyBudgetDialog" aria-label="Cerrar">×</button></div>
@@ -5020,7 +5031,7 @@ function oneV15RenderDatePlan(level,r){
     }).join(""):'<div class="r8-empty-row">Sin registros</div>')+'</div>';
   };
   const status=complete?"Presupuesto definido":result?"Presupuesto sin asignación completa":"Presupuesto pendiente de revisión";
-  const note=(data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"";
+  const note=((data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"")+(Array.isArray(data.v15WeeklyAllocations)&&data.v15WeeklyAllocations.length?" · Distribuciones semanales: ver quincena":"");
   document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+'</div></article></div></section>';
 }
 
@@ -5056,6 +5067,118 @@ function oneV15WeekEvents(p){
  }
  return events;
 }
+// V15.5: weekly allocations annotate canonical category budgets; they are not independent expenses.
+let oneV15AllocationDraft=null;
+function oneV15AllocationParent(p,c){
+ if(!p||!c||c.active===false||c.budgetable===false||c.type!=="Gasto")throw Error("Categoría no disponible");
+ const amount=p.categoryBudgets?.[c.id]??0,currency=p.categoryBudgetCurrencies?.[c.id]||"CRC";
+ return {start:p.date,end:periodEndDate(p),amount,currency};
+}
+function oneV15AllocationRecord(p,c){
+ const rows=data.v15WeeklyAllocations;
+ if(rows===undefined)return null;
+ if(!Array.isArray(rows))throw Error("Asignaciones pendientes de revisión");
+ const matches=rows.filter(x=>x?.periodKey===periodKey(p)&&x.categoryId===c.id);
+ if(matches.length>1)throw Error("Asignaciones duplicadas");
+ return matches[0]||null;
+}
+function oneV15AllocationRows(p,w,index){
+ const list=[];
+ for(const c of budgetCategories("Gasto",p)){
+  try{
+   const rec=oneV15AllocationRecord(p,c);if(!rec)continue;
+   const state=oneV15QueryCore.allocationState(oneV15AllocationParent(p,c),rec);
+   if(state.stale)continue;
+   list.push('<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(originalMoney(state.amounts[index]/100,rec.currency))+'</strong></div>');
+  }catch{}
+ }
+ return list.length?'<div class="r8-section"><div class="r8-section-heading"><span>Presupuesto asignado</span></div>'+list.join("")+'</div>':"";
+}
+function oneV15OpenAllocation(key){
+ const p=periodByKey(key),dialog=document.getElementById("v15AllocationDialog");if(!p)return;
+ const cats=budgetCategories("Gasto",p).filter(c=>c.active!==false&&c.budgetable!==false);
+ if(!cats.length)return alert("No hay categorías de gasto disponibles.");
+ oneV15AllocationDraft={key,ledger:JSON.stringify(data)};
+ document.getElementById("v15AllocationCategory").replaceChildren(...cats.map(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;return o}));
+ oneV15ResetAllocationFields();dialog.showModal();
+}
+function oneV15ResetAllocationFields(){
+ const d=oneV15AllocationDraft;if(!d)return;
+ const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+ const week=document.getElementById("v15AllocationWeek"),amount=document.getElementById("v15AllocationAmount");
+ const undo=document.getElementById("v15AllocationUndo");
+ try{
+  const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec);
+  if(state.stale)throw Error("El presupuesto original cambió. La distribución anterior está en revisión.");
+  week.replaceChildren(...state.weeks.map((w,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=dateLabel(w.start)+" – "+dateLabel(w.end);return o}));
+  document.getElementById("v15AllocationCurrency").textContent=parent.currency;
+  const initial=oneV15QueryCore.allocationPreview(parent,rec,0,(state.amounts?.[0]??Math.ceil(state.total/state.weeks.length))/100,"maintain");
+  amount.value=String(initial.base[0]/100);document.getElementById("v15AllocationMode").value="maintain";
+  undo.hidden=!rec?.undo;oneV15PreviewAllocation();
+ }catch(error){
+  document.getElementById("v15AllocationPreview").textContent=error.message;document.getElementById("v15AllocationConfirm").disabled=true;undo.hidden=true;d.preview=null;
+ }
+}
+function oneV15PreviewAllocation(){
+ const d=oneV15AllocationDraft;if(!d)return;
+ const slot=document.getElementById("v15AllocationPreview"),confirmBtn=document.getElementById("v15AllocationConfirm");
+ d.preview=null;confirmBtn.disabled=true;
+ try{
+  const p=periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),field=document.getElementById("v15AllocationAmount");
+  if(field.value===""||!field.validity.valid)throw Error("Ingresá un monto válido.");
+  const preview=oneV15QueryCore.allocationPreview(parent,rec,Number(document.getElementById("v15AllocationWeek").value),Number(field.value),document.getElementById("v15AllocationMode").value);
+  d.preview={categoryId:c.id,...preview};
+  slot.innerHTML=preview.weeks.map((w,i)=>'<div class="r8-budget-row"><span>'+safe(dateLabel(w.start)+" – "+dateLabel(w.end))+'</span><strong>'+safe(originalMoney(preview.next[i]/100,preview.currency))+'</strong></div>').join("")+'<div class="r8-section"><div class="r8-section-heading"><span>Total anterior</span><strong>'+safe(originalMoney(preview.oldTotal/100,preview.currency))+'</strong></div><div class="r8-section-heading"><span>Nuevo total</span><strong>'+safe(originalMoney(preview.total/100,preview.currency))+'</strong></div></div>';
+  confirmBtn.disabled=false;
+ }catch(error){slot.textContent=error.message}
+}
+function oneV15PersistAllocation(undo=false){
+ const d=oneV15AllocationDraft;if(!d)return false;
+ try{
+  if(JSON.stringify(data)!==d.ledger)throw Error("Los datos cambiaron. Cerrá y volvé a abrir la distribución.");
+  oneStorageAssertCurrent();
+  const cid=document.getElementById("v15AllocationCategory").value,p=periodByKey(d.key),c=categoryById(cid),parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c);
+  const state=oneV15QueryCore.allocationState(parent,rec);
+  if(state.stale)throw Error("El presupuesto original cambió.");
+  const staged=clone(data),target=staged.periods.find(x=>periodKey(x)===d.key);
+  const rows=Array.isArray(staged.v15WeeklyAllocations)?staged.v15WeeklyAllocations:[];
+  staged.v15WeeklyAllocations=rows.filter(x=>!(x.periodKey===d.key&&x.categoryId===cid));
+  if(undo){
+   if(!rec?.undo)throw Error("No hay una distribución para revertir.");
+   if(rec.undo.hadAmount)target.categoryBudgets[cid]=rec.undo.amount;else delete target.categoryBudgets[cid];
+   if(rec.undo.previous)staged.v15WeeklyAllocations.push(rec.undo.previous);
+  }else{
+   oneV15PreviewAllocation();const v=d.preview;if(!v||v.categoryId!==cid)throw Error("Revisá la vista previa.");
+   const previous=rec?{...rec}:null;if(previous)delete previous.undo;
+   staged.v15WeeklyAllocations.push({periodKey:d.key,categoryId:cid,start:v.start,end:v.end,currency:v.currency,parentMinor:v.total,amounts:v.next,createdAt:new Date().toISOString(),undo:{hadAmount:Object.prototype.hasOwnProperty.call(p.categoryBudgets||{},cid),amount:parent.amount,previous}});
+   if(v.total!==v.oldTotal)target.categoryBudgets[cid]=v.total/100;
+  }
+  // Commit all changes in one checked write; never mutate live state on a failed save.
+  oneStoragePersist(JSON.stringify(staged));data=staged;
+  document.getElementById("v15AllocationDialog").close();oneV15AllocationDraft=null;
+  renderPlan();renderDashboard();renderReports();
+  const detail=[...document.querySelectorAll("[data-v15-week-detail]")].find(x=>x.dataset.v15WeekDetail===d.key);if(detail)detail.open=true;
+  return true;
+ }catch(error){document.getElementById("v15AllocationPreview").textContent=error.message;return false}
+}
+function oneV15BindAllocation(){
+ const dialog=document.getElementById("v15AllocationDialog");
+ document.getElementById("v15AllocationCancel").addEventListener("click",()=>dialog.close());
+ document.getElementById("v15AllocationCategory").addEventListener("change",oneV15ResetAllocationFields);
+ document.getElementById("v15AllocationWeek").addEventListener("change",()=>{
+  const d=oneV15AllocationDraft,p=d&&periodByKey(d.key),c=categoryById(document.getElementById("v15AllocationCategory").value);
+  try{
+   const parent=oneV15AllocationParent(p,c),rec=oneV15AllocationRecord(p,c),state=oneV15QueryCore.allocationState(parent,rec),base=state.amounts||oneV15QueryCore.allocationPreview(parent,rec,0,Math.ceil(state.total/state.weeks.length)/100,"maintain").base;
+   document.getElementById("v15AllocationAmount").value=String(base[Number(document.getElementById("v15AllocationWeek").value)]/100);
+  }catch{}
+  oneV15PreviewAllocation();
+ });
+ for(const id of ["v15AllocationAmount","v15AllocationMode"])document.getElementById(id).addEventListener("input",oneV15PreviewAllocation);
+ document.getElementById("v15AllocationForm").addEventListener("submit",e=>{e.preventDefault();oneV15PersistAllocation(false)});
+ document.getElementById("v15AllocationUndo").addEventListener("click",()=>{if(confirm("¿Revertir la última distribución y restaurar su presupuesto anterior?"))oneV15PersistAllocation(true)});
+}
+
 function oneV15WeekDetail(p){
  const key=periodKey(p);let breakdown;
  try{breakdown=oneV15QueryCore.weeklyBreakdown(p.date,periodEndDate(p),oneV15WeekEvents(p))}
@@ -5065,14 +5188,16 @@ function oneV15WeekDetail(p){
   for(const e of events){const id=e.categoryId;grouped.set(id,(grouped.get(id)||0)+e.amountCRC);}
   return sortedCategories((data.categories||[]).filter(c=>grouped.has(c.id))).map(c=>'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(money(grouped.get(c.id)))+'</strong></div>').join("")||'<div class="r8-empty-row">Sin registros</div>';
  };
- const sections=breakdown.weeks.map(w=>{
+ const sections=breakdown.weeks.map((w,index)=>{
   const label=dateLabel(w.start)+" – "+dateLabel(w.end);
   const income=w.events.filter(e=>e.type==="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
   const out=w.events.filter(e=>e.type!=="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
-  return '<details class="r8-unused" data-v15-week-start="'+safe(w.start)+'" data-v15-week-end="'+safe(w.end)+'"><summary>'+safe(label)+'</summary><div class="r8-section"><div class="r8-section-heading"><span>Ingresos registrados</span><strong>'+safe(money(income))+'</strong></div><div class="r8-section-heading"><span>Egresos registrados</span><strong>'+safe(money(out))+'</strong></div>'+renderEvents(w.events)+'</div></details>';
+  return '<details class="r8-unused" data-v15-week-start="'+safe(w.start)+'" data-v15-week-end="'+safe(w.end)+'"><summary>'+safe(label)+'</summary><div class="r8-section"><div class="r8-section-heading"><span>Ingresos registrados</span><strong>'+safe(money(income))+'</strong></div><div class="r8-section-heading"><span>Egresos registrados</span><strong>'+safe(money(out))+'</strong></div>'+renderEvents(w.events)+'</div>'+oneV15AllocationRows(p,w,index)+'</details>';
  }).join("");
  const outside=breakdown.outside.length?'<details class="r8-unused" data-v15-week-outside><summary>Registros fuera de fecha asignados a esta quincena</summary>'+renderEvents(breakdown.outside)+'</details>':"";
- return '<details class="r8-unused" data-v15-week-detail="'+safe(key)+'"><summary>Semanas</summary><div class="r8-card-dates">Actividad registrada · presupuesto sin distribución semanal</div>'+sections+outside+'</details>';
+ const records=Array.isArray(data.v15WeeklyAllocations)?data.v15WeeklyAllocations.filter(x=>x.periodKey===key):[];
+ const label=records.length?"Actividad registrada · asignaciones semanales (si vigentes)":"Actividad registrada · presupuesto sin distribución semanal";
+ return '<details class="r8-unused" data-v15-week-detail="'+safe(key)+'"><summary>Semanas</summary><div class="r8-card-dates">'+label+'</div>'+sections+outside+'<button type="button" class="btn secondary small" data-v15-allocate="'+safe(key)+'">Distribuir presupuesto</button></details>';
 }
 
 function renderPlan(){
@@ -5199,6 +5324,7 @@ function initR8(){
     if(oneApplyCopyBudgetMonth(copyDialog?.dataset.targetMonth||""))copyDialog.close();
   });
   updateMovementFields();
+  oneV15BindAllocation();
   const start=document.getElementById("v15PlanStart"),end=document.getElementById("v15PlanEnd");
   for(const field of [start,end])field.addEventListener("change",()=>{
     start.setCustomValidity("");end.setCustomValidity("");
@@ -5240,6 +5366,7 @@ function initR8(){
     renderPlan();
   }));
   document.getElementById("planMonths")?.addEventListener("click",(event)=>{
+    const allocation=event.target.closest("[data-v15-allocate]");if(allocation){oneV15OpenAllocation(allocation.dataset.v15Allocate);return}
     const copy=event.target.closest("[data-copy-budget-month]");
     if(copy){oneOpenCopyBudgetMonth(copy.dataset.copyBudgetMonth);return}
     const edit=event.target.closest("[data-r8-edit-budget]");
@@ -5362,7 +5489,44 @@ function weeklyBreakdown(start,end,events){
  }
  return {weeks,outside};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown};
+// V15.5: allocations are integer minor units, scoped to an original parent.
+function allocateWeighted(total,weights){
+ if(!Number.isSafeInteger(total)||total<0||!weights.length||weights.some(w=>!Number.isSafeInteger(w)||w<0))throw Error("Invalid allocation");
+ const sum=weights.reduce((s,w)=>s+BigInt(w),0n),den=sum||BigInt(weights.length);
+ const rows=weights.map((w,i)=>{const n=BigInt(total)*(sum?BigInt(w):1n);return {i,value:Number(n/den),remainder:n%den}});
+ let left=total-rows.reduce((s,r)=>s+r.value,0);
+ for(const r of [...rows].sort((a,b)=>a.remainder===b.remainder?a.i-b.i:a.remainder>b.remainder?-1:1)){if(left<=0)break;r.value++;left--}
+ return rows.map(r=>r.value);
+}
+function allocationState(parent,record){
+ if(!parent||!["CRC","USD"].includes(parent.currency))throw Error("Invalid parent currency");
+ const total=minor(parent.amount),weeks=weeklyBreakdown(parent.start,parent.end,[]).weeks.map(w=>({start:w.start,end:w.end}));
+ if(weeks.length<2||weeks.length>8)throw Error("Unexpected weekly allocation span");
+ if(record){
+  const valid=record.start===parent.start&&record.end===parent.end&&record.currency===parent.currency&&record.parentMinor===total&&Array.isArray(record.amounts)&&record.amounts.length===weeks.length&&record.amounts.every(v=>Number.isSafeInteger(v)&&v>=0)&&record.amounts.reduce((s,v)=>s+v,0)===total;
+  if(!valid)return {weeks,total,stale:true,amounts:null};
+  return {weeks,total,stale:false,amounts:record.amounts.slice()};
+ }
+ return {weeks,total,stale:false,amounts:null};
+}
+function allocationPreview(parent,record,index,amount,mode){
+ const state=allocationState(parent,record);
+ if(state.stale)throw Error("Parent changed; review before replacing allocation");
+ if(!Number.isInteger(index)||index<0||index>=state.weeks.length||!["maintain","increase"].includes(mode))throw Error("Invalid allocation choice");
+ const base=state.amounts||allocateWeighted(state.total,state.weeks.map(()=>1)),target=minor(amount),next=base.slice();
+ if(mode==="maintain"){
+  if(target>state.total)throw Error("Amount exceeds parent budget");
+  const other=allocateWeighted(state.total-target,base.filter((_,i)=>i!==index));
+  let j=0;for(let i=0;i<next.length;i++)next[i]=i===index?target:other[j++];
+ }else{
+  if(target<base[index])throw Error("Increase cannot reduce total");
+  next[index]=target;
+ }
+ const total=next.reduce((s,n)=>s+n,0);
+ if(!Number.isSafeInteger(total))throw Error("Unsafe total");
+ return {weeks:state.weeks,base,next,oldTotal:state.total,total,currency:parent.currency,start:parent.start,end:parent.end};
+}
+return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;

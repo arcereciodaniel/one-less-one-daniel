@@ -39,7 +39,44 @@ function weeklyBreakdown(start,end,events){
  }
  return {weeks,outside};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown};
+// V15.5: allocations are integer minor units, scoped to an original parent.
+function allocateWeighted(total,weights){
+ if(!Number.isSafeInteger(total)||total<0||!weights.length||weights.some(w=>!Number.isSafeInteger(w)||w<0))throw Error("Invalid allocation");
+ const sum=weights.reduce((s,w)=>s+BigInt(w),0n),den=sum||BigInt(weights.length);
+ const rows=weights.map((w,i)=>{const n=BigInt(total)*(sum?BigInt(w):1n);return {i,value:Number(n/den),remainder:n%den}});
+ let left=total-rows.reduce((s,r)=>s+r.value,0);
+ for(const r of [...rows].sort((a,b)=>a.remainder===b.remainder?a.i-b.i:a.remainder>b.remainder?-1:1)){if(left<=0)break;r.value++;left--}
+ return rows.map(r=>r.value);
+}
+function allocationState(parent,record){
+ if(!parent||!["CRC","USD"].includes(parent.currency))throw Error("Invalid parent currency");
+ const total=minor(parent.amount),weeks=weeklyBreakdown(parent.start,parent.end,[]).weeks.map(w=>({start:w.start,end:w.end}));
+ if(weeks.length<2||weeks.length>8)throw Error("Unexpected weekly allocation span");
+ if(record){
+  const valid=record.start===parent.start&&record.end===parent.end&&record.currency===parent.currency&&record.parentMinor===total&&Array.isArray(record.amounts)&&record.amounts.length===weeks.length&&record.amounts.every(v=>Number.isSafeInteger(v)&&v>=0)&&record.amounts.reduce((s,v)=>s+v,0)===total;
+  if(!valid)return {weeks,total,stale:true,amounts:null};
+  return {weeks,total,stale:false,amounts:record.amounts.slice()};
+ }
+ return {weeks,total,stale:false,amounts:null};
+}
+function allocationPreview(parent,record,index,amount,mode){
+ const state=allocationState(parent,record);
+ if(state.stale)throw Error("Parent changed; review before replacing allocation");
+ if(!Number.isInteger(index)||index<0||index>=state.weeks.length||!["maintain","increase"].includes(mode))throw Error("Invalid allocation choice");
+ const base=state.amounts||allocateWeighted(state.total,state.weeks.map(()=>1)),target=minor(amount),next=base.slice();
+ if(mode==="maintain"){
+  if(target>state.total)throw Error("Amount exceeds parent budget");
+  const other=allocateWeighted(state.total-target,base.filter((_,i)=>i!==index));
+  let j=0;for(let i=0;i<next.length;i++)next[i]=i===index?target:other[j++];
+ }else{
+  if(target<base[index])throw Error("Increase cannot reduce total");
+  next[index]=target;
+ }
+ const total=next.reduce((s,n)=>s+n,0);
+ if(!Number.isSafeInteger(total))throw Error("Unsafe total");
+ return {weeks:state.weeks,base,next,oldTotal:state.total,total,currency:parent.currency,start:parent.start,end:parent.end};
+}
+return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;
