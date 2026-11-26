@@ -35,6 +35,16 @@ const oneV16Editor=(()=>{
    const historical=target.parentKey||target.originId;
    if(historical&&(cid!==target.categoryId||amount(command.amount)!==target.minor||target.parentKey&&!model.periods.some(p=>p.key===target.parentKey&&inside(p,command.date))||target.originId&&!inside({start:target.originStart,end:target.originEnd},command.date)))throw Error("El monto y categoría históricos se conservan; solo podés mover la fecha dentro del período original.");
    removed=[target];created=[dated(cid,command.date,amount(command.amount),unit,target.id,{...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{}),...(target.originId?{originId:target.originId,originStart:target.originStart,originEnd:target.originEnd}:{})})];
+  }else if(kind==="transfer"){
+   const {destinationCategoryId,date,range,asOf}=command,minor=amount(command.amount);
+   const F=typeof oneV16Finance!=="undefined"?oneV16Finance:require("./v16-financial-assignments.cjs");
+   const I=typeof oneV16Intelligence!=="undefined"?oneV16Intelligence:require("./v16-budget-intelligence.cjs");
+   const option=I.donors(model,range,asOf,F,{categoryId:destinationCategoryId,date,currency:target.currency}).find(x=>x.id===target.id);
+   if(!option||minor>option.maxMinor)throw Error("El monto supera el presupuesto que se puede redistribuir.");
+   const existing=old.find(a=>a.date===date&&a.categoryId===destinationCategoryId&&a.currency===target.currency);
+   removed=[target,...(existing?[existing]:[])];
+   if(target.minor>minor)created.push({...target,minor:target.minor-minor});
+   created.push(existing?{...existing,minor:add(existing.minor,minor)}:dated(destinationCategoryId,date,minor,target.currency,baseId+":0"));
   }else if(kind==="delete"){
    if(!target.date||target.parentKey||target.originId||target.source==="legacy-scheduled-income")throw Error("No se permite eliminar una asignación histórica.");
    removed=[target];
@@ -52,6 +62,7 @@ const oneV16Editor=(()=>{
    if((kind==="create"||kind==="edit"&&(a.date!==target.date||a.categoryId!==target.categoryId||a.minor>target.minor))&&retained.some(x=>!x.date&&x.categoryId===a.categoryId&&x.currency===a.currency&&inside(x,a.date)))throw Error("Esta categoría tiene presupuesto pendiente de distribuir en esa fecha. Distribuí primero el monto existente.");
   }
   const next=[...retained,...created],before=totals(old),after=totals(next);
+  if(kind==="transfer"&&(before.CRC!==after.CRC||before.USD!==after.USD))throw Error("La redistribución debe conservar los totales.");
   return {command:clone(command),baseline:JSON.stringify(model),created:clone(created),removed:clone(removed),before,after,delta:{CRC:after.CRC-before.CRC,USD:after.USD-before.USD}};
  }
  function commit(model,preview){
