@@ -83,8 +83,8 @@ test("Notas y grupos peligrosos son texto, no HTML ejecutable",()=>{
  }finally{close()}
 });
 test("V10.3 identifica Daniel y Lab sin alterar claves",()=>{
- assert(html.includes('<small class="brand-version">v16.0.0-rc.1</small>'));
- assert(lab.includes('<small class="brand-version">v16.0.0-rc.1 LAB</small>'));
+ assert(html.includes('<small class="brand-version">v16.0.0</small>'));
+ assert(lab.includes('<small class="brand-version">v16.0.0 LAB</small>'));
  assert(lab.includes('src="../mobile-pilot/desktop.js"'));
  assert(html.includes('src="mobile-pilot/desktop.js"'));
 });

@@ -62,8 +62,8 @@ function buildPreview(){
  assert(!/<\/script/i.test(split));
  replace('<script src="../mobile-pilot/public/split-fare.js"></script>','<script>'+split+'</script>');
  replace('<script src="../mobile-pilot/desktop.js"></script>','<script>document.getElementById("oneSettingsRestore").disabled=true;document.getElementById("importBtn").disabled=true;document.getElementById("importFile").disabled=true;</script>');
- replace('<small class="brand-version">v16.0.0-rc.1 LAB</small>','<small class="brand-version">V15.6 LAB · DEMO</small>');
- replace('v16.0.0-rc.1 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.','V15.6 LAB · DEMO · Datos ficticios · Sin conexión móvil ni red.');
+ replace('<small class="brand-version">v16.0.0 LAB</small>','<small class="brand-version">V15.6 LAB · DEMO</small>');
+ replace('v16.0.0 LAB · CRC/USD · Datos locales · No envía información a ningún servidor.','V15.6 LAB · DEMO · Datos ficticios · Sin conexión móvil ni red.');
  const demo=seed();
  // Provide a little realistic, explicitly fictitious budget data for all visible cards.
  for(const p of demo.periods){

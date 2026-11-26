@@ -23,3 +23,8 @@ Detener nuevas escrituras y exportar el estado actual a otro archivo. Conservar 
 ## Alcance
 
 El paquete de demo usa únicamente datos ficticios y claves aisladas. El auditor local no almacena ni transmite el JSON. La auditoría estática no sustituye la verificación de saldos ni las pruebas visuales/físicas. Las previsiones de proyecto no se agregan automáticamente a Futuro para evitar doble contabilización.
+
+
+## Registro de validación (26-nov-2026)
+
+El usuario comunicó como validados: revisión visual, respaldo JSON exportado y conservado, auditoría local sin incidencias pendientes, saldos y registros financieros, y registro/sincronización desde iPhone. Esta es una confirmación del usuario, no una inspección independiente de sus datos. Las pruebas RC1 del commit 6f4e9f462ae51cfef56a67aeb0d6e538fd704c9b aprobaron 214/214 (run 45905995869). Se prepara la etiqueta estable; todavía deben comprobarse las pruebas de la revisión final y obtenerse autorización explícita para publicar. PR #6 permanece como borrador. Los controles posteriores al despliegue siguen pendientes.

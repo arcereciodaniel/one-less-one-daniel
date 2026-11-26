@@ -280,3 +280,8 @@ Siguiente fase tras el piloto móvil V11.8: conciliación de previsiones y gasto
 ## V16.0.0-rc.1 — Candidata de lanzamiento (26-nov-2026)
 
 **No publicada.** Consolida V15.0–V15.9 en una rama candidata; la etiqueta visible cambia, no las claves de almacenamiento ni el esquema financiero 6.2. La auditoría y la demo se distribuyen como archivos locales, nunca se importan respaldos reales en la demo. La publicación queda bloqueada para etiquetas RC; el lanzamiento estable requiere autorización explícita, respaldo comprobado, revisión de incidencias, comparación de saldos, aprobación visual e iPhone físico. El calendario flexible permanece activo únicamente en Lab. No se modifica el Worker ni Gloriana. Ver [protocolo de lanzamiento](docs/v16-release-checklist.md).
+
+
+## V16.0.0 — Preparación de lanzamiento (26-nov-2026)
+
+El usuario confirmó las cinco validaciones manuales del checklist: interfaz, respaldo, auditoría local, saldos y registros, y captura/sincronización desde iPhone. RC1 aprobó 214 de 214 pruebas (ejecución 45905995869, revisión 6f4e9f462ae51cfef56a67aeb0d6e538fd704c9b). Se prepara la etiqueta estable sin cambios funcionales ni migración adicional. Todavía no publicada: el PR permanece en borrador hasta verificar las pruebas del commit final y recibir autorización expresa de publicación. No se adjuntan datos financieros privados.
