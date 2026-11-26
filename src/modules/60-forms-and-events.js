@@ -3,13 +3,22 @@ function oneV15CalendarInit(){
  const dialog=document.getElementById("v15CalendarDialog"),form=document.getElementById("v15CalendarForm");
  const frequency=document.getElementById("v15CalendarFrequency"),start=document.getElementById("v15CalendarStart");
  const preview=document.getElementById("v15CalendarPreview"),saveBtn=document.getElementById("v15CalendarSave");
- let snapshot=null,proposal=null;
+ const status=document.getElementById("v15TransitionStatus"),prepare=document.getElementById("v15TransitionPrepare"),withdraw=document.getElementById("v15TransitionCancel");
+ const endFor=p=>periodEndDate(p,data.periods,data.settings);
+ let snapshot=null,proposal=null,preflight=null;
  function render(){
-  proposal=null;saveBtn.disabled=true;
+  proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;
+  status.textContent="";
+  withdraw.hidden=!data.v15CalendarTransition;
   try{
    if(!restoreValidDate(start.value)||start.value<oneShiftDate(todayIso(),1))throw Error("Elegí una fecha futura.");
    const draft=oneV15QueryCore.previewPlanningCalendar(data,start.value,frequency.value,90);
    proposal={frequency:frequency.value,start:start.value,days:90};
+   preflight=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   const current=oneV15QueryCore.transitionStatus(data,data.v15CalendarTransition,todayIso(),endFor);
+   const issues={"legacy-overlap":"Coincide con períodos existentes.","transition-gap":"Hay un intervalo sin planificación.","not-future":"Elegí una fecha futura.","assigned-future-movements":"Hay movimientos futuros asignados al calendario original."};
+   status.textContent="Primera fecha disponible: "+dateLabel(preflight.earliest)+". "+(preflight.ready?"Sin solapamientos. Preparación disponible.":preflight.issues.map(x=>issues[x]||x).join(" "))+(current.status==="prepared"?" · Transición preparada (no activa).":current.status==="review"?" · Transición anterior pendiente de revisión.":"");
+   prepare.disabled=!preflight.ready;
    const rows=draft.periods.map(p=>{
     const byCurrency=new Map();for(const e of p.incomes){const amount=(byCurrency.get(e.currency)||0)+e.minor;if(!Number.isSafeInteger(amount))throw Error("Monto fuera de rango");byCurrency.set(e.currency,amount)}
     const amounts=[...byCurrency].map(([c,n])=>originalMoney(n/100,c)).join(" + ")||"Sin ingresos programados";
@@ -17,17 +26,42 @@ function oneV15CalendarInit(){
    }).join("");
    preview.innerHTML='<div class="r8-section-heading"><span>Ingresos programados · estimación</span></div>'+rows+(draft.warnings.length?'<p class="muted">'+draft.warnings.length+' configuración(es) de ingresos pendiente(s) de revisión.</p>':"");
    saveBtn.disabled=false;
-  }catch(error){preview.textContent=error.message;}
+  }catch(error){proposal=null;preflight=null;saveBtn.disabled=true;prepare.disabled=true;preview.textContent=error.message;status.textContent="Transición no disponible.";}
  }
  document.getElementById("v15CalendarOpen").addEventListener("click",()=>{
   snapshot=JSON.stringify(data);
-  const saved=data.v15PlanningCalendarDraft,minimum=oneShiftDate(todayIso(),1);
+  const saved=data.v15CalendarTransition||data.v15PlanningCalendarDraft,minimum=oneShiftDate(todayIso(),1);
   frequency.value=["weekly","biweekly","semimonthly","monthly"].includes(saved?.frequency)?saved.frequency:"monthly";
   start.min=minimum;start.value=restoreValidDate(saved?.start)&&saved.start>=minimum?saved.start:minimum;
   render();document.getElementById("oneSettingsDialog").close();dialog.showModal();
  });
  document.getElementById("v15CalendarCancel").addEventListener("click",()=>dialog.close());
  for(const field of [frequency,start])field.addEventListener("change",render);
+ document.getElementById("v15TransitionDate").addEventListener("click",()=>{
+  try{
+   const check=oneV15QueryCore.transitionPreflight(data,{frequency:frequency.value,start:oneShiftDate(todayIso(),1),days:90},todayIso(),endFor);
+   start.value=check.earliest;render();
+  }catch(error){status.textContent=error.message;}
+ });
+ prepare.addEventListener("click",()=>{
+  render();if(!proposal||!preflight?.ready)return;
+  if(!confirm("¿Preparar esta transición? No activará el nuevo calendario ni modificará tus presupuestos."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const check=oneV15QueryCore.transitionPreflight(data,proposal,todayIso(),endFor);
+   if(!check.ready||check.boundary!==preflight.boundary)throw Error("Las fechas originales cambiaron.");
+   const staged=clone(data);staged.v15CalendarTransition={...proposal,status:"prepared",boundary:check.boundary};
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
+ withdraw.addEventListener("click",()=>{
+  if(!confirm("¿Retirar la transición preparada? Los presupuestos originales no cambiarán."))return;
+  try{
+   if(snapshot!==JSON.stringify(data))throw Error("Los datos cambiaron. Volvé a abrir la propuesta.");
+   const staged=clone(data);delete staged.v15CalendarTransition;
+   oneStoragePersist(JSON.stringify(staged));data=staged;snapshot=JSON.stringify(data);render();
+  }catch(error){status.textContent=error.message;}
+ });
  form.addEventListener("submit",event=>{
   event.preventDefault();render();if(!proposal)return;
   try{

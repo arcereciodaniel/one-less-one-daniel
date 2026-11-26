@@ -792,6 +792,11 @@
   <label for="v15CalendarStart">Desde</label><input type="date" id="v15CalendarStart" required>
   <p class="muted">Propuesta de 90 días. Los ingresos programados conservan sus propias fechas. No modifica los presupuestos existentes.</p>
   <div id="v15CalendarPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+  <details class="r8-unused"><summary>Transición al nuevo calendario</summary>
+    <div id="v15TransitionStatus" class="r8-card-dates" role="status"></div>
+    <button class="btn secondary small" type="button" id="v15TransitionDate">Usar primera fecha disponible</button>
+    <div class="one-budget-copy-actions"><button class="btn secondary small" type="button" id="v15TransitionCancel" hidden>Retirar transición</button><button class="btn secondary small" type="button" id="v15TransitionPrepare" disabled>Preparar transición</button></div>
+  </details>
   <div class="one-budget-copy-actions"><button class="btn secondary" id="v15CalendarCancel" type="button">Cerrar</button><button class="btn" id="v15CalendarSave" type="submit">Guardar propuesta</button></div>
  </form>
 </dialog>

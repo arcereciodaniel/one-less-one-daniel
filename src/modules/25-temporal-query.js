@@ -176,7 +176,37 @@ function previewPlanningCalendar(raw,start,frequency,days=90){
  }
  return {periods,warnings};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar};
+// V15.6b: transition contract; no materialization into the legacy ledger.
+function transitionPreflight(raw,proposal,asOf,endFor){
+ if(!validDate(asOf)||typeof endFor!=="function"||!proposal||!Array.isArray(raw?.periods))throw Error("Invalid transition");
+ const calendar=planningCalendar(proposal.start,proposal.frequency,proposal.days);
+ const tomorrow=shiftDate(asOf,1),issues=[],keys=new Set();
+ const legacy=raw.periods.map(p=>{
+  const key=keyFor(p),end=endFor(p);
+  if(!key||keys.has(key)||!validDate(p.date)||!validDate(end)||end<p.date)throw Error("Invalid legacy period");
+  keys.add(key);return {key,start:p.date,end};
+ }).sort((a,b)=>a.start.localeCompare(b.start));
+ for(let i=1;i<legacy.length;i++)if(legacy[i].start<=legacy[i-1].end)issues.push("legacy-overlap");
+ const legacyEnd=legacy.reduce((last,p)=>p.end>last?p.end:last,"");
+ const earliest=legacyEnd&&legacyEnd>=tomorrow?shiftDate(legacyEnd,1):tomorrow;
+ if(proposal.start<tomorrow)issues.push("not-future");
+ if(proposal.start<earliest)issues.push("legacy-overlap");
+ if(proposal.start>earliest)issues.push("transition-gap");
+ const overlaps=legacy.filter(p=>p.start<=calendar.at(-1).end&&p.end>=proposal.start);
+ // Future movements may have been explicitly assigned to an old period; do not reassign them.
+ const assignedFuture=(raw.movements||[]).filter(m=>validDate(m.date)&&m.date>=proposal.start&&keys.has(m.period));
+ if(assignedFuture.length)issues.push("assigned-future-movements");
+ const boundary=JSON.stringify({legacy,assigned:assignedFuture.map(m=>[m.id,m.date,m.period]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))});
+ return {ready:issues.length===0,issues:[...new Set(issues)],earliest,legacyEnd,overlapCount:overlaps.length,assignedFutureCount:assignedFuture.length,boundary,periods:calendar};
+}
+function transitionStatus(raw,record,asOf,endFor){
+ if(!record||record.status!=="prepared")return {status:"none"};
+ try{
+  const check=transitionPreflight(raw,record,asOf,endFor);
+  return {status:check.ready&&check.boundary===record.boundary?"prepared":"review",...check};
+ }catch{return {status:"review",ready:false,issues:["invalid-transition"]}}
+}
+return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;
