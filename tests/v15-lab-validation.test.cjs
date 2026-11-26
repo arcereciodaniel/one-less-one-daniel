@@ -195,3 +195,27 @@ test("V15.7 demo has three synthetic cases and isolated storage, no mobile or ne
   assert.equal(w.document.getElementById("oneMobilePilot"),null);
  }finally{w.close()}
 });
+
+test("V15.8 current snapshot agrees with remaining budget and native detail",()=>{
+ const raw=seed();raw.movements[0].amount=15000;
+ const e=boot(raw,false,null,"2026-11-20"),w=e.w;
+ try{
+  const before=e.serialized(),s=w.oneV15CurrentBudget("2026-11-20");
+  assert(s&&s.hasPlan);
+  assert.equal(s.rows.find(r=>r.id==="cat-exp").remainingCRC,5000);
+  assert.equal(s.rows.find(r=>r.id==="cat-debt").remainingCRC,20000);
+  assert.equal(w.remainingBudgetForCurrentPeriod(s.p,"2026-11-20"),25000);
+  assert.equal(s.analysis.remaining,2500000);
+  assert.match(w.oneV15PeriodIntelligence(s.p,"2026-11-20"),/Por encima del ritmo de referencia/);
+  w.renderDashboard();
+  assert.match(w.document.getElementById("dashboardInsight").textContent,/por encima del ritmo/i);
+  assert.equal(e.serialized(),before);
+ }finally{w.close()}
+});
+test("V15.8 isolated demo uses fresh keys and keeps network blocked",()=>{
+ const {buildGlobalPreview}=require("../scripts/build-v15-global-preview.cjs");
+ const html=buildGlobalPreview();
+ assert.match(html,/V15\.8 LAB · DEMO/);assert.match(html,/rastro_lab_v15_8_preview_data_v1/);
+ assert.doesNotMatch(html,/rastro_lab_v15_7_preview_|<script\s+src=/);
+ assert.match(html,/connect-src 'none'/);
+});

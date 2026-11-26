@@ -4475,12 +4475,34 @@ function periodMovements(p,throughDate=null){
 function periodHasRealSignal(p){
   return periodMovements(p).length>0 || !!reconciliationForPeriod(p) || (data.reserveMovements||[]).some(t=>t.type==="Aporte"&&periodKey(periodForDate(t.date)||{})===periodKey(p));
 }
+// V15.8: canonical read-only rows, using assigned period keys and historical FX.
+function oneV15PeriodBudgetRows(p,throughDate){
+  const movements=periodMovements(p,throughDate),cats=budgetCategories(["Gasto","Pago deuda"],p);
+  const known=new Set(cats.map(c=>c.id));
+  for(const c of data.categories||[]){
+    if(known.has(c.id)||c.budgetable===false||!["Gasto","Pago deuda"].includes(c.type))continue;
+    if(movements.some(m=>m.type===c.type&&movementCategoryAmountCRC(m,c)!==0)||oneBudgetSavingsActual(p,c.id,throughDate)!==0){cats.push(c);known.add(c.id)}
+  }
+  const savingsIds=new Set([
+    ...(data.categories||[]).filter(c=>c.type==="Gasto"&&/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
+  return cats.map(c=>{
+    const plannedCRC=periodCategoryBudgetCRC(p,c.id,"pay");
+    const spentCRC=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
+    const savingsCRC=oneBudgetSavingsActual(p,c.id,throughDate);
+    const isSavings=c.type==="Gasto"&&savingsIds.has(c.id);
+    return {id:c.id,name:c.name,type:c.type,plannedCRC,spentCRC,savingsCRC,isSavings,paceEligible:c.type==="Gasto"&&!isSavings&&!savingsCRC,remainingCRC:Math.max(0,plannedCRC-spentCRC-savingsCRC)};
+  });
+}
+function oneV15CurrentBudget(asOf=todayIso()){
+  const p=periodForDate(asOf);
+  if(!p||!p.date||p.date>asOf||periodEndDate(p)<asOf)return null;
+  const rows=oneV15PeriodBudgetRows(p,asOf);
+  try{return {p,rows,hasPlan:rows.some(r=>r.plannedCRC>0),analysis:oneV15QueryCore.budgetIntelligence(rows,p.date,periodEndDate(p),asOf)}}catch{return null}
+}
 function remainingBudgetForCurrentPeriod(p,throughDate){
-  const ms=periodMovements(p,throughDate).filter(m=>m.type==="Gasto"||m.type==="Pago deuda");
-  return budgetCategories(["Gasto","Pago deuda"],p).reduce((sum,c)=>{
-    const spent=ms.reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+oneBudgetSavingsActual(p,c.id,throughDate);
-    return sum+Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay")-spent);
-  },0);
+  return oneV15PeriodBudgetRows(p,throughDate).reduce((sum,r)=>sum+r.remainingCRC,0);
 }
 function pendingIncomeForCurrentPeriod(p,asOfDate){
   // Solo ingresos con pago programado después del saldo calculado a hoy.
@@ -5002,13 +5024,7 @@ function oneV15IntelligenceHtml(rows,start,end,asOf,pace=true){
  }catch{return ""}
 }
 function oneV15PeriodIntelligence(p,asOf){
- const ms=periodMovements(p,asOf);
- const cats=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false);
- const rows=cats.map(c=>{
-  const savings=oneBudgetSavingsActual(p,c.id,asOf);
-  const spent=ms.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
-  return {id:c.id,name:c.name,type:c.type,plannedCRC:periodCategoryBudgetCRC(p,c.id,"pay"),spentCRC:spent,savingsCRC:savings,paceEligible:c.type==="Gasto"&&!savings&&oneSuggestedSavingsCategoryId()!==c.id&&!(data.reserves||[]).some(x=>oneGoalBudgetCategory(x)===c.id)};
- }).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ const rows=oneV15PeriodBudgetRows(p,asOf).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
  return oneV15IntelligenceHtml(rows,p.date,periodEndDate(p),asOf);
 }
 function oneV15DateIntelligence(query,range,asOf){
@@ -6649,16 +6665,10 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   // después de descontar gastos efectivos (incluidos futuros ya registrados)
   // y transferencias a metas vinculadas. Se prorratean, NO son vencimientos.
   let ordinary=0,plannedSavings=0;
-  const savingsCategoryIds=new Set([
-   ...budgetCategories("Gasto",p).filter(c=>/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
-   ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
-  ]);
-  for(const c of budgetCategories("Gasto",p)){
-   const amount=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
-   const goals=oneBudgetSavingsActual(p,c.id,end);
-   const remaining=Math.max(0,amount-paid-goals);
-   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
+  // Same rows as Presupuesto/Inicio, including already registered future items.
+  const budgetRows=oneV15PeriodBudgetRows(p,end);
+  for(const row of budgetRows.filter(r=>r.type==="Gasto")){
+   if(row.isSavings)plannedSavings+=row.remainingCRC;else ordinary+=row.remainingCRC;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
@@ -6670,12 +6680,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
   // Deudas: cuota programada primero. Si el presupuesto de Pago deuda es mayor,
   // solo se proyecta la diferencia, nunca la misma cuota dos veces.
-  const debtBudget=budgetCategories("Pago deuda",p).reduce((sum,c)=>{
-   const budget=Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay"));
-   const paid=movements.filter(m=>m.type==="Pago deuda")
-     .reduce((total,m)=>total+movementCategoryAmountCRC(m,c),0);
-   return sum+Math.max(0,budget-paid);
-  },0);
+  const debtBudget=budgetRows.filter(r=>r.type==="Pago deuda").reduce((sum,r)=>sum+r.remainingCRC,0);
   const scheduled=dueDates.filter(x=>x.date>=rangeStart&&x.date<=end).reduce((sum,x)=>sum+x.amount,0);
   const extra=Math.max(0,debtBudget-scheduled);
   if(extra>.005){
@@ -6686,6 +6691,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
  if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
+ if((data.projectPlans||[]).some(plan=>{const p=oneProjectById(plan.projectId);return p&&oneProjectEnabled(p)&&oneProjectPlanSummary(p,plan).remaining>.005;}))warnings.push("Las previsiones pendientes de Proyectos no se suman automáticamente: podrían estar incluidas en el presupuesto.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");
@@ -7243,6 +7249,9 @@ function oneRenderGoalCards(){
       .slice(0,5);
     const status=archived?'<span class="one-goal-state'+(completed?' completed':'')+'">'+(completed?'Cumplida':'Archivada')+'</span>':"";
     const linkedBudget=categoryById(oneGoalBudgetCategory(r))?.name||"Sin vincular";
+    const budgetSnapshot=!archived?oneV15CurrentBudget(today):null;
+    const linkedRow=budgetSnapshot?.rows.find(x=>x.id===oneGoalBudgetCategory(r)&&x.type==="Gasto");
+    const linkedContext=linkedRow&&linkedRow.plannedCRC>0?'<div class="one-goal-linked"><span>Disponible en categoría · período actual</span><strong>'+safe(money(linkedRow.remainingCRC))+'</strong></div><small class="muted">Importe compartido por la categoría, no reservado para esta meta.</small>':"";
     const ops=history.map(t=>'<div class="one-goal-history-row"><span>'+dateLabel(t.date)+' · '+safe(t.type)+'</span><strong>'+originalMoney(t.amount,t.currency||"CRC")+'</strong></div>').join("");
     return '<article class="one-goal-card">'+
       '<div class="one-goal-card-top"><div><span class="one-goal-eyebrow">META</span><h3>'+safe(r.name)+'</h3></div>'+status+'</div>'+
@@ -7250,7 +7259,7 @@ function oneRenderGoalCards(){
       (target>0?'<div class="one-goal-bar" role="progressbar" aria-label="Progreso de '+safe(r.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><span style="width:'+pct.toFixed(1)+'%"></span></div>':'')+
       '<div class="one-goal-stats"><span>'+(target>0?Math.round(pct)+'% completado · Faltan '+money(remaining):'Sin monto objetivo')+'</span><span>'+safe(dateInfo)+'</span></div>'+
       '<p class="one-goal-hint">'+safe(hint)+'</p>'+
-      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+
+      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+linkedContext+
       '<div class="one-goal-actions">'+(archived?'':
         '<button class="btn small" type="button" data-goal-txn="'+safe(r.id)+'" data-goal-type="Aporte">+ Aportar</button>')+
         '<button class="btn secondary small" type="button" data-edit-reserve="'+safe(r.id)+'">Editar</button></div>'+
@@ -7653,6 +7662,12 @@ function oneProjectDetailRender(p){
  document.getElementById("oneProjectBudgetNote").textContent="Disponible considerando gastos reales y previsiones todavía pendientes: "+
   oneProjectMoney(p,forecastRemaining)+
   ". Cada gasto conciliado reduce el pendiente automáticamente, sin crear otro movimiento.";
+ const context=oneV15CurrentBudget(todayIso());
+ if(context){
+  const linked=oneProjectMovementRows(p).filter(({m})=>m.period===periodKey(context.p)&&m.date<=todayIso());
+  const total=linked.reduce((s,{m})=>s+movementAmountCRC(m),0);
+  if(total>.005)document.getElementById("oneProjectBudgetNote").textContent+=" Gasto vinculado del período financiero actual: "+money(total)+". Ya está registrado en Movimientos; no se suma nuevamente.";
+ }
  const buckets=p.buckets||[];
  const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
  const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
@@ -9795,18 +9810,16 @@ renderDashboard=function(){
     hist.length===1?`Saldo operativo de hoy: ${money(hist[0].balance)} · historial en formación`:
     "Aún no hay saldos operativos reales registrados";
 
-  const spendPlan=Math.max(0,summary.plannedExpense-oneSavingsBudgetPlanned(summary.rows));
-  const usage=spendPlan?summary.realExpense/spendPlan:null;
-  const insight=document.getElementById("dashboardInsight");
-  if(usage===null){
-    insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
-  }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
-  }else if(usage<=1){
-    insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
-  }else{
-    insight.innerHTML=`<div class="v7-insight-icon">!</div><h3>El gasto superó el plan</h3><p>Los gastos reales están ${money(summary.realExpense-spendPlan)} por encima del presupuesto de gastos, sin contar el ahorro apartado.</p><span class="v7-status-pill">○ Requiere atención</span>`;
-  }
+  const snapshot=oneV15CurrentBudget(todayIso()),insight=document.getElementById("dashboardInsight"),a=snapshot?.analysis;
+  const title=!a?"Presupuesto pendiente de revisión":a.over.length||a.unbudgeted.length?"Revisá tu presupuesto":a.ahead.length?"Gasto por encima del ritmo de referencia":snapshot.hasPlan?"Dentro del presupuesto":"Definí tu presupuesto";
+  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):"Sin período vigente";
+  const text=a?(a.over.length||a.unbudgeted.length?
+    a.over.length+" categoría(s) con exceso · "+a.unbudgeted.length+" sin presupuesto.":
+    a.ahead.length?a.ahead.length+" categoría(s) por encima del ritmo lineal por días.":
+    snapshot.hasPlan?"No hay excesos ni gastos sin asignación en el período actual.":"Asigná montos para comenzar la comparación."):
+    "No hay un período vigente con información verificable.";
+  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+safe(title)+'</h3><p>'+safe(label)+' · '+safe(text)+'</p>'+
+    (a&&snapshot.hasPlan?'<span class="v7-status-pill">Pendiente: '+safe(money(a.remaining/100))+'</span>':"");
 
   const debts=activeDebts().map(d=>({...d,nextDate:v7NextPayDate(d)})).filter(d=>d.nextDate).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,3);
   document.getElementById("dashboardCommitments").innerHTML=debts.length?debts.map(d=>{
@@ -9928,6 +9941,12 @@ renderMovements=function(){
   document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${v7SafeText(selectedLabel(level,value))}</div>
     <div class="v7-donut-placeholder" style="--v7-pct:${topPct}%"><div class="v7-donut-center"><strong>${money(expense)}</strong><span>Gastos</span></div></div>
     <div class="v7-mini-bars">${ranked.length?ranked.map(([name,val])=>`<div class="v7-mini-bar"><div><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span>${v7SafeText(name)}</span><span>${tot?Math.round(val/tot*100):0}%</span></div><div class="v7-mini-bar-track"><span style="width:${tot?Math.min(100,val/tot*100):0}%"></span></div></div><strong style="font-size:.66rem;text-align:right">${money(val)}</strong></div>`).join(""):`<div class="muted" style="font-size:.72rem">Todavía no hay gastos reales en este periodo.</div>`}</div>`;
+  // Context is the current financial period, never the filtered feed.
+  const currentBudget=oneV15CurrentBudget(todayIso());
+  if(currentBudget){
+    const html=oneV15IntelligenceHtml(currentBudget.rows,currentBudget.p.date,periodEndDate(currentBudget.p),todayIso());
+    if(html)document.getElementById("movementQuick").insertAdjacentHTML("beforeend",'<div class="r8-card-dates">Presupuesto vigente · '+safe(dateLabel(currentBudget.p.date))+' – '+safe(dateLabel(periodEndDate(currentBudget.p)))+' (todos los movimientos del período)</div>'+html);
+  }
   m2RenderAccountSummary(rows);m2RenderTemplates();m2RenderAudit();
   oneRenderGoalMovementPreview(level,value);
 };

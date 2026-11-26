@@ -406,18 +406,16 @@ renderDashboard=function(){
     hist.length===1?`Saldo operativo de hoy: ${money(hist[0].balance)} · historial en formación`:
     "Aún no hay saldos operativos reales registrados";
 
-  const spendPlan=Math.max(0,summary.plannedExpense-oneSavingsBudgetPlanned(summary.rows));
-  const usage=spendPlan?summary.realExpense/spendPlan:null;
-  const insight=document.getElementById("dashboardInsight");
-  if(usage===null){
-    insight.innerHTML=`<div class="v7-insight-icon">↗</div><h3>Tu lectura está lista para crecer</h3><p>Definí presupuesto y registrá movimientos reales para que One Less One pueda comparar ritmo, desviaciones y proyección.</p><span class="v7-status-pill">○ Faltan datos reales</span>`;
-  }else if(usage<=.85){
-    insight.innerHTML=`<div class="v7-insight-icon">▥</div><h3>Vas dentro de tu ritmo de gasto</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto de egresos del período seleccionado. No es una comparación con el tiempo transcurrido.</p><span class="v7-status-pill">✓ Dentro del presupuesto</span>`;
-  }else if(usage<=1){
-    insight.innerHTML=`<div class="v7-insight-icon">◔</div><h3>Estás cerca del límite planeado</h3><p>Has utilizado ${(usage*100).toFixed(0)}% del presupuesto. Vale la pena cuidar los gastos discrecionales del resto del periodo.</p><span class="v7-status-pill">○ Revisar ritmo</span>`;
-  }else{
-    insight.innerHTML=`<div class="v7-insight-icon">!</div><h3>El gasto superó el plan</h3><p>Los gastos reales están ${money(summary.realExpense-spendPlan)} por encima del presupuesto de gastos, sin contar el ahorro apartado.</p><span class="v7-status-pill">○ Requiere atención</span>`;
-  }
+  const snapshot=oneV15CurrentBudget(todayIso()),insight=document.getElementById("dashboardInsight"),a=snapshot?.analysis;
+  const title=!a?"Presupuesto pendiente de revisión":a.over.length||a.unbudgeted.length?"Revisá tu presupuesto":a.ahead.length?"Gasto por encima del ritmo de referencia":snapshot.hasPlan?"Dentro del presupuesto":"Definí tu presupuesto";
+  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):"Sin período vigente";
+  const text=a?(a.over.length||a.unbudgeted.length?
+    a.over.length+" categoría(s) con exceso · "+a.unbudgeted.length+" sin presupuesto.":
+    a.ahead.length?a.ahead.length+" categoría(s) por encima del ritmo lineal por días.":
+    snapshot.hasPlan?"No hay excesos ni gastos sin asignación en el período actual.":"Asigná montos para comenzar la comparación."):
+    "No hay un período vigente con información verificable.";
+  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+safe(title)+'</h3><p>'+safe(label)+' · '+safe(text)+'</p>'+
+    (a&&snapshot.hasPlan?'<span class="v7-status-pill">Pendiente: '+safe(money(a.remaining/100))+'</span>':"");
 
   const debts=activeDebts().map(d=>({...d,nextDate:v7NextPayDate(d)})).filter(d=>d.nextDate).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,3);
   document.getElementById("dashboardCommitments").innerHTML=debts.length?debts.map(d=>{
@@ -539,6 +537,12 @@ renderMovements=function(){
   document.getElementById("movementQuick").innerHTML=`<div class="one-move-insight-period">${v7SafeText(selectedLabel(level,value))}</div>
     <div class="v7-donut-placeholder" style="--v7-pct:${topPct}%"><div class="v7-donut-center"><strong>${money(expense)}</strong><span>Gastos</span></div></div>
     <div class="v7-mini-bars">${ranked.length?ranked.map(([name,val])=>`<div class="v7-mini-bar"><div><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span>${v7SafeText(name)}</span><span>${tot?Math.round(val/tot*100):0}%</span></div><div class="v7-mini-bar-track"><span style="width:${tot?Math.min(100,val/tot*100):0}%"></span></div></div><strong style="font-size:.66rem;text-align:right">${money(val)}</strong></div>`).join(""):`<div class="muted" style="font-size:.72rem">Todavía no hay gastos reales en este periodo.</div>`}</div>`;
+  // Context is the current financial period, never the filtered feed.
+  const currentBudget=oneV15CurrentBudget(todayIso());
+  if(currentBudget){
+    const html=oneV15IntelligenceHtml(currentBudget.rows,currentBudget.p.date,periodEndDate(currentBudget.p),todayIso());
+    if(html)document.getElementById("movementQuick").insertAdjacentHTML("beforeend",'<div class="r8-card-dates">Presupuesto vigente · '+safe(dateLabel(currentBudget.p.date))+' – '+safe(dateLabel(periodEndDate(currentBudget.p)))+' (todos los movimientos del período)</div>'+html);
+  }
   m2RenderAccountSummary(rows);m2RenderTemplates();m2RenderAudit();
   oneRenderGoalMovementPreview(level,value);
 };

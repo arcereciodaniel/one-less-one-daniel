@@ -155,13 +155,7 @@ function oneV15IntelligenceHtml(rows,start,end,asOf,pace=true){
  }catch{return ""}
 }
 function oneV15PeriodIntelligence(p,asOf){
- const ms=periodMovements(p,asOf);
- const cats=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false);
- const rows=cats.map(c=>{
-  const savings=oneBudgetSavingsActual(p,c.id,asOf);
-  const spent=ms.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
-  return {id:c.id,name:c.name,type:c.type,plannedCRC:periodCategoryBudgetCRC(p,c.id,"pay"),spentCRC:spent,savingsCRC:savings,paceEligible:c.type==="Gasto"&&!savings&&oneSuggestedSavingsCategoryId()!==c.id&&!(data.reserves||[]).some(x=>oneGoalBudgetCategory(x)===c.id)};
- }).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
+ const rows=oneV15PeriodBudgetRows(p,asOf).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
  return oneV15IntelligenceHtml(rows,p.date,periodEndDate(p),asOf);
 }
 function oneV15DateIntelligence(query,range,asOf){

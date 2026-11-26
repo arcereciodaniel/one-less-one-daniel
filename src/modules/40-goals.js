@@ -92,6 +92,9 @@ function oneRenderGoalCards(){
       .slice(0,5);
     const status=archived?'<span class="one-goal-state'+(completed?' completed':'')+'">'+(completed?'Cumplida':'Archivada')+'</span>':"";
     const linkedBudget=categoryById(oneGoalBudgetCategory(r))?.name||"Sin vincular";
+    const budgetSnapshot=!archived?oneV15CurrentBudget(today):null;
+    const linkedRow=budgetSnapshot?.rows.find(x=>x.id===oneGoalBudgetCategory(r)&&x.type==="Gasto");
+    const linkedContext=linkedRow&&linkedRow.plannedCRC>0?'<div class="one-goal-linked"><span>Disponible en categoría · período actual</span><strong>'+safe(money(linkedRow.remainingCRC))+'</strong></div><small class="muted">Importe compartido por la categoría, no reservado para esta meta.</small>':"";
     const ops=history.map(t=>'<div class="one-goal-history-row"><span>'+dateLabel(t.date)+' · '+safe(t.type)+'</span><strong>'+originalMoney(t.amount,t.currency||"CRC")+'</strong></div>').join("");
     return '<article class="one-goal-card">'+
       '<div class="one-goal-card-top"><div><span class="one-goal-eyebrow">META</span><h3>'+safe(r.name)+'</h3></div>'+status+'</div>'+
@@ -99,7 +102,7 @@ function oneRenderGoalCards(){
       (target>0?'<div class="one-goal-bar" role="progressbar" aria-label="Progreso de '+safe(r.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><span style="width:'+pct.toFixed(1)+'%"></span></div>':'')+
       '<div class="one-goal-stats"><span>'+(target>0?Math.round(pct)+'% completado · Faltan '+money(remaining):'Sin monto objetivo')+'</span><span>'+safe(dateInfo)+'</span></div>'+
       '<p class="one-goal-hint">'+safe(hint)+'</p>'+
-      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+
+      '<div class="one-goal-linked"><span>Presupuesto</span><strong>'+safe(linkedBudget)+'</strong></div>'+linkedContext+
       '<div class="one-goal-actions">'+(archived?'':
         '<button class="btn small" type="button" data-goal-txn="'+safe(r.id)+'" data-goal-type="Aporte">+ Aportar</button>')+
         '<button class="btn secondary small" type="button" data-edit-reserve="'+safe(r.id)+'">Editar</button></div>'+

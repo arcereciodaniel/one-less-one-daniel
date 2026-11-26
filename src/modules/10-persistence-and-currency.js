@@ -575,12 +575,34 @@ function periodMovements(p,throughDate=null){
 function periodHasRealSignal(p){
   return periodMovements(p).length>0 || !!reconciliationForPeriod(p) || (data.reserveMovements||[]).some(t=>t.type==="Aporte"&&periodKey(periodForDate(t.date)||{})===periodKey(p));
 }
+// V15.8: canonical read-only rows, using assigned period keys and historical FX.
+function oneV15PeriodBudgetRows(p,throughDate){
+  const movements=periodMovements(p,throughDate),cats=budgetCategories(["Gasto","Pago deuda"],p);
+  const known=new Set(cats.map(c=>c.id));
+  for(const c of data.categories||[]){
+    if(known.has(c.id)||c.budgetable===false||!["Gasto","Pago deuda"].includes(c.type))continue;
+    if(movements.some(m=>m.type===c.type&&movementCategoryAmountCRC(m,c)!==0)||oneBudgetSavingsActual(p,c.id,throughDate)!==0){cats.push(c);known.add(c.id)}
+  }
+  const savingsIds=new Set([
+    ...(data.categories||[]).filter(c=>c.type==="Gasto"&&/(ahorro|inversi[oó]n|meta)/i.test(c.name||"")).map(c=>c.id),
+    ...(data.reserves||[]).filter(r=>r.type==="goal").map(oneGoalBudgetCategory).filter(Boolean)
+  ]);
+  return cats.map(c=>{
+    const plannedCRC=periodCategoryBudgetCRC(p,c.id,"pay");
+    const spentCRC=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0);
+    const savingsCRC=oneBudgetSavingsActual(p,c.id,throughDate);
+    const isSavings=c.type==="Gasto"&&savingsIds.has(c.id);
+    return {id:c.id,name:c.name,type:c.type,plannedCRC,spentCRC,savingsCRC,isSavings,paceEligible:c.type==="Gasto"&&!isSavings&&!savingsCRC,remainingCRC:Math.max(0,plannedCRC-spentCRC-savingsCRC)};
+  });
+}
+function oneV15CurrentBudget(asOf=todayIso()){
+  const p=periodForDate(asOf);
+  if(!p||!p.date||p.date>asOf||periodEndDate(p)<asOf)return null;
+  const rows=oneV15PeriodBudgetRows(p,asOf);
+  try{return {p,rows,hasPlan:rows.some(r=>r.plannedCRC>0),analysis:oneV15QueryCore.budgetIntelligence(rows,p.date,periodEndDate(p),asOf)}}catch{return null}
+}
 function remainingBudgetForCurrentPeriod(p,throughDate){
-  const ms=periodMovements(p,throughDate).filter(m=>m.type==="Gasto"||m.type==="Pago deuda");
-  return budgetCategories(["Gasto","Pago deuda"],p).reduce((sum,c)=>{
-    const spent=ms.reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+oneBudgetSavingsActual(p,c.id,throughDate);
-    return sum+Math.max(0,periodCategoryBudgetCRC(p,c.id,"pay")-spent);
-  },0);
+  return oneV15PeriodBudgetRows(p,throughDate).reduce((sum,r)=>sum+r.remainingCRC,0);
 }
 function pendingIncomeForCurrentPeriod(p,asOfDate){
   // Solo ingresos con pago programado después del saldo calculado a hoy.

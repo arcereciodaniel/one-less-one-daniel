@@ -330,6 +330,12 @@ function oneProjectDetailRender(p){
  document.getElementById("oneProjectBudgetNote").textContent="Disponible considerando gastos reales y previsiones todavía pendientes: "+
   oneProjectMoney(p,forecastRemaining)+
   ". Cada gasto conciliado reduce el pendiente automáticamente, sin crear otro movimiento.";
+ const context=oneV15CurrentBudget(todayIso());
+ if(context){
+  const linked=oneProjectMovementRows(p).filter(({m})=>m.period===periodKey(context.p)&&m.date<=todayIso());
+  const total=linked.reduce((s,{m})=>s+movementAmountCRC(m),0);
+  if(total>.005)document.getElementById("oneProjectBudgetNote").textContent+=" Gasto vinculado del período financiero actual: "+money(total)+". Ya está registrado en Movimientos; no se suma nuevamente.";
+ }
  const buckets=p.buckets||[];
  const bucketSum=buckets.reduce((s,b)=>s+num(b.budget),0);
  const assignedSpend=buckets.reduce((s,b)=>s+oneProjectSpent(p,b.id),0);
