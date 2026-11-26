@@ -1,0 +1,36 @@
+name: V17 RC4 audit and visual validation
+on:
+  push:
+    branches: [release/v17-0-rc4]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node --test tests/v17-rc4-reconciled-forecast.test.cjs
+      - run: node --test --test-concurrency=2 tests/*.test.cjs mobile-pilot/tests/*.test.mjs
+      - run: node scripts/build-v17-rc4.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: One-Less-One-V17.0-RC4-TECNICA
+          path: preview-v17-rc4/
+          retention-days: 30
+          if-no-files-found: error
+      - run: npm install playwright@1.56.1 --no-save --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/check-v17-rc4-visual.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: V17-RC4-visual
+          path: preview-v17-rc4/*.png
+          retention-days: 30
+          if-no-files-found: error
