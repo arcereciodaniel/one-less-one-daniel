@@ -30,7 +30,7 @@ function confirmedFlows(){return [...(data.movements||[]).map(m=>({id:"m:"+m.id,
  rep('function total(p,field){','function originalTotal(p,field){');
  rep('function kpis(p){','function total(p,field){const t=B.totals(p,currentRates(),display),v=field==="plannedMinor"?t.planned:field==="actualMinor"?t.actual:t.remaining;return v===null?"—":f(v,display)}\nfunction kpis(p){');
  rep('el("periodCaption").textContent=label(range)+','el("periodCaption").textContent="Calendario · Totales "+display+" · Detalle original · "+label(range)+');
- rep('else if(moduleName==="home")el("content").innerHTML=kpis(p)', 'else if(moduleName==="home")el("content").innerHTML=\'<div class="demo-card" style="margin-bottom:12px"><small class="muted">Saldo operativo hoy · calculador original</small><h2 style="font-size:1.55rem">\'+f(v.operating.minor,"CRC")+\'</h2></div>\'+kpis(p)');
+ rep('else if(moduleName==="home")el("content").innerHTML=kpis(p)', 'else if(moduleName==="home")el("content").innerHTML=\'<div class="demo-card" style="margin-bottom:12px"><small class="muted">Saldo operativo · fecha simulada</small><h2 style="font-size:1.55rem">\'+f(v.operating.minor,"CRC")+\'</h2></div>\'+kpis(p)');
  rep('if(moduleName==="future"){const a=v.future;return ', 'if(moduleName==="future"){const a=v.future,scenario=B.scenario(model,TODAY,v.range.end,confirmedFlows(),currentRates(),F,S);return \'<section class="demo-card"><h2>Flujo fechado parcial</h2><div class="demo-alloc"><span>Variación incluida · desde hoy</span><strong>\'+(scenario.netMinor===null?"—":f(scenario.netMinor,"CRC"))+\'</strong></div><small class="muted">No es saldo futuro. Excluye obligaciones no conciliadas y presupuesto sin fecha.</small></section>\'+');
  rep('el("lightTheme").onclick=()=>theme("light");el("darkTheme").onclick=()=>theme("dark");','el("lightTheme").onclick=()=>theme("light");el("darkTheme").onclick=()=>theme("dark");el("displayCurrency").onchange=e=>{display=e.target.value;render()};');
  rep('theme("dark");render();','theme("dark");render();');
@@ -46,7 +46,7 @@ function confirmedFlows(){return [...(data.movements||[]).map(m=>({id:"m:"+m.id,
  localCSS+="\n#v17NativeHost{display:none!important}.olo-demo .demo-utility select{width:auto;min-width:0;height:34px;font-size:.75rem}.olo-demo .demo-utility{flex-wrap:wrap}";
  assert(!/<\/script/i.test(script));
  native=native.replace(/<body([^>]*)>/,'<body class="olo-demo"><div id="v17NativeHost" hidden inert>');
- native=native.replace("</body>","</div><style>"+localCSS+"</style>"+markup+"<script>(function(){try{"+script+"}catch(error){document.getElementById('rc-content').textContent='No se pudo iniciar la candidata. Los registros de prueba no se sobrescribieron. '+error.message;console.error(error)}})();</script></body>");
+ native=native.replace("</body>",()=>"</div><style>"+localCSS+"</style>"+markup+"<script>(function(){try{"+script+"}catch(error){document.getElementById('rc-content').textContent='No se pudo iniciar la candidata. Los registros de prueba no se sobrescribieron. '+error.message;console.error(error)}})();</script></body>");
  assert(!/<script\s+src=/i.test(native));assert(!native.includes("rastro_lab_v7_1_data_v1"));assert(!native.includes("daniel_finanzas_local_v1"));assert(native.includes("connect-src 'none'"));
  return native;
 }
