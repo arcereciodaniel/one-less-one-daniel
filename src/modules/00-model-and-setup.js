@@ -142,14 +142,14 @@ function dateForMonthDay(year,monthIndex,day){const last=new Date(Date.UTC(year,
 function shiftMonth(monthKeyValue,delta){const [y,m]=String(monthKeyValue).split("-").map(Number),d=new Date(Date.UTC(y,m-1+delta,1));return d.toISOString().slice(0,7)}
 function targetPeriodByAssignment(raw,date,assignment){
   const month=date.slice(0,7),isNext=String(assignment).startsWith("next-"),targetMonth=isNext?shiftMonth(month,1):month,fortnight=String(assignment).endsWith("-2")?2:1;
-  return (raw.periods||[]).find(p=>p.budgetMonth===targetMonth&&Number(p.fortnight)===fortnight)||null;
+  return (raw.periods||[]).find(p=>!oneV15IsFlexiblePeriod(p)&&p.budgetMonth===targetMonth&&Number(p.fortnight)===fortnight)||null;
 }
 function incomeOccurrencesForData(raw,c){
   const cfg=normalizeIncomeConfig(c?.incomeConfig||{}),result=new Map();
   if(!c||c.type!=="Ingreso"||c.active===false||c.budgetable===false||!cfg.projectAutomatically||cfg.expectedAmount<=0||cfg.frequency==="irregular")return result;
   const periods=[...(raw.periods||[])].sort((a,b)=>String(a.date).localeCompare(String(b.date)));if(!periods.length)return result;
   const minDate=periods[0].date,maxDate=periodEndDate(periods.at(-1),periods,raw.settings);
-  const addOccurrence=(date,target=null)=>{if(!date||date<minDate||date>maxDate)return;const p=target||periodForDateIn(raw.periods,date);if(!p)return;const key=periodKey(p),cur=result.get(key)||{amount:0,currency:cfg.expectedCurrency,dates:[]};cur.amount+=cfg.expectedAmount;cur.dates.push(date);result.set(key,cur)};
+  const addOccurrence=(date,target=null)=>{if(!date||date<minDate||date>maxDate)return;const byDate=periodForDateIn(raw.periods,date);const p=oneV15IsFlexiblePeriod(byDate)?byDate:target||byDate;if(!p)return;const key=periodKey(p),cur=result.get(key)||{amount:0,currency:cfg.expectedCurrency,dates:[]};cur.amount+=cfg.expectedAmount;cur.dates.push(date);result.set(key,cur)};
   const min=new Date(minDate+"T00:00:00Z"),max=new Date(maxDate+"T00:00:00Z");
   if(cfg.frequency==="semimonthly"||cfg.frequency==="monthly"){
     for(let cursor=new Date(Date.UTC(min.getUTCFullYear(),min.getUTCMonth(),1));cursor<=max;cursor=new Date(Date.UTC(cursor.getUTCFullYear(),cursor.getUTCMonth()+1,1))){
@@ -251,7 +251,7 @@ function oneAlignMovementPeriods(raw,fromMonth){
 }
 function oneUpdatePaydayPeriods(fromMonth){
   for(const p of data.periods){
-    if(p.budgetMonth>=fromMonth)p.date=canonicalPaymentDate(p.budgetMonth,p.fortnight,data.settings);
+    if(!oneV15IsFlexiblePeriod(p)&&p.budgetMonth>=fromMonth)p.date=canonicalPaymentDate(p.budgetMonth,p.fortnight,data.settings);
   }
   oneAlignMovementPeriods(data,fromMonth);
 }
@@ -274,7 +274,31 @@ function id(){return globalThis.crypto?.randomUUID?.() || Math.random().toString
 function clone(x){return JSON.parse(JSON.stringify(x))}
 let data = load();
 
+// V15.6c: explicit period identity, independent of accounting month slots.
+function oneV15IsFlexiblePeriod(p){return p?.periodKind==="flexible"}
+function oneV15ValidateFlexiblePeriod(p){
+  if(!oneV15IsFlexiblePeriod(p)||!restoreValidDate(p.date)||!restoreValidDate(p.endDate)||p.endDate<p.date||
+    !["weekly","biweekly","semimonthly","monthly"].includes(p.frequency)||
+    p.key!=="v15-period-"+p.date+"-"+p.endDate||p.budgetMonth!==p.date.slice(0,7)||p.fortnight!==0)
+      throw Error("Período flexible inválido; se conserva el respaldo original.");
+  return p;
+}
+function oneV15ValidatePeriodIdentities(rows,settings){
+  if(!rows.some(oneV15IsFlexiblePeriod))return;
+  const keys=new Set();
+  for(const p of rows){
+    if(oneV15IsFlexiblePeriod(p))oneV15ValidateFlexiblePeriod(p);
+    const key=periodKey(p);if(!key||keys.has(key))throw Error("Identidad de período duplicada.");keys.add(key);
+  }
+  const ordered=[...rows].sort((a,b)=>a.date.localeCompare(b.date));
+  for(let i=1;i<ordered.length;i++){
+    const previous=ordered[i-1],next=ordered[i];
+    if(previous.date===next.date||periodEndDate(previous,rows,settings)>=next.date)
+      throw Error("Períodos financieros solapados.");
+  }
+}
 function deriveBudgetMeta(p){
+  if(oneV15IsFlexiblePeriod(p))return {budgetMonth:p.date.slice(0,7),fortnight:0};
   if(p.budgetMonth&&p.fortnight)return {budgetMonth:p.budgetMonth,fortnight:Number(p.fortnight)};
   const d=new Date((p.date||"")+"T00:00:00Z");
   if(Number.isNaN(d.getTime()))return {budgetMonth:"",fortnight:1};
@@ -311,6 +335,7 @@ function migrateData(raw){
   raw.settings.displayCurrency=normalizeCurrency(raw.settings.displayCurrency||"CRC");
   raw.settings.payDays=onePayDays(raw.settings);
   raw.periods=Array.isArray(raw.periods)?raw.periods:[];
+  oneV15ValidatePeriodIdentities(raw.periods,raw.settings);
   raw.movements=Array.isArray(raw.movements)?raw.movements:[];
   raw.movementTemplates=Array.isArray(raw.movementTemplates)?raw.movementTemplates:[];
   raw.movementAudit=Array.isArray(raw.movementAudit)?raw.movementAudit:[];
@@ -416,7 +441,7 @@ function migrateData(raw){
 
   const remap=new Map(), merged=[], byAccountingPeriod=new Map();
   [...raw.periods].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{
-    const accountingKey=`${p.budgetMonth}|${p.fortnight}`;
+    const accountingKey=oneV15IsFlexiblePeriod(p)?"explicit|"+periodKey(p):`${p.budgetMonth}|${p.fortnight}`;
     const existing=byAccountingPeriod.get(accountingKey);
     if(!existing){byAccountingPeriod.set(accountingKey,p);merged.push(p);return;}
     remap.set(periodKey(p),periodKey(existing));
@@ -573,6 +598,7 @@ function restoreValidate(raw){
     throw Error("La configuración financiera no es válida.");
   if(raw.settings?.fxHistory!==undefined&&!Array.isArray(raw.settings.fxHistory))
     throw Error("El historial de tipos de cambio es inválido.");
+  oneV15ValidatePeriodIdentities(raw.periods,raw.settings||{});
   const seen=new Set();
   for(const p of raw.periods){
     const hasKey=typeof p.key==="string"&&p.key.trim().length>0;

@@ -400,6 +400,7 @@ function periodKey(p){return p.key||`${p.quarter}-${p.n}`}
 function periodForDateIn(periods,date){
   const candidates=[...periods].sort((a,b)=>a.date.localeCompare(b.date));let chosen=null;
   for(const p of candidates){if(p.date<=date)chosen=p;else break}
+  if(oneV15IsFlexiblePeriod(chosen)&&date>chosen.endDate)return null;
   return chosen;
 }
 function periodForDate(date){return periodForDateIn(data.periods,date)}
@@ -482,6 +483,7 @@ function addDaysIso(date,days){
   const d=new Date(date+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)
 }
 function periodEndDate(p,periods=null,settings=null){
+  if(oneV15IsFlexiblePeriod(p))return oneV15ValidateFlexiblePeriod(p).endDate;
   const rows=periods||data.periods,config=settings||data.settings;
   const next=(rows||[]).map(x=>x.date).filter(d=>d>p.date).sort()[0]||
     (Number(p.fortnight)===1?canonicalPaymentDate(p.budgetMonth,2,config):canonicalPaymentDate(oneMonthShift(p.budgetMonth,1),1,config));

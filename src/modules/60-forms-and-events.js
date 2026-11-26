@@ -1,3 +1,19 @@
+// Run the real migration and restore path against an in-memory copy only.
+function oneV15ValidateTransitionShadow(raw,record,asOf){
+ const endFor=p=>periodEndDate(p,raw.periods,raw.settings);
+ const materialized=oneV15QueryCore.materializeTransition(raw,record,asOf,endFor);
+ const baseline=restorePrepare(clone(raw)),candidate=restorePrepare(materialized.ledger);
+ const legacyKeys=new Set(baseline.periods.map(periodKey));
+ const existing=candidate.periods.filter(p=>legacyKeys.has(periodKey(p)));
+ const comparable=p=>({key:periodKey(p),date:p.date,end:periodEndDate(p,baseline.periods,baseline.settings),categoryBudgets:p.categoryBudgets,categoryBudgetCurrencies:p.categoryBudgetCurrencies,categoryBudgetSources:p.categoryBudgetSources,categoryBudgetScheduledDates:p.categoryBudgetScheduledDates,opening:p.opening});
+ if(JSON.stringify(existing.map(comparable))!==JSON.stringify(baseline.periods.map(comparable)))throw Error("La simulación cambió un presupuesto original.");
+ if(JSON.stringify(candidate.movements)!==JSON.stringify(baseline.movements))throw Error("La simulación cambió movimientos.");
+ const newRows=candidate.periods.filter(p=>!legacyKeys.has(periodKey(p)));
+ if(newRows.length!==materialized.createdKeys.length||newRows.some(p=>!oneV15IsFlexiblePeriod(p)||!materialized.createdKeys.includes(periodKey(p))))throw Error("La simulación no conservó todos los períodos.");
+ for(const p of newRows)oneV15ValidateFlexiblePeriod(p);
+ return {count:newRows.length,first:newRows[0].date,last:newRows.at(-1).endDate};
+}
+
 // V15.6a: proposal only. No legacy period generation, migration, or active forecast writes.
 function oneV15CalendarInit(){
  const dialog=document.getElementById("v15CalendarDialog"),form=document.getElementById("v15CalendarForm");
@@ -19,6 +35,12 @@ function oneV15CalendarInit(){
    const issues={"legacy-overlap":"Coincide con períodos existentes.","transition-gap":"Hay un intervalo sin planificación.","not-future":"Elegí una fecha futura.","assigned-future-movements":"Hay movimientos futuros asignados al calendario original."};
    status.textContent="Primera fecha disponible: "+dateLabel(preflight.earliest)+". "+(preflight.ready?"Sin solapamientos. Preparación disponible.":preflight.issues.map(x=>issues[x]||x).join(" "))+(current.status==="prepared"?" · Transición preparada (no activa).":current.status==="review"?" · Transición anterior pendiente de revisión.":"");
    prepare.disabled=!preflight.ready;
+   if(preflight.ready){
+    try{
+     const shadow=oneV15ValidateTransitionShadow(data,{...proposal,status:"prepared",boundary:preflight.boundary},todayIso());
+     status.textContent+=" · Ensayo local: "+shadow.count+" períodos conservados.";
+    }catch(error){status.textContent+=" · Ensayo pendiente: "+error.message;prepare.disabled=true;preflight=null;}
+   }
    const rows=draft.periods.map(p=>{
     const byCurrency=new Map();for(const e of p.incomes){const amount=(byCurrency.get(e.currency)||0)+e.minor;if(!Number.isSafeInteger(amount))throw Error("Monto fuera de rango");byCurrency.set(e.currency,amount)}
     const amounts=[...byCurrency].map(([c,n])=>originalMoney(n/100,c)).join(" + ")||"Sin ingresos programados";
