@@ -1,0 +1,32 @@
+name: V16.0 RC1 full validation
+on:
+  push:
+    branches: [release/v16-0-rc1]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/release/v16-0-rc1' || github.head_ref == 'release/v16-0-rc1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - name: All desktop and mobile tests
+        run: node --test --test-concurrency=2 tests/*.test.cjs mobile-pilot/tests/*.test.mjs
+      - name: Build isolated candidate package
+        run: node scripts/build-v16-release-candidate.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: One-Less-One-V16.0-RC1
+          path: preview-v16-rc1/
+          if-no-files-found: error
+          retention-days: 30
