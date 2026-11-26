@@ -155,12 +155,13 @@ function oneV15IntelligenceHtml(rows,start,end,asOf,pace=true){
  }catch{return ""}
 }
 function oneV15PeriodIntelligence(p,asOf){
+ if(oneV15QueryCore.hasUnreconciledBudget(data))return "";
  const rows=oneV15PeriodBudgetRows(p,asOf).filter(r=>r.plannedCRC!==0||r.spentCRC!==0||r.savingsCRC!==0);
  return oneV15IntelligenceHtml(rows,p.date,periodEndDate(p),asOf);
 }
 function oneV15DateIntelligence(query,range,asOf){
  // An incomplete query must never infer that an unknown allocation is zero.
- if(query?.coverage!=="complete"||query.requiresReconciliation)return "";
+ if(query?.coverage!=="complete"||query.requiresReconciliation||oneV15QueryCore.hasUnreconciledBudget(data))return "";
  const movements=data.movements.filter(m=>m.date>=range.start&&m.date<=range.end&&m.date<=asOf);
  const contributions=(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date>=range.start&&t.date<=range.end&&t.date<=asOf);
  const rows=(data.categories||[]).filter(c=>["Gasto","Pago deuda"].includes(c.type)&&c.budgetable!==false).map(c=>({
@@ -500,7 +501,7 @@ function renderPlan(){
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
   document.getElementById("planTitle").textContent=title;
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
-  document.getElementById("planSub").textContent="Planificación y control por períodos financieros.";
+  document.getElementById("planSub").textContent=oneV15QueryCore.hasUnreconciledBudget(data)?"Presupuesto base · ajustes V13/V14 pendientes de reconciliación.":"Planificación y control por períodos financieros.";
   document.getElementById("planClosingTitle").textContent="Cierre proyectado del periodo";
   const extended=level==="half"||level==="year";
   const possible=extended?oneV15PlanGroups(level):level==="quarter"?planningQuarters():level==="month"?availableBudgetMonths():[...data.periods].sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(p=>periodKey(p));

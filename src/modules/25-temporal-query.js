@@ -266,7 +266,81 @@ function budgetIntelligence(rows,start,end,asOf,{pace=true,complete=true}={}){
  const sum=(field,list=out)=>{const n=list.reduce((s,r)=>s+r[field],0);if(!Number.isSafeInteger(n))throw Error("Unsafe aggregate");return n};
  return {status,days,elapsed,complete,rows:out,unbudgeted:out.filter(r=>r.unbudgeted),over:out.filter(r=>r.excess>0&&!r.unbudgeted),ahead:out.filter(r=>r.ahead>0),remaining:status==="closed"?null:sum("remaining"),remainingDebt:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Pago deuda")),remainingOther:status==="closed"?null:sum("remaining",out.filter(r=>r.type==="Gasto"))};
 }
-return {budgetIntelligence,auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
+// V15.9: a read-only release preflight. Output contains only counts and issue codes.
+function hasUnreconciledBudget(raw){
+ return ["flexBudgets","livingBudgets"].some(k=>raw?.[k]!==undefined&&(!Array.isArray(raw[k])||raw[k].length>0));
+}
+function releaseAudit(raw){
+ const issues=[],counts={},record=x=>x&&typeof x==="object"&&!Array.isArray(x);
+ const add=(code,severity,count=1)=>{if(count>0)issues.push({code,severity,count})};
+ if(!record(raw))return {ready:false,counts,issues:[{code:"invalid-backup",severity:"blocker",count:1}]};
+ const lists=["periods","movements","categories","debts","reserves","reserveMovements","reconciliations","sharedCharges","sharedChargeGroups","projects","projectLinks","projectPlans","v15WeeklyAllocations","flexBudgets","livingBudgets"];
+ const get=k=>Array.isArray(raw[k])?raw[k]:[];
+ for(const k of lists){
+  counts[k]=get(k).length;
+  if((["periods","movements","debts"].includes(k)||raw[k]!==undefined)&&(!Array.isArray(raw[k])||get(k).some(x=>!record(x))))add("invalid-list:"+k,"blocker");
+ }
+ if(!get("periods").length)add("no-periods","blocker");
+ if(hasUnreconciledBudget(raw))add("legacy-budget-adjustments","blocker",Math.max(1,counts.flexBudgets+counts.livingBudgets));
+ const rows=k=>get(k).filter(record),ids=k=>new Set(rows(k).map(x=>x.id).filter(Boolean));
+ for(const k of lists.filter(x=>!["v15WeeklyAllocations","flexBudgets","livingBudgets"].includes(x))){
+  const seen=new Set();let duplicate=0,missing=0;
+  for(const r of rows(k)){const key=k==="periods"?keyFor(r):r.id;if(!key){missing++;continue}if(seen.has(key))duplicate++;seen.add(key)}
+  add("duplicate-id:"+k,"blocker",duplicate);add("missing-id:"+k,"review",missing);
+ }
+ const categories=new Map(rows("categories").map(x=>[x.id,x])),periods=new Map(rows("periods").map(x=>[keyFor(x),x])),debtIds=ids("debts"),goalIds=ids("reserves"),movementIds=ids("movements"),projectIds=ids("projects");
+ const ordered=rows("periods").filter(p=>validDate(p.date)).sort((a,b)=>a.date.localeCompare(b.date));
+ const endFor=p=>p.periodKind==="flexible"?p.endDate:(()=>{const next=ordered.find(x=>x.date>p.date);return next?shiftDate(next.date,-1):null})();
+ const moneyOK=x=>(typeof x==="number"||typeof x==="string"&&x.trim()!=="")&&Number.isFinite(Number(x))&&Number(x)>=0;
+ const currencyOK=x=>x===undefined||["CRC","USD"].includes(x);
+ let invalid=0,unknown=0,overlap=0;const slots=new Set(),starts=new Set();
+ for(const p of rows("periods")){
+  const flexible=p.periodKind==="flexible",slot=flexible?keyFor(p):p.budgetMonth+"|"+p.fortnight;
+  if(!validDate(p.date)||!validMonth(p.budgetMonth)||(!flexible&&![1,2].includes(Number(p.fortnight)))||(flexible&&(!validDate(p.endDate)||p.endDate<p.date||keyFor(p)!=="v15-period-"+p.date+"-"+p.endDate)))invalid++;
+  if(slots.has(slot)||starts.has(p.date))overlap++;slots.add(slot);starts.add(p.date);
+  if(p.categoryBudgets!==undefined&&!record(p.categoryBudgets))invalid++;
+  if(p.categoryBudgetCurrencies!==undefined&&!record(p.categoryBudgetCurrencies))invalid++;
+  for(const [cid,amount] of Object.entries(record(p.categoryBudgets)?p.categoryBudgets:{})){if(!moneyOK(amount)||!currencyOK(p.categoryBudgetCurrencies?.[cid]))invalid++;if(!categories.has(cid))unknown++}
+ }
+ for(let i=1;i<ordered.length;i++)if(ordered[i-1].periodKind==="flexible"&&ordered[i-1].endDate>=ordered[i].date)overlap++;
+ add("invalid-budget-period","blocker",invalid);add("overlapping-period","blocker",overlap);add("unknown-budget-category","blocker",unknown);
+ let badMovement=0,orphanPeriod=0,orphanCategory=0,badSplit=0,badDebt=0,missingFx=0,duplicateMobile=0;
+ const mobile=new Set();
+ for(const m of rows("movements")){
+  if(!validDate(m.date)||!moneyOK(m.amount)||!currencyOK(m.currency))badMovement++;
+  if(!periods.has(m.period))orphanPeriod++;
+  if(m.categoryId&&!categories.has(m.categoryId))orphanCategory++;
+  if(m.debtId&&!debtIds.has(m.debtId))badDebt++;
+  if(m.currency==="USD"&&!(Number(m.fxBuy)>0&&Number(m.fxSell)>0))missingFx++;
+  if(m.mobilePilotId){if(mobile.has(m.mobilePilotId))duplicateMobile++;mobile.add(m.mobilePilotId)}
+  if(m.splits!==undefined&&!Array.isArray(m.splits))badSplit++;
+  if(Array.isArray(m.splits)&&m.splits.length){
+   const seen=new Set();let sum=0,valid=true;
+   for(const x of m.splits){if(!record(x)||!moneyOK(x.amount)||Number(x.amount)<=0||!categories.has(x.categoryId)||seen.has(x.categoryId)){valid=false;continue}seen.add(x.categoryId);sum+=Number(x.amount)}
+   if(!valid||Math.abs(sum-Number(m.amount))>.005)badSplit++;
+  }
+ }
+ add("invalid-movement","blocker",badMovement);add("missing-period-link","blocker",orphanPeriod);add("missing-category-link","blocker",orphanCategory);add("invalid-split","blocker",badSplit);add("missing-debt-link","review",badDebt);add("missing-historical-fx","review",missingFx);add("duplicate-mobile-id","blocker",duplicateMobile);
+ add("missing-goal-link","review",rows("reserveMovements").filter(t=>t.reserveId&&!goalIds.has(t.reserveId)).length);
+ const linked=new Set();let projectLink=0;
+ for(const x of rows("projectLinks")){if(!projectIds.has(x.projectId)||!movementIds.has(x.movementId)||linked.has(x.movementId))projectLink++;linked.add(x.movementId)}
+ add("invalid-project-link","blocker",projectLink);
+ const allocSeen=new Set();let stale=0,duplicate=0;
+ for(const a of rows("v15WeeklyAllocations")){
+  const key=JSON.stringify([a.periodKey,a.categoryId]);if(allocSeen.has(key))duplicate++;allocSeen.add(key);
+  const p=periods.get(a.periodKey),c=categories.get(a.categoryId);
+  try{
+   if(!p||c?.type!=="Gasto"||!Object.prototype.hasOwnProperty.call(p.categoryBudgets||{},a.categoryId))throw Error("Missing allocation parent");
+   const end=endFor(p)||a.end;
+   if(allocationState({start:p.date,end,amount:Number(p.categoryBudgets[a.categoryId]),currency:p.categoryBudgetCurrencies?.[a.categoryId]||"CRC"},a).stale)stale++;
+  }catch{stale++}
+ }
+ add("duplicate-week-allocation","blocker",duplicate);add("stale-week-allocation","review",stale);
+ if(raw.v15CalendarTransition?.status==="active")add("active-flexible-calendar","review");
+ if(raw.categorySchemaVersion!==1||raw.incomeSchemaVersion!==1)add("legacy-schema","review");
+ return {ready:!issues.length,counts,issues};
+}
+return {hasUnreconciledBudget,releaseAudit,budgetIntelligence,auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar,transitionPreflight,transitionStatus,materializeTransition,extendFlexibleCalendar};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;

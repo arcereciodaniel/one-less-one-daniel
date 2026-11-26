@@ -122,6 +122,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
  if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
  if((data.projectPlans||[]).some(plan=>{const p=oneProjectById(plan.projectId);return p&&oneProjectEnabled(p)&&oneProjectPlanSummary(p,plan).remaining>.005;}))warnings.push("Las previsiones pendientes de Proyectos no se suman automáticamente: podrían estar incluidas en el presupuesto.");
+ if(oneV15QueryCore.hasUnreconciledBudget(data))warnings.push("Ajustes presupuestarios V13/V14 pendientes de reconciliar; la proyección usa únicamente el presupuesto base.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");

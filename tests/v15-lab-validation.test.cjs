@@ -219,3 +219,28 @@ test("V15.8 isolated demo uses fresh keys and keeps network blocked",()=>{
  assert.doesNotMatch(html,/rastro_lab_v15_7_preview_|<script\s+src=/);
  assert.match(html,/connect-src 'none'/);
 });
+
+test("V15.9 legacy budget flags suppress overconfident current signals without rewriting history",()=>{
+ const raw=seed();raw.flexBudgets=[{id:"legacy",amount:123}];raw.livingBudgets=[{id:"old",amount:456}];
+ const e=boot(raw,false,null,"2026-11-20"),w=e.w;
+ try{
+  const before=e.serialized();
+  assert.equal(w.oneV15CurrentBudget("2026-11-20"),null);
+  assert.equal(w.oneV15PeriodIntelligence(e.read().periods[0],"2026-11-20"),"");
+  w.renderDashboard();assert.match(w.document.getElementById("dashboardHeroNote").textContent,/V13\/V14/);
+  assert.match(w.document.getElementById("dashboardInsight").textContent,/V13\/V14/);
+  assert.equal(e.serialized(),before);
+ }finally{w.close()}
+});
+test("V15.9 restore preparation preserves canonical identities and dormant legacy adjustment objects",()=>{
+ const raw=seed();raw.flexBudgets=[{id:"legacy",amount:123}];raw.livingBudgets=[{id:"old",amount:456}];
+ const e=boot(raw,false,null,"2026-11-20"),w=e.w;
+ try{
+  const before=e.serialized(),snapshot=e.read(),staged=w.restorePrepare(JSON.parse(JSON.stringify(snapshot)));
+  assert.deepEqual(JSON.parse(JSON.stringify(staged.flexBudgets)),snapshot.flexBudgets);
+  assert.deepEqual(JSON.parse(JSON.stringify(staged.livingBudgets)),snapshot.livingBudgets);
+  assert.deepEqual(staged.periods.map(p=>p.key).join("|"),snapshot.periods.map(p=>p.key).join("|"));
+  assert.deepEqual(staged.movements.map(m=>[m.id,m.period,m.date,m.amount]).join("|"),snapshot.movements.map(m=>[m.id,m.period,m.date,m.amount]).join("|"));
+  assert.equal(e.serialized(),before);
+ }finally{w.close()}
+});

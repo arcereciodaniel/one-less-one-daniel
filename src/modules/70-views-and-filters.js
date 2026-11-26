@@ -231,6 +231,9 @@ function oneEstimatedAvailable(today=todayIso()){
 }
 function oneRenderEstimatedAvailable(today=todayIso()){
   const slot=document.getElementById("dashboardHeroNote");if(!slot)return;
+  if(oneV15QueryCore.hasUnreconciledBudget(data)){
+    slot.innerHTML='<div class="one-available-kicker">Disponible estimado</div><strong class="one-available-value">—</strong><span class="one-available-caption">Revisá los ajustes de presupuesto V13/V14 antes de estimar el disponible.</span>';return;
+  }
   const info=oneEstimatedAvailable(today);
   if(!info.ready){
     const hint=!info.hasBalance?
@@ -408,7 +411,7 @@ renderDashboard=function(){
 
   const snapshot=oneV15CurrentBudget(todayIso()),insight=document.getElementById("dashboardInsight"),a=snapshot?.analysis;
   const title=!a?"Presupuesto pendiente de revisión":a.over.length||a.unbudgeted.length?"Revisá tu presupuesto":a.ahead.length?"Gasto por encima del ritmo de referencia":snapshot.hasPlan?"Dentro del presupuesto":"Definí tu presupuesto";
-  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):"Sin período vigente";
+  const label=snapshot?dateLabel(snapshot.p.date)+" – "+dateLabel(periodEndDate(snapshot.p)):oneV15QueryCore.hasUnreconciledBudget(data)?"Ajustes V13/V14 pendientes":"Sin período vigente";
   const text=a?(a.over.length||a.unbudgeted.length?
     a.over.length+" categoría(s) con exceso · "+a.unbudgeted.length+" sin presupuesto.":
     a.ahead.length?a.ahead.length+" categoría(s) por encima del ritmo lineal por días.":

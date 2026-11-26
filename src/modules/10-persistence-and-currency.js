@@ -141,6 +141,8 @@ function oneRenderDataHealth(){
  const slot=document.getElementById("oneDataHealthReport");
  if(!slot)return null;
  const report=oneHealthCheck(data),date=todayIso();
+ const release=oneV15QueryCore.releaseAudit(data);
+ if(!release.ready)report.issues.unshift(...release.issues.map(x=>({count:x.count,message:"Auditoría V15 · "+x.code+" · "+(x.severity==="blocker"?"requiere revisión antes de publicar":"verificación pendiente")})));
  const status=document.createElement("p");status.className="one-health-status";
  status.dataset.level=report.issues.length||oneStorageConflict||storageReadError?"review":"ok";
  status.textContent=storageReadError?"Historial no legible: guardado bloqueado":
@@ -596,6 +598,7 @@ function oneV15PeriodBudgetRows(p,throughDate){
   });
 }
 function oneV15CurrentBudget(asOf=todayIso()){
+  if(oneV15QueryCore.hasUnreconciledBudget(data))return null;
   const p=periodForDate(asOf);
   if(!p||!p.date||p.date>asOf||periodEndDate(p)<asOf)return null;
   const rows=oneV15PeriodBudgetRows(p,asOf);
