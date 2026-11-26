@@ -4865,7 +4865,7 @@ function renderDashboard(){
   document.getElementById("dashboardCategories").innerHTML=categoryTable(cat);
   renderReconciliationStatus();
   if(document.getElementById("oneDataHealthDetails")?.open)oneRenderDataHealth();
-  const labels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+  const labels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
   drawBarChart(document.getElementById("expenseChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.expenses):[0],labels.length?rows.map(r=>r.actualExpenses):[0]);
   drawLineChart(document.getElementById("cashChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.ending):[0],labels.length?rows.map(r=>r.actualBalance):[0]);
 }
@@ -4919,7 +4919,7 @@ function setPlanMonthOpen(section,open,persist=true){
   const body=section.querySelector(".plan-month-body"),btn=section.querySelector(".plan-month-toggle");
   if(body)body.hidden=!open;
   section.classList.toggle("is-collapsed",!open);
-  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":"Ver quincenas"}
+  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":oneV15HasFlexiblePeriods()?"Ver períodos":"Ver quincenas"}
   if(persist)rememberPlanMonthOpen(section.dataset.planMonth,open);
 }
 function setAllPlanMonths(open){
@@ -6602,6 +6602,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
+ if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");
@@ -7930,7 +7931,7 @@ function renderReports(){
   document.querySelectorAll("[data-report-panel]").forEach(p=>p.hidden=p.dataset.reportPanel!==reportActiveTab);
   document.querySelectorAll("[data-report-tab]").forEach(b=>b.classList.toggle("active",b.dataset.reportTab===reportActiveTab));
   document.getElementById("reportPeriodTitle").textContent=`Detalle · ${selectedLabel(level,value)}`;
-  document.getElementById("periodReportTable").innerHTML=`<thead><tr><th>Periodo</th><th>Fecha</th><th>Ingresos plan</th><th>Ingresos reales</th><th>Egresos plan</th><th>Egresos reales</th><th>Variación</th><th>Saldo proyectado</th><th>Saldo real</th></tr></thead><tbody>${summary.rows.length?summary.rows.map(r=>`<tr><td>${monthLabel(r.budgetMonth)} · ${r.fortnight===1?"1.ª":"2.ª"}</td><td>${dateLabel(r.date)}</td><td class="num">${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</td><td class="num">${money(r.actualIncome)}</td><td class="num">${money(r.expenses)}</td><td class="num">${money(r.actualExpenses)}</td><td class="num ${r.expenses-r.actualExpenses<0?"negative":"positive"}">${money(r.expenses-r.actualExpenses)}</td><td class="num">${money(r.ending)}</td><td class="num">${r.actualBalance===null?"—":money(r.actualBalance)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">No hay periodos configurados para esta selección.</td></tr>`}</tbody>`;
+  document.getElementById("periodReportTable").innerHTML=`<thead><tr><th>Periodo</th><th>Fecha</th><th>Ingresos plan</th><th>Ingresos reales</th><th>Egresos plan</th><th>Egresos reales</th><th>Variación</th><th>Saldo proyectado</th><th>Saldo real</th></tr></thead><tbody>${summary.rows.length?summary.rows.map(r=>`<tr><td>${oneV15IsFlexiblePeriod(r)?safe(fortnightLabel(r)):`${monthLabel(r.budgetMonth)} · ${r.fortnight===1?"1.ª":"2.ª"}`}</td><td>${dateLabel(r.date)}</td><td class="num">${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</td><td class="num">${money(r.actualIncome)}</td><td class="num">${money(r.expenses)}</td><td class="num">${money(r.actualExpenses)}</td><td class="num ${r.expenses-r.actualExpenses<0?"negative":"positive"}">${money(r.expenses-r.actualExpenses)}</td><td class="num">${money(r.ending)}</td><td class="num">${r.actualBalance===null?"—":money(r.actualBalance)}</td></tr>`).join(""):`<tr><td colspan="9" class="empty">No hay periodos configurados para esta selección.</td></tr>`}</tbody>`;
   document.getElementById("categoryReportTable").innerHTML=reportCategoryTable(cats);
   renderReportPast(history);renderReportPresent(current);renderReportFuture(future);
   requestAnimationFrame(()=>drawActiveReportCharts({summary,cats,history,future,current}));
@@ -7973,14 +7974,14 @@ function drawActiveReportCharts(ctxData){
   const {cats,history,future,current}=ctxData,tab=reportActiveTab,labels=history.map(r=>reportShortMonth(r.month));
   if(tab==="overview"){
     drawReportGroupedBars(document.getElementById("reportOverviewFlowChart"),labels,history.map(r=>r.actualIncome),history.map(r=>r.actualExpense));
-    const timeline=allActualRows().slice(-12),tl=timeline.map(r=>`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportOverviewBalanceChart"),tl,[{values:timeline.map(r=>r.ending),color:"#5ca6e8"},{values:timeline.map(r=>r.actualBalance),color:"#4dab7a",dashed:true}]);
+    const timeline=allActualRows().slice(-12),tl=timeline.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportOverviewBalanceChart"),tl,[{values:timeline.map(r=>r.ending),color:"#5ca6e8"},{values:timeline.map(r=>r.actualBalance),color:"#4dab7a",dashed:true}]);
     const top=reportTopCategories(cats);drawReportHorizontalBars(document.getElementById("reportOverviewCategoryChart"),top.map(r=>r.category),top.map(r=>r.budget),top.map(r=>r.actual));const donut=reportDonutData(cats);drawReportDonut(document.getElementById("reportOverviewDonutChart"),donut.labels,donut.values);
   }else if(tab==="past"){
     drawReportGroupedBars(document.getElementById("reportPastFlowChart"),labels,history.map(r=>r.actualIncome),history.map(r=>r.actualExpense));drawReportLine(document.getElementById("reportPastNetChart"),labels,[{values:history.map(r=>r.netActual),color:"#5ca6e8"}]);
   }else if(tab==="present"){
     if(current){const ms=periodMovements(current,todayIso()),income=ms.filter(m=>m.type==="Ingreso").reduce((s,m)=>s+movementAmountCRC(m),0),expense=ms.filter(m=>m.type==="Gasto"||m.type==="Pago deuda").reduce((s,m)=>s+movementAmountCRC(m),0);drawReportWaterfall(document.getElementById("reportPresentWaterfallChart"),[num(current.openingCalc),income,expense])}
   }else if(tab==="future"){
-    const fl=future.map(r=>`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportFutureBalanceChart"),fl,[{values:future.map(r=>r.ending),color:"#5ca6e8"}]);drawReportGroupedBars(document.getElementById("reportFutureFlowChart"),fl,future.map(r=>num(r.incomeCRC)+num(r.otherIncomeCRC)),future.map(r=>num(r.expenses)),["#4dab7a","#d9a441"]);
+    const fl=future.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):`${reportShortMonth(r.budgetMonth).split(" ")[0]} ${r.fortnight}Q`);drawReportLine(document.getElementById("reportFutureBalanceChart"),fl,[{values:future.map(r=>r.ending),color:"#5ca6e8"}]);drawReportGroupedBars(document.getElementById("reportFutureFlowChart"),fl,future.map(r=>num(r.incomeCRC)+num(r.otherIncomeCRC)),future.map(r=>num(r.expenses)),["#4dab7a","#d9a441"]);
   }else if(tab==="categories"){
     const top=reportTopCategories(cats,9);drawReportHorizontalBars(document.getElementById("reportCategoryBarChart"),top.map(r=>r.category),top.map(r=>r.budget),top.map(r=>r.actual));const donut=reportDonutData(cats,7);drawReportDonut(document.getElementById("reportCategoryDonutChart"),donut.labels,donut.values);
   }
@@ -9510,7 +9511,13 @@ function oneRenderEstimatedAvailable(today=todayIso()){
 /* Resumen de meses financieros completos, derivado del historial sin mutarlo. */
 function oneMonthlyCloseData(month,asOf=todayIso()){
   const periods=(data.periods||[]).filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===month);
-  if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
+  if(periods.some(oneV15IsFlexiblePeriod)){
+    if(periods.some(p=>!oneV15IsFlexiblePeriod(p)))return null;
+    const ordered=[...periods].sort((a,b)=>a.date.localeCompare(b.date));
+    const first=month+"-01",last=oneShiftDate(oneMonthShift(month,1)+"-01",-1);
+    if(ordered[0]?.date!==first||ordered.at(-1)?.endDate!==last||
+       ordered.some((p,i)=>periodEndDate(p)>=asOf||(i>0&&p.date!==oneShiftDate(ordered[i-1].endDate,1))))return null;
+  }else if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
      !periods.some(p=>Number(p.fortnight)===1)||!periods.some(p=>Number(p.fortnight)===2)||
      periods.some(p=>periodEndDate(p)>=asOf))return null;
   const movements=selectedMovements("month",month).filter(m=>m.date<=asOf&&
@@ -9682,7 +9689,7 @@ renderDashboard=function(){
   const expCanvas=document.getElementById("expenseChart");
   renderCobrosReminderWidget();
   if(expCanvas){
-    const chartLabels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+    const chartLabels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
     drawBarChart(expCanvas,chartLabels.length?chartLabels:["Sin datos"],chartLabels.length?rows.map(r=>r.expenses):[0],chartLabels.length?rows.map(r=>r.actualExpenses):[0]);
   }
 };
@@ -9696,8 +9703,9 @@ renderPlan=function(){
   document.getElementById("planTitle").textContent="Presupuesto";
   const extended=level==="half"||level==="year";
   const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
-  const partial=extended&&slots.size!==(level==="half"?12:24);
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${partial?" · Período incompleto":""}`;
+  const mixed=data.periods.some(p=>oneV15IsFlexiblePeriod(p)&&oneV15PlanMatches(p,level,value));
+  const partial=extended&&!mixed&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${mixed&&extended?" · Agrupación por mes de referencia":partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);

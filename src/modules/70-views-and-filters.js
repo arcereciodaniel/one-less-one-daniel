@@ -259,7 +259,13 @@ function oneRenderEstimatedAvailable(today=todayIso()){
 /* Resumen de meses financieros completos, derivado del historial sin mutarlo. */
 function oneMonthlyCloseData(month,asOf=todayIso()){
   const periods=(data.periods||[]).filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===month);
-  if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
+  if(periods.some(oneV15IsFlexiblePeriod)){
+    if(periods.some(p=>!oneV15IsFlexiblePeriod(p)))return null;
+    const ordered=[...periods].sort((a,b)=>a.date.localeCompare(b.date));
+    const first=month+"-01",last=oneShiftDate(oneMonthShift(month,1)+"-01",-1);
+    if(ordered[0]?.date!==first||ordered.at(-1)?.endDate!==last||
+       ordered.some((p,i)=>periodEndDate(p)>=asOf||(i>0&&p.date!==oneShiftDate(ordered[i-1].endDate,1))))return null;
+  }else if(periods.length!==2||new Set(periods.map(p=>Number(p.fortnight))).size!==2||
      !periods.some(p=>Number(p.fortnight)===1)||!periods.some(p=>Number(p.fortnight)===2)||
      periods.some(p=>periodEndDate(p)>=asOf))return null;
   const movements=selectedMovements("month",month).filter(m=>m.date<=asOf&&
@@ -431,7 +437,7 @@ renderDashboard=function(){
   const expCanvas=document.getElementById("expenseChart");
   renderCobrosReminderWidget();
   if(expCanvas){
-    const chartLabels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+    const chartLabels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
     drawBarChart(expCanvas,chartLabels.length?chartLabels:["Sin datos"],chartLabels.length?rows.map(r=>r.expenses):[0],chartLabels.length?rows.map(r=>r.actualExpenses):[0]);
   }
 };
@@ -445,8 +451,9 @@ renderPlan=function(){
   document.getElementById("planTitle").textContent="Presupuesto";
   const extended=level==="half"||level==="year";
   const slots=new Set(data.periods.filter(p=>oneV15PlanMatches(p,level,value)).map(p=>p.budgetMonth+"|"+p.fortnight));
-  const partial=extended&&slots.size!==(level==="half"?12:24);
-  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${partial?" · Período incompleto":""}`;
+  const mixed=data.periods.some(p=>oneV15IsFlexiblePeriod(p)&&oneV15PlanMatches(p,level,value));
+  const partial=extended&&!mixed&&slots.size!==(level==="half"?12:24);
+  document.getElementById("planSub").textContent=`Tu plan de lo que entra, lo que sale y lo que te queda. · ${label}${mixed&&extended?" · Agrupación por mes de referencia":partial?" · Período incompleto":""}`;
   document.querySelectorAll("#planMonths .plan-month").forEach((section,index)=>{
     const month=section.dataset.planMonth;
     const hasPreference=Object.prototype.hasOwnProperty.call(uiState.planMonths||{},month);

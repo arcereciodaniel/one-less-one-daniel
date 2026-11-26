@@ -131,6 +131,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
+ if(periods.some(p=>oneV15IsFlexiblePeriod(p)&&p.date<=until&&periodEndDate(p)>asOf))warnings.push("Los gastos sin fecha específica se estiman dentro de cada período; no son asignaciones semanales confirmadas.");
  if(manualIncomeGroups)warnings.push("Hay ingresos presupuestados sin automatización; no se anticipan sin fecha.");
  if(undatedIncomeGroups)warnings.push("Algunos ingresos configurados no tienen fecha válida dentro del período.");
  if(undatedDebts)warnings.push(undatedDebts+" deuda(s) activas sin día de pago o cuota válida no se pueden fechar.");

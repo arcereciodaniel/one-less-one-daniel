@@ -18,7 +18,7 @@ function renderDashboard(){
   document.getElementById("dashboardCategories").innerHTML=categoryTable(cat);
   renderReconciliationStatus();
   if(document.getElementById("oneDataHealthDetails")?.open)oneRenderDataHealth();
-  const labels=rows.map(r=>level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
+  const labels=rows.map(r=>oneV15IsFlexiblePeriod(r)?dateLabel(r.date):level==="quarter"?`${monthLabel(r.budgetMonth).slice(0,3)} ${r.fortnight}Q`:level==="month"?`${r.fortnight}.ª`:dateLabel(r.date).replace(/ de /g," "));
   drawBarChart(document.getElementById("expenseChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.expenses):[0],labels.length?rows.map(r=>r.actualExpenses):[0]);
   drawLineChart(document.getElementById("cashChart"),labels.length?labels:["Sin datos"],labels.length?rows.map(r=>r.ending):[0],labels.length?rows.map(r=>r.actualBalance):[0]);
 }
@@ -72,7 +72,7 @@ function setPlanMonthOpen(section,open,persist=true){
   const body=section.querySelector(".plan-month-body"),btn=section.querySelector(".plan-month-toggle");
   if(body)body.hidden=!open;
   section.classList.toggle("is-collapsed",!open);
-  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":"Ver quincenas"}
+  if(btn){btn.setAttribute("aria-expanded",String(open));btn.textContent=open?"Ocultar detalle":oneV15HasFlexiblePeriods()?"Ver períodos":"Ver quincenas"}
   if(persist)rememberPlanMonthOpen(section.dataset.planMonth,open);
 }
 function setAllPlanMonths(open){
