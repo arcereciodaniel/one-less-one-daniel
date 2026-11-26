@@ -81,7 +81,7 @@ for(const lab of [false,true])test("V15.3 native selector and financial groups "
  const select=e.get("planLevel");
  assert.equal(d.querySelectorAll("#planLevel").length,1);
  assert.equal(d.querySelectorAll("[data-r8-plan-level]").length,0);
- assert.deepEqual(Array.from(select.options,o=>o.value),["fortnight","month","quarter","half","year"]);
+ assert.deepEqual(Array.from(select.options,o=>o.value),["week","fortnight","month","quarter","half","year","custom"]);
  function set(mode,month){select.value=mode;select.dispatchEvent(new w.Event("change",{bubbles:true}));e.get("planMonth").value=month;e.get("planMonth").dispatchEvent(new w.Event("change",{bubbles:true}));}
  function months(){return Array.from(d.querySelectorAll("#planMonths [data-plan-month]"),s=>s.dataset.planMonth)}
  set("month","2026-12");assert.deepEqual(months(),["2026-12"]);

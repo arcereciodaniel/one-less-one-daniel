@@ -440,6 +440,7 @@ const renderPlanLegacy=renderPlan;
 renderPlan=function(){
   renderPlanLegacy();
   const {level,value}=hierarchicalSelection("plan");
+  if(["week","custom"].includes(level))return;
   const label=value?selectedLabel(level,value):"Sin periodo";
   document.getElementById("planTitle").textContent="Presupuesto";
   const extended=level==="half"||level==="year";

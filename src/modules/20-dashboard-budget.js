@@ -180,8 +180,72 @@ function r8BudgetSection(types,heading,period){
   </div>`;
 }
 
+// Date views are intentionally read-only; the original financial cards remain unchanged.
+function oneV15DateRange(level){
+  const pref=uiState.v15DateQuery||{},today=todayIso();
+  if(level==="week")return oneV15QueryCore.calendarRange(restoreValidDate(pref.week)?pref.week:today,"week");
+  if(restoreValidDate(pref.start)&&restoreValidDate(pref.end)&&pref.start<=pref.end)return {start:pref.start,end:pref.end};
+  return {start:today,end:today};
+}
+function oneV15SaveDateRange(level,range){
+  uiState.v15DateQuery={...(uiState.v15DateQuery||{}),...(level==="week"?{week:range.start}:{start:range.start,end:range.end})};
+  saveUiState();
+}
+function oneV15SyncDateControls(level){
+  const dateMode=["week","custom"].includes(level),custom=level==="custom";
+  const controls=document.getElementById("v15PlanDateControls");
+  controls.hidden=!custom;
+  // Existing stylesheet gives display:flex to period-filter; honor hidden explicitly.
+  controls.style.display=custom?"":"none";
+  for(const id of ["newQuarterBtn","duplicateQuarterBtn","expandPlanBtn","collapsePlanBtn"])document.getElementById(id).disabled=dateMode;
+  if(custom){
+    const r=oneV15DateRange(level),a=document.getElementById("v15PlanStart"),b=document.getElementById("v15PlanEnd");
+    a.value=r.start;b.value=r.end;a.max=r.end;b.min=r.start;a.setCustomValidity("");b.setCustomValidity("");
+  }
+}
+function oneV15RenderDatePlan(level,r){
+  const preference={level,quarter:document.getElementById("planQuarter").value,month:document.getElementById("planMonth").value,fortnight:document.getElementById("planFortnight").value};
+  if(JSON.stringify(uiState.v15PlanSelection)!==JSON.stringify(preference)){uiState.v15PlanSelection=preference;saveUiState()}
+  oneV15SyncDateControls(level);
+  const rangeLabel=dateLabel(r.start)+" – "+dateLabel(r.end);
+  document.getElementById("planTitle").textContent="Presupuesto";
+  document.getElementById("r8PlanEyebrow").textContent="PLAN FINANCIERO";
+  document.getElementById("planSub").textContent=rangeLabel;
+  document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.disabled=level==="custom");
+  const today=todayIso(),allRows=allAdaptiveProjectedRows(),live=allRows.find(p=>p.date<=today&&today<=periodEndDate(p));
+  const operation=actualBalanceAt(today),obligations=live?remainingBudgetForCurrentPeriod(live,today):0,closing=live?live.ending:operation;
+  const items=[["Saldo operativo hoy",money(operation),""],["Compromisos pendientes",money(obligations),""],["Cierre actual estimado",money(closing),closing<0?"negative":"positive"]];
+  document.getElementById("planQuarterSummary").innerHTML=items.map(([label,amount,tone])=>'<div class="summary-box"><div class="summary-label">'+label+'</div><div class="summary-value '+tone+'">'+amount+'</div></div>').join("");
+  document.getElementById("goalBudgetPreview").hidden=true;
+  document.getElementById("planSummary").textContent="";
+  document.getElementById("planClosing").innerHTML="";
+  let result=null;
+  try{result=oneV15QueryCore.queryBudget(data,{basis:"calendar",mode:level,anchor:r.start,end:r.end},p=>periodEndDate(p,data.periods,data.settings))}catch(error){console.warn("V15 date query unavailable",error)}
+  const complete=result?.coverage==="complete";
+  const within=t=>t.date>=r.start&&t.date<=r.end;
+  const movements=data.movements.filter(within),contributions=(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&within(t));
+  const rows=sortedCategories((data.categories||[]).filter(c=>["Ingreso","Gasto","Pago deuda"].includes(c.type))).map(c=>{
+    const actual=movements.filter(m=>m.type===c.type).reduce((s,m)=>s+movementCategoryAmountCRC(m,c),0)+(c.type==="Gasto"?contributions.filter(t=>oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0):0);
+    const planned=(result?.totals||result?.knownSubtotal||[]).filter(x=>x.categoryId===c.id);
+    return {c,actual,planned};
+  }).filter(x=>x.actual!==0||x.planned.some(p=>p.minor!==0));
+  const section=(title,income)=>{
+    const visible=rows.filter(x=>(x.c.type==="Ingreso")===income);
+    return '<div class="r8-section"><div class="r8-section-heading"><span>'+title+'</span><strong>'+money(visible.reduce((s,x)=>s+x.actual,0))+'</strong></div>'+ (visible.length?visible.map(x=>{
+      const amounts=x.planned.filter(p=>p.minor!==0).map(p=>originalMoney(p.minor/100,p.currency)).join(" + ");
+      const label=complete?(amounts||"Sin asignación"):(amounts?"Subtotal completo: "+amounts:"Sin asignación para este intervalo");
+      return '<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(x.c.name)+'</span><small class="muted">'+safe(label)+'</small></span><strong>'+safe(money(x.actual))+'</strong></div>';
+    }).join(""):'<div class="r8-empty-row">Sin registros</div>')+'</div>';
+  };
+  const status=complete?"Presupuesto definido":result?"Presupuesto sin asignación completa":"Presupuesto pendiente de revisión";
+  const note=(data.flexBudgets||[]).length||(data.livingBudgets||[]).length?" · Ajustes V13/V14 pendientes":"";
+  document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+'</div></article></div></section>';
+}
+
 function renderPlan(){
   const {level,value}=hierarchicalSelection("plan");
+  if(["week","custom"].includes(level)){oneV15RenderDatePlan(level,value);return}
+  oneV15SyncDateControls(level);
   const allRows=allAdaptiveProjectedRows(),staticRows=allProjectedRows();
   const rows=allRows.filter(r=>oneV15PlanMatches(r,level,value));
   const months=[...new Set(rows.map(r=>r.budgetMonth))];
@@ -301,9 +365,21 @@ function initR8(){
     if(oneApplyCopyBudgetMonth(copyDialog?.dataset.targetMonth||""))copyDialog.close();
   });
   updateMovementFields();
+  const start=document.getElementById("v15PlanStart"),end=document.getElementById("v15PlanEnd");
+  for(const field of [start,end])field.addEventListener("change",()=>{
+    start.setCustomValidity("");end.setCustomValidity("");
+    if(!restoreValidDate(start.value)||!restoreValidDate(end.value)||end.value<start.value){
+      field.setCustomValidity("Elegí fechas válidas y en orden.");field.reportValidity();return;
+    }
+    oneV15SaveDateRange("custom",{start:start.value,end:end.value});renderPlan();
+  });
   document.querySelectorAll("[data-r8-period-shift]").forEach(b=>b.addEventListener("click",()=>{
     const shift=Number(b.dataset.r8PeriodShift)||0;
     const {level,value}=hierarchicalSelection("plan");
+    if(level==="week"){
+      const r=oneV15DateRange("week");oneV15SaveDateRange("week",{start:oneShiftDate(r.start,shift*7)});renderPlan();return;
+    }
+    if(level==="custom")return;
     if(level==="half"||level==="year"){
       const groups=oneV15PlanGroups(level),target=groups[groups.indexOf(value)+shift];
       const month=target&&availableBudgetMonths().find(m=>oneV15FinancialGroup(m,level)===target);

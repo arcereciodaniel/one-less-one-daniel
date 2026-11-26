@@ -51,7 +51,7 @@ function bind(){
   document.querySelectorAll("#nav button[data-view]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
   syncQuarterSelectors();
   const planPref=uiState.v15PlanSelection;
-  if(planPref&&["fortnight","month","quarter","half","year"].includes(planPref.level)){
+  if(planPref&&["week","fortnight","month","quarter","half","year","custom"].includes(planPref.level)){
     const level=document.getElementById("planLevel"),q=document.getElementById("planQuarter"),m=document.getElementById("planMonth");
     level.value=planPref.level;
     if(planningQuarters().includes(planPref.quarter))q.value=planPref.quarter;

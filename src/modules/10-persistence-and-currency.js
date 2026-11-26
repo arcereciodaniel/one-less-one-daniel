@@ -888,12 +888,14 @@ function syncHierarchicalFilter(prefix,resetCurrent=false){
     const desired=!resetCurrent&&available.includes(fEl.value)?fEl.value:(defaults.fortnight||available[0]||"1");
     fillObjectSelect(fEl,[{value:"1",label:"Quincena 1"},{value:"2",label:"Quincena 2"}].filter(x=>available.includes(x.value)),desired);
   }
+  const dateMode=prefix==="plan"&&["week","custom"].includes(level);
   if(qWrap)qWrap.hidden=level!=="quarter";
-  if(mWrap)mWrap.hidden=level==="quarter";
+  if(mWrap)mWrap.hidden=level==="quarter"||dateMode;
   if(fWrap)fWrap.hidden=level!=="fortnight";
 }
 function hierarchicalSelection(prefix){
   const level=document.getElementById(prefix+"Level")?.value||"quarter";
+  if(prefix==="plan"&&["week","custom"].includes(level))return {level,value:oneV15DateRange(level)};
   if(level==="quarter")return {level,value:document.getElementById(prefix+"Quarter")?.value||""};
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};

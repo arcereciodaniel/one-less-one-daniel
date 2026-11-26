@@ -199,12 +199,18 @@
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
         <div class="r8-view-switch">
           <select id="planLevel" aria-label="Período de presupuesto">
+            <option value="week">Semana</option>
             <option value="fortnight">Quincena</option>
             <option value="month" selected>Mes</option>
             <option value="quarter">Trimestre</option>
             <option value="half">Semestre</option>
             <option value="year">Año</option>
+            <option value="custom">Personalizado</option>
           </select>
+        </div>
+        <div class="period-filter" id="v15PlanDateControls" hidden>
+          <div><label for="v15PlanStart">Desde</label><input id="v15PlanStart" type="date"></div>
+          <div><label for="v15PlanEnd">Hasta</label><input id="v15PlanEnd" type="date"></div>
         </div>
       </div>
     </div>

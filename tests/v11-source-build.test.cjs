@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root,file),"utf8");
 
 test("V12: los trece módulos componen exactamente el archivo de Daniel",()=>{
- assert.equal(PARTS.length,14);
+ assert.equal(PARTS.length,15);
  const generated=buildApp();
  assert.equal(generated,read("index.html"));
  assert.equal(labFromDaniel(generated),read("lab/index.html"));
