@@ -10,7 +10,12 @@ const oneV17Bridge=(()=>{
   // Revalidate the reviewed transaction against fresh native records and preserve every non-overlay field.
   E.commit(model,staged);
   const prepared=P.prepare(raw,base,staged.command,F,E),next=P.commit(raw,base,prepared,F,E);
-  const stored=P.persist(io,expected,next);
+  // Native load normalizes legacy records in memory. Persist only the overlay on
+  // the exact on-disk ledger, not incidental normalization of original records.
+  const disk=JSON.parse(expected);
+  if(!disk||typeof disk!=="object"||Array.isArray(disk)||JSON.stringify(disk[P.FIELD])!==JSON.stringify(raw[P.FIELD]))throw Error("La copia guardada cambió; recargá antes de continuar.");
+  const nextDisk={...disk,[P.FIELD]:clone(next[P.FIELD])};
+  const stored=P.persist(io,expected,nextDisk);
   return {raw:clone(next),stored};
  }
  function totals(p,rates,display){
