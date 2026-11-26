@@ -611,9 +611,9 @@ function bind(){
 
   document.getElementById("exportMovementsCsv").addEventListener("click",()=>{
     const level=document.getElementById("movementLevel").value,value=document.getElementById("movementPeriod").value;
-    const rows=m2FilteredMovementRows().rows,headers=["Fecha","Mes presupuestario","Quincena","Tipo","Categoría","Deuda","Cuenta","Método","Descripción","División por categorías","Monto original","Moneda original","Equivalente CRC histórico","TC compra","TC venta","Periodo","Trimestre"];
-    const csv=[headers,...rows.map(m=>{const p=movementPeriod(m);return [m.date,p?.budgetMonth||"",p?.fortnight||"",m.type,movementDisplayCategory(m),movementDebtName(m),m.account,m.paymentMethod||"",m.description,(m.splits||[]).map(x=>categoryNameById(x.categoryId,"?")+": "+x.amount).join(" | "),m.amount,normalizeCurrency(m.currency),movementAmountCRC(m),m.fxBuy||"",m.fxSell||"",m.period,movementBudgetQuarter(m)]})].map(r=>r.map(csvEscape).join(",")).join("\n");
-    download(`movimientos-${level}-${value}.csv`,"\ufeff"+csv,"text/csv")
+    const flex=globalThis.oneFlexMovementRange?.(),rows=m2FilteredMovementRows().rows,headers=["Fecha","Mes presupuestario","Quincena","Tipo","Categoría","Deuda","Cuenta","Método","Descripción","División por categorías","Monto original","Moneda original","Equivalente CRC histórico","TC compra","TC venta","Periodo","Trimestre"];
+    const csv=[headers,...rows.map(m=>{const p=movementPeriod(m);return [m.date,p?.budgetMonth||"",p?.fortnight||"",m.type,movementDisplayCategory(m),movementDebtName(m),m.account,m.paymentMethod||"",m.description,(m.splits||[]).map(x=>categoryNameById(x.categoryId,"?")+": "+x.amount).join(" | "),m.amount,normalizeCurrency(m.currency),movementAmountCRC(m),m.fxBuy||"",m.fxSell||"",m.period,movementBudgetQuarter(m)]})].map((r,i)=>(flex?[...r,...(i===0?["Rango flexible desde","Rango flexible hasta"]:[flex.start,flex.end])]:r).map(csvEscape).join(",")).join("\n");
+    download(flex?`movimientos-${flex.start}-${flex.end}.csv`:`movimientos-${level}-${value}.csv`,"\ufeff"+csv,"text/csv")
   });
   document.getElementById("exportReportCsv")?.addEventListener("click",()=>{
     const level=document.getElementById("reportLevel").value,value=document.getElementById("reportPeriod").value;

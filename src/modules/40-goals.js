@@ -60,6 +60,7 @@ function oneGoalTxnEligibility(r,candidate=null,editingId=""){
   return {ok:true};
 }
 function oneGoalSelectedTransactions(level,value){
+  if(level==="flex"&&value?.start&&value?.end)return oneFlexDateRows(data.reserveMovements,value).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   return (data.reserveMovements||[]).filter(t=>{
     const p=periodForDate(t.date);
     return p&&(level==="quarter"?budgetQuarter(p)===value:

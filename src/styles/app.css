@@ -2013,3 +2013,6 @@ header .topbar>.one-utility-bar button:focus-visible{
 
 /* V13.1 native budget editor */
 .one-flex-history{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}.one-flex-entry{display:grid;grid-template-columns:minmax(0,1fr) minmax(85px,125px) 72px;align-items:center;gap:8px;margin:8px 0}.one-flex-entry label{overflow-wrap:anywhere}.one-flex-entry label small{display:block;font-size:.72rem;color:var(--muted)}.one-flex-entry input,.one-flex-entry select{min-width:0;width:100%}#oneFlexBudgetDialog .dialog-body{max-height:80vh;overflow:auto}#oneFlexBudgetDialog section h3{margin:12px 0 5px}@media(max-width:420px){.one-flex-entry{grid-template-columns:minmax(0,1fr) 90px 65px;gap:5px}}
+
+/* V13.2 shared date scope */
+#dashboardFilters[hidden],#oneFlexHome[hidden],#expenseChart[hidden],#expenseChartLegend[hidden],#oneFlexChartNote[hidden]{display:none!important}#oneFlexHome{width:100%;margin:0}#oneFlexHome .one-flex-toolbar{justify-content:flex-start}
