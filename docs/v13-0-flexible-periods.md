@@ -1,0 +1,3 @@
+# V13.0 · Flexible period views (Beta)
+
+Opt-in from Settings → Períodos financieros. Independent weekly, twice-monthly, monthly and quarterly date ranges for Budget and Movements, shared navigation and movement filtering/export. Original income schedules, movement IDs, period IDs, amounts, reconciliations and plans are not migrated. The existing editor is accessible via Editar plan quincenal. Only complete, exactly covering plans are consolidated; for mismatched ranges planned values remain unavailable rather than prorated. Dashboard, projections, goals and budget editing still use the legacy engine. Native non-quincenal allocations and migration are subsequent work. No new storage keys or servers. Existing application version label retained pending full migration.

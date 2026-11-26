@@ -253,7 +253,7 @@ function m2FilteredMovementRows(){
   const from=document.getElementById("movementDateFrom")?.value||"";
   const to=document.getElementById("movementDateTo")?.value||"";
   const query=(document.getElementById("movementSearch")?.value||"").trim().toLocaleLowerCase("es");
-  const scope=selectedMovements(level,value).sort((a,b)=>String(b.date).localeCompare(String(a.date))||num(b.seq)-num(a.seq));
+  const scope=(globalThis.oneFlexMovementScope?.()??selectedMovements(level,value)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||num(b.seq)-num(a.seq));
   const rows=scope.filter(m=>{
     if(type&&m.type!==type)return false;
     if(category&&!(m.splits||[]).some(x=>x.categoryId===category)&&m.categoryId!==category)return false;

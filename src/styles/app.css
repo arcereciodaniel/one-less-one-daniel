@@ -2007,3 +2007,6 @@ header .topbar>.one-utility-bar button:focus-visible{
   overflow-x:visible!important
  }
 }
+
+/* V13.0 flexible views */
+.one-flex-panel{display:grid;gap:14px;margin:12px 0}.one-flex-panel[hidden],.one-flex-settings [hidden],.r8-plan-title-actions[hidden],.one-move-period-control[hidden],#planMonths[hidden],#planQuarterSummary[hidden],#r8PlanOptions[hidden]{display:none!important}.one-flex-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}.one-flex-toolbar label{display:flex;align-items:center;gap:8px}.one-flex-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.one-flex-settings{display:grid;gap:10px}.one-flex-check{display:flex;align-items:center;gap:8px}.one-flex-check input{width:auto}.one-flex-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.one-flex-panel .table-wrap{overflow-x:auto}
