@@ -10,7 +10,12 @@ function buildIntelligencePreview(){
   const demo=JSON.parse(raw);
   demo.categories.push({id:"cat-demo-extra",name:"Comida fuera",type:"Gasto",group:"Gastos",active:true,budgetable:true,sort:4});
   demo.movements.push({id:"g2",seq:3,type:"Gasto",date:"2026-11-16",amount:4000,currency:"CRC",categoryId:"cat-demo-extra",category:"Comida fuera",period:"P0"});
-  demo.movementSeq=3;
+  demo.movements[0].amount=78000;
+  demo.categories.push({id:"cat-demo-transport",name:"Transporte",type:"Gasto",group:"Gastos",active:true,budgetable:true,sort:5});
+  demo.periods[0].categoryBudgets["cat-demo-transport"]=5000;
+  demo.periods[0].categoryBudgetCurrencies["cat-demo-transport"]="CRC";
+  demo.movements.push({id:"g3",seq:4,type:"Gasto",date:"2026-11-17",amount:7500,currency:"CRC",categoryId:"cat-demo-transport",category:"Transporte",period:"P0"});
+  demo.movementSeq=4;
   return "const demo="+JSON.stringify(demo).replace(/</g,"\\u003c")+";demo.settings.fxCheckedOn=todayIso()";
  });
  assert(!html.includes("rastro_lab_v15_6_preview_"));

@@ -154,3 +154,44 @@ test("V15.6 isolated preview: no external assets or mobile, distinct storage, sy
  w.__previewNavigate("plan");assert(w.document.getElementById("planMonths").querySelector(".r8-fortnight-card"));
  }finally{w.close()}
 });
+
+test("V15.7 native detail is collapsed and read-only; pace and incomplete range guards",()=>{
+ const raw=seed();raw.movements[0].amount=15000;
+ const e=boot(raw,false,null,"2026-11-20"),w=e.w;
+ try{
+  const before=e.serialized(),p=e.read().periods[0];
+  const markup=w.oneV15PeriodIntelligence(p,"2026-11-20");
+  assert.match(markup,/data-v15-intelligence/);
+  assert.match(markup,/Por encima del ritmo de referencia/);
+  assert.match(markup,/Supermercado/);
+  const el=w.document.createElement("div");el.innerHTML=markup;
+  assert.equal(el.querySelector("details").open,false);
+  assert.equal(w.oneV15DateIntelligence({coverage:"partial"},{start:"2026-11-16",end:"2026-11-22"},"2026-11-20"),"");
+  assert.equal(e.serialized(),before);
+  assert.deepEqual(e.errors,[]);
+ }finally{w.close()}
+});
+test("V15.7 demo has three synthetic cases and isolated storage, no mobile or network",()=>{
+ const {buildIntelligencePreview}=require("../scripts/build-v15-intelligence-preview.cjs");
+ const html=buildIntelligencePreview();
+ assert.match(html,/V15\.7 LAB · DEMO/);assert.match(html,/rastro_lab_v15_7_preview_data_v1/);
+ assert.doesNotMatch(html,/rastro_lab_v15_6_preview_|<script\s+src=/);
+ assert.match(html,/connect-src 'none'/);
+ const dom=new JSDOM(html,{url:"https://preview.example.com/",runScripts:"outside-only",pretendToBeVisual:true});
+ const w=dom.window;
+ try{
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};
+  w.HTMLDialogElement.prototype.close=function(){this.open=false};
+  w.HTMLElement.prototype.scrollIntoView=function(){};
+  w.HTMLCanvasElement.prototype.getContext=function(){return new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}})};
+  w.fetch=async()=>{throw Error("offline")};w.alert=()=>{};w.confirm=()=>true;w.prompt=()=>null;
+  const RealDate=w.Date,stamp=RealDate.parse("2026-11-20T12:00:00Z");w.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[stamp]))}static now(){return stamp}};
+  for(const key of ["daniel_finanzas_local_v1","rastro_lab_v7_1_data_v1","rastro_lab_v15_6_preview_data_v1"])w.localStorage.setItem(key,"protected");
+  w.eval([...w.document.querySelectorAll("script")].map(x=>x.textContent).join("\n")+"\n;globalThis.__v15Demo={navigate,oneV15PeriodIntelligence,data};");
+  const p=w.__v15Demo.data.periods[0],markup=w.__v15Demo.oneV15PeriodIntelligence(p,"2026-11-20");
+  for(const s of ["Sin presupuesto","Exceso del presupuesto","Por encima del ritmo de referencia","Comida fuera","Transporte","Supermercado"])assert(markup.includes(s),s);
+  w.__v15Demo.navigate("plan");assert(w.document.querySelector("#planMonths [data-v15-intelligence]"));
+  for(const key of ["daniel_finanzas_local_v1","rastro_lab_v7_1_data_v1","rastro_lab_v15_6_preview_data_v1"])assert.equal(w.localStorage.getItem(key),"protected");
+  assert.equal(w.document.getElementById("oneMobilePilot"),null);
+ }finally{w.close()}
+});
