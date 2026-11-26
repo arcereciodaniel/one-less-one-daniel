@@ -1,0 +1,18 @@
+name: V15 isolated financial core
+on:
+  push:
+    branches: [dev/v15-1-2-financial-core]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/v15-financial-query.test.cjs
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
