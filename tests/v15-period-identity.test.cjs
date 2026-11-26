@@ -80,7 +80,7 @@ function boot(custom=seed(),lab=false){
 
 
 
-const {transitionPreflight,materializeTransition,auditLedger}=require("../src/experimental/v15-financial-query.cjs");
+const {transitionPreflight,materializeTransition}=require("../src/experimental/v15-financial-query.cjs");
 test("V15.6c explicit identities and calendar sums for multiple periods in one month",()=>{
  const raw={periods:[{key:"p",budgetMonth:"2026-11",fortnight:2,date:"2026-11-14",categoryBudgets:{food:100},categoryBudgetCurrencies:{food:"CRC"}}],movements:[],categories:[{id:"food",type:"Gasto"}]};
  const proposal={start:"2026-11-28",frequency:"weekly",days:90},endFor=p=>p.endDate||"2026-11-27",asOf="2026-11-26";
