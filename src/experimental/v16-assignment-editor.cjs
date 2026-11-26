@@ -32,15 +32,16 @@ const oneV16Editor=(()=>{
    if(!target.date||target.source==="legacy-scheduled-income")throw Error("Esta asignación requiere revisión del origen.");
    const cid=command.categoryId??target.categoryId,unit=command.currency??target.currency;
    if(unit!==target.currency)throw Error("Para cambiar moneda, eliminá y creá una nueva asignación explícitamente.");
-   if(target.parentKey&&(cid!==target.categoryId||!model.periods.some(p=>p.key===target.parentKey&&inside(p,command.date))||amount(command.amount)!==target.minor))throw Error("El monto y categoría históricos se conservan; solo podés mover la fecha dentro del período original.");
-   removed=[target];created=[dated(cid,command.date,amount(command.amount),unit,target.id,{...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{}),...(target.originId?{originId:target.originId}:{})})];
+   const historical=target.parentKey||target.originId;
+   if(historical&&(cid!==target.categoryId||amount(command.amount)!==target.minor||target.parentKey&&!model.periods.some(p=>p.key===target.parentKey&&inside(p,command.date))||target.originId&&!inside({start:target.originStart,end:target.originEnd},command.date)))throw Error("El monto y categoría históricos se conservan; solo podés mover la fecha dentro del período original.");
+   removed=[target];created=[dated(cid,command.date,amount(command.amount),unit,target.id,{...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{}),...(target.originId?{originId:target.originId,originStart:target.originStart,originEnd:target.originEnd}:{})})];
   }else if(kind==="delete"){
-   if(!target.date||target.parentKey||target.source==="legacy-scheduled-income")throw Error("No se permite eliminar una asignación histórica.");
+   if(!target.date||target.parentKey||target.originId||target.source==="legacy-scheduled-income")throw Error("No se permite eliminar una asignación histórica.");
    removed=[target];
   }else if(kind==="distribute"){
    if(target.date||!valid(target.start)||!valid(target.end)||target.start>target.end)throw Error("La asignación no es un intervalo pendiente.");
    if(!Array.isArray(command.parts)||!command.parts.length||command.parts.length>60)throw Error("Ingresá las fechas de distribución.");
-   created=command.parts.map((p,i)=>{if(!inside(target,p.date))throw Error("La fecha debe estar dentro del intervalo original.");return dated(target.categoryId,p.date,amount(p.amount),target.currency,baseId+":"+i,{originId:target.originId||target.id,...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{})})});
+   created=command.parts.map((p,i)=>{if(!inside(target,p.date))throw Error("La fecha debe estar dentro del intervalo original.");return dated(target.categoryId,p.date,amount(p.amount),target.currency,baseId+":"+i,{originId:target.originId||target.id,originStart:target.originStart||target.start,originEnd:target.originEnd||target.end,...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{})})});
    if(created.reduce((s,x)=>add(s,x.minor),0)!==target.minor)throw Error("La distribución debe conservar exactamente el total original.");
    removed=[target];
   }else throw Error("Operación no disponible.");
@@ -48,7 +49,7 @@ const oneV16Editor=(()=>{
   for(const a of created){
    if(used.has(a.id))throw Error("ID de asignación duplicado.");used.add(a.id);
    const slot=JSON.stringify([a.categoryId,a.currency,a.date]);if(slots.has(slot))throw Error("Ya existe una asignación para esta categoría, moneda y fecha. Editala o elegí otra fecha.");slots.add(slot);
-   if(kind==="create"&&retained.some(x=>!x.date&&x.categoryId===a.categoryId&&x.currency===a.currency&&inside(x,a.date)))throw Error("Esta categoría tiene presupuesto pendiente de distribuir en esa fecha. Distribuí primero el monto existente.");
+   if((kind==="create"||kind==="edit"&&(a.date!==target.date||a.categoryId!==target.categoryId||a.minor>target.minor))&&retained.some(x=>!x.date&&x.categoryId===a.categoryId&&x.currency===a.currency&&inside(x,a.date)))throw Error("Esta categoría tiene presupuesto pendiente de distribuir en esa fecha. Distribuí primero el monto existente.");
   }
   const next=[...retained,...created],before=totals(old),after=totals(next);
   return {command:clone(command),baseline:JSON.stringify(model),created:clone(created),removed:clone(removed),before,after,delta:{CRC:after.CRC-before.CRC,USD:after.USD-before.USD}};

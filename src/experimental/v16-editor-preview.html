@@ -56,9 +56,9 @@ function openEditor(kind,b){
  const range=kind==="create"?b.dataset.range.split("/"):null;editing={kind,id,target,range,transactionId:"demo-v16-3-"+(++seq)};
  el("editorTitle").textContent=kind==="distribute"?"Distribuir presupuesto":kind==="edit"?"Editar asignación":"Asignar presupuesto";
  el("category").replaceChildren(...model.categories.filter(c=>!c.synthetic&&c.active!==false&&c.budgetable!==false).map(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name;return o}));
- el("category").disabled=kind==="distribute"||!!target?.parentKey;el("category").value=target?.categoryId||b.dataset.add||el("category").options[0].value;
- el("singleFields").hidden=kind==="distribute";el("distributionFields").hidden=kind!=="distribute";el("date").disabled=kind==="distribute";el("amount").disabled=kind==="distribute"||!!target?.parentKey;el("currency").disabled=kind!=="create";
- el("repeatFields").hidden=kind!=="create";el("repeat").value="once";el("count").value="2";el("countWrap").hidden=true;el("deleteAssignment").hidden=kind!=="edit"||!!target?.parentKey;
+ el("category").disabled=kind==="distribute"||!!(target?.parentKey||target?.originId);el("category").value=target?.categoryId||b.dataset.add||el("category").options[0].value;
+ el("singleFields").hidden=kind==="distribute";el("distributionFields").hidden=kind!=="distribute";el("date").disabled=kind==="distribute";el("amount").disabled=kind==="distribute"||!!(target?.parentKey||target?.originId);el("currency").disabled=kind!=="create";
+ el("repeatFields").hidden=kind!=="create";el("repeat").value="once";el("count").value="2";el("countWrap").hidden=true;el("deleteAssignment").hidden=kind!=="edit"||!!(target?.parentKey||target?.originId);
  el("parts").replaceChildren();el("currency").value=target?.currency||b.dataset.unit||"CRC";el("date").min=range?.[0]||"";el("date").max=range?.[1]||"";el("date").value=target?.date||(range?(range[0]<=TODAY&&TODAY<=range[1]?TODAY:range[0]):"");el("amount").value=target?.date?String(target.minor/100):Number(b.dataset.suggest||0)>0?String(Number(b.dataset.suggest)/100):"";
  if(kind==="distribute"){el("distributionContext").textContent=label(target)+" · Total a conservar: "+f(target.minor,target.currency);addPart(target.start,String(target.minor/100))}
  invalidate();el("edit").showModal();
