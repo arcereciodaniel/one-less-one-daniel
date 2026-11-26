@@ -19,6 +19,9 @@ jobs:
       - run: node --test tests/v16-1-flexible-system.test.cjs tests/v16-2-financial-assignments.test.cjs tests/v16-3-assignment-editor.test.cjs tests/v16-4-budget-intelligence.test.cjs tests/v16-5-system-views.test.cjs tests/v16-6-minimal-ux.test.cjs
       - run: node --test --test-concurrency=2 tests/*.test.cjs mobile-pilot/tests/*.test.mjs
       - run: node scripts/build-v16-6-preview.cjs
+      - run: npm install playwright@1.56.1 --no-save --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/check-v16-6-visual.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: One-Less-One-V16.6-DEMO
