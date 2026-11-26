@@ -181,7 +181,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
     const isSavings=savingsCategoryIds.has(c.id);
     const daily=oneFutureLivingDaily(source,c,sourceOverrides,wholeDates);
     const weights=daily.map((v,i)=>Math.max(0,v-movements.filter(m=>m.type==="Gasto"&&m.date===wholeDates[i]).reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0)-(isSavings?(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date===wholeDates[i]&&oneContributionCategory(t)===c.id).reduce((sum,t)=>sum+reserveTxnHistoricalCRC(t,"pay"),0):0)));
-    for(const x of oneFutureWeighted(remaining,wholeDates,weights))add(x.date,-x.amount,isSavings?"budget-savings":"budget",c.name,"Living Budget · asignación estimada");
+    for(const x of oneFutureWeighted(remaining,wholeDates,weights))add(x.date,-x.amount,isSavings?"budget-savings":"budget",c.name,"Asignación estimada");
    }else if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
   }
   if(ordinary>.005){
@@ -207,7 +207,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
  }
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
- if(living)warnings.push("Living Budget: los ajustes por fecha sustituyen el plan anterior. Los gastos pendientes se estiman según las asignaciones; las cuotas mínimas conservan su vencimiento. El ingreso automático usa el calendario de cada categoría.");
+ if(living)warnings.push("Los gastos pendientes son estimados; las cuotas e ingresos programados conservan sus fechas.");
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
  if(flexible&&sources.some(p=>p.native&&p.start<=until&&p.end>asOf))warnings.push("Los presupuestos flexibles prevalecen sobre los anteriores cuando se superponen. Los gastos se distribuyen como estimación y los ingresos se fechan con el calendario actual de cada categoría.");
@@ -265,7 +265,7 @@ function renderFuture(){
   button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active));
  });
  const q=id=>document.getElementById(id);
- q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until)+(forecast.living?" · Living Budget":forecast.flexible?" · Planificación flexible":"");
+ q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until)+"";
  q("oneFutureNumbers").innerHTML=[
   ["Saldo operativo de hoy",forecast.base],
   ["Saldo estimado al final",forecast.balance],

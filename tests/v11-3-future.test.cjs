@@ -233,3 +233,12 @@ test("V14.5: restore round trip preserves original plans and dated overrides",()
  assert.equal(restored.movements.length,sample.movements.length);
  assert.throws(()=>w.restorePrepare({...sample,livingBudgets:[...sample.livingBudgets,sample.livingBudgets[0]]}));
 });
+
+test("V14.5: one budget interface is visible from first load; interval persists independently of ledger",()=>{
+ const e=boot(),w=e.w,d=w.document;w.navigate("plan");
+ assert.equal(d.getElementById("oneLegacyBudgetHeader").hidden,true);assert.equal(d.getElementById("planMonths").hidden,true);assert.equal(d.getElementById("r8PlanOptions").hidden,true);
+ assert.equal(d.getElementById("oneFlexPlan").hidden,false);assert(d.querySelector("#oneFlexPlan .r8-fortnight-card"));assert(!d.getElementById("oneFlexPlan").textContent.includes("Lectura del presupuesto"));
+ const before=e.serialized(),select=d.getElementById("oloPlanPeriod");select.value="week";select.dispatchEvent(new w.Event("change",{bubbles:true}));
+ assert.equal(d.getElementById("oloPlanPeriod").value,"week");assert.equal(JSON.parse(w.localStorage.getItem("daniel_finanzas_ui_v1")).oloBudgetView.mode,"week");
+ assert.equal(e.serialized(),before);assert.deepEqual(e.errors,[]);
+});

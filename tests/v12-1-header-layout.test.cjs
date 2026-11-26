@@ -40,7 +40,7 @@ test("V12.1.3: menú completo, preferencias y configuración sin herramientas ex
    assert(doc.getElementById("oneSettingsDialog").contains(doc.getElementById(id)));
    assert(!bar.contains(doc.getElementById(id)));
   }
-  assert(html.includes('<small class="brand-version">v12.1.3'+(name==="Lab"?" LAB":"")+'</small>'));
+  assert(html.includes('<small class="brand-version">v14.5'+(name==="Lab"?" LAB":"")+'</small>'));
  }
 });
 test("V12.1.3: compilación de Daniel y Lab comparte CSS y mantiene aislamiento",()=>{

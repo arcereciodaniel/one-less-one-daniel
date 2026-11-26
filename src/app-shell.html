@@ -194,7 +194,7 @@
         <h1 id="planTitle">Presupuesto</h1>
         <p class="sub" id="planSub"></p>
       </div>
-      <div class="r8-plan-title-actions">
+      <div class="r8-plan-title-actions" id="oneLegacyBudgetHeader" hidden>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="-1" title="Periodo anterior" aria-label="Periodo anterior">‹</button>
         <button class="r8-period-arrow" type="button" data-r8-period-shift="1" title="Periodo siguiente" aria-label="Periodo siguiente">›</button>
         <div class="r8-view-switch" aria-label="Nivel de presupuesto">
@@ -203,6 +203,7 @@
           <button type="button" data-r8-plan-level="fortnight">Quincena</button>
         </div>
       </div>
+      <div class="r8-plan-title-actions" id="oneBudgetHeader"></div>
     </div>
     <dialog id="copyBudgetDialog" class="one-budget-copy-dialog" aria-labelledby="copyBudgetTitle">
       <form id="copyBudgetForm">
@@ -213,7 +214,7 @@
         <div class="one-budget-copy-actions"><button class="btn secondary" type="button" id="cancelCopyBudget">Cancelar</button><button class="btn" type="submit" id="confirmCopyBudget">Copiar presupuesto</button></div>
       </form>
     </dialog>
-    <details class="r8-plan-options" id="r8PlanOptions">
+    <details class="r8-plan-options" id="r8PlanOptions" hidden>
       <summary>Opciones de período, categorías y planificación</summary>
     <div class="toolbar v7-plan-toolbar">
       <div class="period-filter" id="planFilters">
@@ -243,7 +244,7 @@
     <section id="goalBudgetPreview" class="one-goal-context" hidden aria-label="Orientación de ahorro para metas"></section>
     <div class="one-payday-panel"><form id="onePaydayForm"><div><strong>Cortes del plan quincenal existente</strong><small>Solo modifica el plan anterior. Configurá tus ingresos desde Categorías.</small></div><label>Primer corte<input id="onePaydayFirst" type="number" min="1" max="27" required></label><label>Segundo corte<input id="onePaydaySecond" type="number" min="2" max="31" required></label><button type="submit" class="btn secondary small">Aplicar</button></form></div>
     <div id="oneFlexPlan" class="one-flex-panel" hidden></div>
-    <div id="planMonths" class="plan-months"></div>
+    <div id="planMonths" class="plan-months" hidden></div>
     <div class="v7-legacy-hidden" aria-hidden="true">
       <strong id="planClosingTitle">Cierre del periodo</strong>
       <span id="planSummary"></span>
@@ -786,13 +787,13 @@
   <div class="one-settings-group">
    <h3>Moneda y calendario</h3>
    <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
-   <div id="oneSettingsPaydayMount"></div>
+   <details class="one-budget-maintenance"><summary>Calendario de registros</summary><div id="oneSettingsPaydayMount"></div><div class="one-settings-buttons"><button type="button" class="btn secondary small" data-olo-maintenance="newQuarterBtn">Crear trimestre</button><button type="button" class="btn secondary small" data-olo-maintenance="duplicateQuarterBtn">Duplicar trimestre</button></div></details>
   </div>
-  <div class="one-settings-group"><h3>Calendario de consulta</h3>
+  <div class="one-settings-group"><h3>Presupuesto</h3>
 <form id="oneFlexSettingsForm" class="one-flex-settings">
-<label class="one-flex-check"><input id="oneFlexEnabled" type="checkbox"> Abrir directamente la vista universal</label>
-<p class="muted">Los filtros universales están disponibles siempre. Elegí tu vista inicial y los cortes de consulta; no cambian las fechas de ingreso ni las asignaciones guardadas.</p>
-<div class="field"><label for="oneFlexMode">Vista predeterminada</label><select id="oneFlexMode"><option value="week">Semanal</option><option value="fortnight">Quincenal</option><option value="month">Mensual</option><option value="quarter">Trimestral</option></select></div>
+<input id="oneFlexEnabled" type="checkbox" hidden checked aria-hidden="true" tabindex="-1">
+
+<div class="field"><label for="oneFlexMode">Período preferido</label><select id="oneFlexMode"><option value="week">Semanal</option><option value="fortnight">Quincenal</option><option value="month">Mensual</option><option value="quarter">Trimestral</option></select></div>
 <div data-flex-fields="fortnight" class="one-flex-fields"><div class="field"><label for="oneFlexFirst">Primer corte</label><input type="number" id="oneFlexFirst" min="1" max="27" required></div><div class="field"><label for="oneFlexSecond">Segundo corte</label><input type="number" id="oneFlexSecond" min="2" max="31" required></div></div>
 <div data-flex-fields="week" class="field"><label for="oneFlexWeekday">Inicio de semana</label><select id="oneFlexWeekday"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
 <div data-flex-fields="month quarter" class="field"><label for="oneFlexDay">Día de inicio (si no existe, último día del mes)</label><input id="oneFlexDay" type="number" min="1" max="31" required></div>
