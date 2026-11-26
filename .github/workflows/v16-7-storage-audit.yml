@@ -1,0 +1,33 @@
+name: V16.7 storage and audit
+on:
+  push:
+    branches: [dev/v16-7-storage-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  editor:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node --test tests/v16-1-flexible-system.test.cjs tests/v16-2-financial-assignments.test.cjs tests/v16-3-assignment-editor.test.cjs tests/v16-4-budget-intelligence.test.cjs tests/v16-5-system-views.test.cjs tests/v16-6-minimal-ux.test.cjs tests/v16-7-storage-overlay.test.cjs tests/v16-7-native-storage.test.cjs
+      - run: node --test --test-concurrency=2 tests/*.test.cjs mobile-pilot/tests/*.test.mjs
+      - run: node scripts/build-v16-6-preview.cjs
+      - run: node scripts/build-v16-7-audit.cjs
+      - run: npm install playwright@1.56.1 --no-save --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/check-v16-6-visual.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: One-Less-One-V16.7-AUDIT
+          path: |
+            preview-v16-6/
+            preview-v16-7/
+          if-no-files-found: error
+          retention-days: 30
