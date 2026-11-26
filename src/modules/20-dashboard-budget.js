@@ -242,6 +242,57 @@ function oneV15RenderDatePlan(level,r){
   document.getElementById("planMonths").innerHTML='<section class="r8-month"><div class="r8-month-heading"><h2>'+safe(rangeLabel)+'</h2></div><div class="r8-fortnight-grid"><article class="r8-fortnight-card"><div class="r8-card-main"><div class="r8-fortnight-heading"><h3>Registrado</h3><span class="r8-chip">Solo lectura</span></div><div class="r8-card-dates">'+safe(status+note)+'</div>'+section("Ingresos registrados",true)+section("Gastos, deudas y ahorro registrados",false)+'</div></article></div></section>';
 }
 
+// V15.4: native, collapsed breakdowns. No writes to the financial model.
+function oneV15MonthCategoryTotals(month){
+ let result;
+ try{result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings))}
+ catch{return '<details class="r8-unused"><summary>Totales por categoría</summary><div class="r8-empty-row">Presupuesto pendiente de revisión</div></details>'}
+ const values=result.totals||result.knownSubtotal;
+ const sections=[["Ingresos",["Ingreso"]],["Gastos, deudas y ahorro",["Gasto","Pago deuda"]]].map(([label,types])=>{
+  const rows=sortedCategories((data.categories||[]).filter(c=>types.includes(c.type)&&c.budgetable!==false)).map(c=>{
+   const amounts=values.filter(x=>x.categoryId===c.id&&x.minor!==0).map(x=>originalMoney(x.minor/100,x.currency));
+   return amounts.length?'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(amounts.join(" + "))+'</strong></div>':"";
+  }).filter(Boolean);
+  return '<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+(rows.join("")||'<div class="r8-empty-row">Sin asignaciones</div>')+'</div>';
+ }).join("");
+ const status=result.coverage==="complete"?"":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
+ return '<details class="r8-unused" data-v15-month-totals="'+safe(month)+'"><summary>Totales por categoría</summary>'+status+sections+'</details>';
+}
+function oneV15WeekEvents(p){
+ const key=periodKey(p),categories=budgetCategories(["Ingreso","Gasto","Pago deuda"],p),events=[];
+ // Use the exact legacy period assignment and category/split calculation.
+ for(const m of periodMovements(p))for(const c of categories){
+  if(m.type!==c.type)continue;
+  const amountCRC=movementCategoryAmountCRC(m,c);
+  if(amountCRC)events.push({date:m.date,categoryId:c.id,type:c.type,amountCRC});
+ }
+ // Same linked contribution rule as oneBudgetSavingsActual; never add a second movement.
+ for(const t of data.reserveMovements||[]){
+  if(t.type!=="Aporte"||periodKey(periodForDate(t.date)||{})!==key)continue;
+  const c=categories.find(c=>c.type!=="Ingreso"&&c.id===oneContributionCategory(t));
+  if(c){const amountCRC=reserveTxnHistoricalCRC(t,"pay");if(amountCRC)events.push({date:t.date,categoryId:c.id,type:c.type,amountCRC});}
+ }
+ return events;
+}
+function oneV15WeekDetail(p){
+ const key=periodKey(p);let breakdown;
+ try{breakdown=oneV15QueryCore.weeklyBreakdown(p.date,periodEndDate(p),oneV15WeekEvents(p))}
+ catch{return '<div class="r8-empty-row">Desglose pendiente de revisión</div>'}
+ const renderEvents=events=>{
+  const grouped=new Map();
+  for(const e of events){const id=e.categoryId;grouped.set(id,(grouped.get(id)||0)+e.amountCRC);}
+  return sortedCategories((data.categories||[]).filter(c=>grouped.has(c.id))).map(c=>'<div class="r8-budget-row"><span class="r8-budget-row-label"><span>'+safe(c.name)+'</span></span><strong>'+safe(money(grouped.get(c.id)))+'</strong></div>').join("")||'<div class="r8-empty-row">Sin registros</div>';
+ };
+ const sections=breakdown.weeks.map(w=>{
+  const label=dateLabel(w.start)+" – "+dateLabel(w.end);
+  const income=w.events.filter(e=>e.type==="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
+  const out=w.events.filter(e=>e.type!=="Ingreso").reduce((s,e)=>s+e.amountCRC,0);
+  return '<details class="r8-unused" data-v15-week-start="'+safe(w.start)+'" data-v15-week-end="'+safe(w.end)+'"><summary>'+safe(label)+'</summary><div class="r8-section"><div class="r8-section-heading"><span>Ingresos registrados</span><strong>'+safe(money(income))+'</strong></div><div class="r8-section-heading"><span>Egresos registrados</span><strong>'+safe(money(out))+'</strong></div>'+renderEvents(w.events)+'</div></details>';
+ }).join("");
+ const outside=breakdown.outside.length?'<details class="r8-unused" data-v15-week-outside><summary>Registros fuera de fecha asignados a esta quincena</summary>'+renderEvents(breakdown.outside)+'</details>':"";
+ return '<details class="r8-unused" data-v15-week-detail="'+safe(key)+'"><summary>Semanas</summary><div class="r8-card-dates">Actividad registrada · presupuesto sin distribución semanal</div>'+sections+outside+'</details>';
+}
+
 function renderPlan(){
   const {level,value}=hierarchicalSelection("plan");
   if(["week","custom"].includes(level)){oneV15RenderDatePlan(level,value);return}
@@ -313,6 +364,7 @@ function renderPlan(){
           <div class="r8-card-closing ${tone}">${money(r.ending)}</div>
           ${r8BudgetSection("Ingreso","Ingresos",r)}
           ${r8BudgetSection(["Gasto","Pago deuda"],"Gastos, deudas y ahorro",r)}
+          ${oneV15WeekDetail(r)}
         </div>
         <div class="r8-card-footer">
           <button type="button" data-r8-add-category="${key}" title="Crear una categoría presupuestable">+ Agregar categoría</button>
@@ -340,7 +392,7 @@ function renderPlan(){
           <button class="r8-month-toggle plan-month-toggle" type="button" data-toggle-plan-month="${month}" aria-expanded="true">Ocultar detalle</button>
         </div>
       </div>
-      <div class="plan-month-body"><div class="r8-fortnight-grid">${cards}</div></div>
+      <div class="plan-month-body">${level==="fortnight"?"":oneV15MonthCategoryTotals(month)}<div class="r8-fortnight-grid">${cards}</div></div>
     </section>`;
   }).join(""):`<div class="r8-plan-empty">Todavía no hay quincenas configuradas para este período.</div>`;
   const firstV8Open=!uiState.r8BudgetInitialized;
