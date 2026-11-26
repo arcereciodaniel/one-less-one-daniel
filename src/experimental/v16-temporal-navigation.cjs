@@ -30,7 +30,7 @@ const oneV16Temporal=(()=>{
   if(![-1,1].includes(step))throw Error("Dirección inválida");
   const rs=partitions(s.month,s.level);
   if(s.scope==="single"&&rs.length>1){const i=rs.findIndex(r=>contains(r,s.anchor)),target=rs[i+step];if(target)return {...s,anchor:target.start};const month=monthShift(s.month,step),next=partitions(month,s.level);return {...s,month,anchor:(step<0?next.at(-1):next[0]).start}}
-  const span=s.scope==="all"||["week","fortnight","month"].includes(s.level)?1:{quarter:3,half:6,year:12}[s.level];return changeMonth(s,monthShift(s.month,step*span));
+  const span=["week","fortnight","month"].includes(s.level)?1:{quarter:3,half:6,year:12}[s.level];return changeMonth(s,monthShift(s.month,step*span));
  }
  function project(ledger,range){
   const cats=new Map(ledger.categories.map(c=>[c.id,c])),rows=new Map(),pending=[];
