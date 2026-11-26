@@ -47,7 +47,7 @@ jobs:
           node --test tests/lab-consolidation.test.cjs tests/v10-3-safety.test.cjs
           node --test mobile-pilot/tests/*.test.mjs
       - name: Probar períodos flexibles V13.0
-        run: node --test tests/v13-0-flexible-periods.test.cjs
+        run: node --test tests/v13-0-flexible-periods.test.cjs tests/v13-1-flexible-budgeting.test.cjs
       - name: Construir el sitio publico sin codigo interno
         run: |
           mkdir -p _site/lab _site/mobile-pilot/public
