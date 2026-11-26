@@ -62,6 +62,7 @@ function nativeFeed(range){const rows=O.movements(data,range);return '<div class
  rep('<h2>Flujo fechado parcial</h2>','<h2>Escenario de liquidez parcial</h2>');
  rep('(scenario.netMinor===null?"—":f(scenario.netMinor,"CRC"))','(liquidity===null?"—":f(liquidity.netMinor,"CRC"))');
  rep('<span>Variación incluida · desde hoy</span>','<span>Variación incluida · desde hoy</span>');
+ rep('<small class="muted">Escenario parcial: cuotas nativas hasta 90 días, sin presupuesto de deuda adicional, proyectos ni cobros pendientes.</small>','<div class="demo-alloc"><span>Saldo del escenario</span><strong>\'+(liquidity===null?"—":f(liquidity.balance,"CRC"))+\'</strong></div><small class="muted">Escenario parcial: cuotas nativas hasta 90 días, sin presupuesto de deuda adicional, proyectos ni cobros pendientes.</small>');
  rep('Compromisos separados del presupuesto.','Compromisos separados del presupuesto; no se suman automáticamente.');
  rep('#v17NativeHost{display:none!important}', '#v17NativeHost{display:none!important}.olo-demo .demo-native-actions{display:flex;justify-content:flex-end;gap:6px;margin:0 0 12px}.olo-demo .demo-native-actions+ .demo-alloc{margin-top:4px}.olo-demo dialog:not([id^="rc-"]){max-width:calc(100vw - 24px)}');
  assert(!h.includes("rastro_lab_v17_rc1_preview_"));return h;
