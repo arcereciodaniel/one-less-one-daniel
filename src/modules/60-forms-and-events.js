@@ -457,6 +457,7 @@ function bind(){
     }
     if(e.target.dataset.plan){
       const [key,field]=e.target.dataset.plan.split("|"),p=periodByKey(key);
+      if(p&&field==="date"&&oneV15HasFlexiblePeriods()){e.target.value=p.date;return alert("No se modifican fechas de períodos cuando existe un calendario flexible.")}
       if(p){p[field]=field==="date"?e.target.value:num(e.target.value);const meta=deriveBudgetMeta(p);p.budgetMonth=meta.budgetMonth;p.fortnight=meta.fortnight;save();syncQuarterSelectors();renderPlan()}
     }
     if(e.target.dataset.planCurrency){
@@ -642,12 +643,14 @@ function bind(){
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La ampliación del calendario flexible todavía no está disponible.");
     const q=prompt("Nombre del trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido. Usa AAAA-T1, AAAA-T2, AAAA-T3 o AAAA-T4.");
     data.periods.push(...rows);syncIncomeProjectionsForData(data);save();syncQuarterSelectors();document.getElementById("planLevel").value="quarter";syncHierarchicalFilter("plan",false);document.getElementById("planQuarter").value=q;renderPlan()
   });
   document.getElementById("duplicateQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La duplicación entre calendarios requiere revisión.");
     const source=selectionQuarter("plan"),q=prompt("Nombre del nuevo trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const src=getQuarterPeriods(source),rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido.");

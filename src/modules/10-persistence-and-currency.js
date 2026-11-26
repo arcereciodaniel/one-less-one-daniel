@@ -649,12 +649,18 @@ function monthLabel(key){
   const [year,month]=key.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(year,month-1,1)));
 }
-function fortnightLabel(p){return `${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
+function oneV15PeriodCaption(p){
+ if(!oneV15IsFlexiblePeriod(p))return p.fortnight===1?"1.ª quincena":"2.ª quincena";
+ return {weekly:"Semana",biweekly:"Período de 14 días",semimonthly:"Quincena calendario",monthly:"Período mensual"}[p.frequency]||"Período";
+}
+function oneV15PeriodOption(p){return oneV15IsFlexiblePeriod(p)?periodKey(p):String(p.fortnight)}
+function oneV15HasFlexiblePeriods(){return data.periods.some(oneV15IsFlexiblePeriod)}
+function fortnightLabel(p){return oneV15IsFlexiblePeriod(p)?oneV15PeriodCaption(p)+" · "+dateLabel(p.date)+" – "+dateLabel(p.endDate):`${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
 function filterOptions(level){
   if(level==="fortnight"){
     return allProjectedRows().map(p=>({
       value:periodKey(p),
-      label:`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
+      label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
     }));
   }
   if(level==="month"){
@@ -868,7 +874,7 @@ function currentFinancialContext(){
   const calendarMonth=today.slice(0,7);
   const financialMonth=active?.budgetMonth||nearestValue(availableBudgetMonths(),calendarMonth);
   const financialQuarter=budgetQuarterFromMonth(financialMonth||calendarMonth);
-  return {today,active,financialMonth,financialQuarter,fortnight:String(active?.fortnight||1)};
+  return {today,active,financialMonth,financialQuarter,fortnight:active?oneV15PeriodOption(active):"1"};
 }
 function currentFilterDefaults(level){
   const ctx=currentFinancialContext();
@@ -886,10 +892,14 @@ function syncHierarchicalFilter(prefix,resetCurrent=false){
   if(qEl)fillSelect(qEl,quarters,qCurrent);
   if(mEl)fillObjectSelect(mEl,months.map(m=>({value:m,label:monthLabel(m)})),mCurrent);
   if(fEl){
-    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).map(p=>String(p.fortnight));
-    const desired=!resetCurrent&&available.includes(fEl.value)?fEl.value:(defaults.fortnight||available[0]||"1");
-    fillObjectSelect(fEl,[{value:"1",label:"Quincena 1"},{value:"2",label:"Quincena 2"}].filter(x=>available.includes(x.value)),desired);
+    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({value:oneV15PeriodOption(p),label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):"Quincena "+p.fortnight}));
+    const values=available.map(x=>x.value);
+    const desired=!resetCurrent&&values.includes(fEl.value)?fEl.value:values.includes(defaults.fortnight)?defaults.fortnight:values[0]||"1";
+    fillObjectSelect(fEl,available,desired);
   }
+  const generic=oneV15HasFlexiblePeriods();
+  const singleOption=[...levelEl.options].find(o=>o.value==="fortnight");
+  if(singleOption)singleOption.textContent=generic?"Período":"Quincena";
   const dateMode=prefix==="plan"&&["week","custom"].includes(level);
   if(qWrap)qWrap.hidden=level!=="quarter";
   if(mWrap)mWrap.hidden=level==="quarter"||dateMode;
@@ -902,9 +912,9 @@ function hierarchicalSelection(prefix){
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
   if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
-  const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
-  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
-  return {level,value:p?periodKey(p):"",month,fortnight};
+  const option=document.getElementById(prefix+"Fortnight")?.value||"1";
+  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&oneV15PeriodOption(r)===option);
+  return {level,value:p?periodKey(p):"",month,fortnight:p?.fortnight||0};
 }
 function selectionQuarter(prefix){
   const s=hierarchicalSelection(prefix);if(s.level==="quarter")return s.value;

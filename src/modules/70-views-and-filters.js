@@ -463,7 +463,7 @@ function m2SyncMovementPeriod(reset=false){
   const select=document.getElementById("movementPeriod");
   if(value&&Array.from(select.options).some(o=>o.value===value))select.value=value;
   const fortnight=document.getElementById("movementFortnight");
-  if(fortnight)Array.from(fortnight.options).forEach(o=>o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena");
+  if(fortnight)Array.from(fortnight.options).forEach(o=>{if(o.value==="1"||o.value==="2")o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena"});
   document.querySelectorAll("[data-one-move-level]").forEach(b=>{
     const active=b.dataset.oneMoveLevel===level;
     b.classList.toggle("active",active);

@@ -248,7 +248,17 @@ function oneV15RenderDatePlan(level,r){
 // V15.4: native, collapsed breakdowns. No writes to the financial model.
 function oneV15MonthCategoryTotals(month){
  let result;
- try{result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings))}
+ try{
+  const grouped=data.periods.filter(p=>p.budgetMonth===month);
+  if(grouped.some(oneV15IsFlexiblePeriod)){
+   const sums=new Map();
+   for(const p of grouped){
+    const exact=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"period",key:periodKey(p)},x=>periodEndDate(x,data.periods,data.settings));
+    for(const a of exact.totals||[]){const k=JSON.stringify([a.categoryId,a.currency]),minor=(sums.get(k)?.minor||0)+a.minor;if(!Number.isSafeInteger(minor))throw Error("Monto fuera de rango");sums.set(k,{...a,minor})}
+   }
+   result={coverage:"grouped",knownSubtotal:[...sums.values()]};
+  }else result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings));
+ }
  catch{return '<details class="r8-unused"><summary>Totales por categoría</summary><div class="r8-empty-row">Presupuesto pendiente de revisión</div></details>'}
  const values=result.totals||result.knownSubtotal;
  const sections=[["Ingresos",["Ingreso"]],["Gastos, deudas y ahorro",["Gasto","Pago deuda"]]].map(([label,types])=>{
@@ -258,7 +268,7 @@ function oneV15MonthCategoryTotals(month){
   }).filter(Boolean);
   return '<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+(rows.join("")||'<div class="r8-empty-row">Sin asignaciones</div>')+'</div>';
  }).join("");
- const status=result.coverage==="complete"?"":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
+ const status=result.coverage==="complete"?"":result.coverage==="grouped"?"<div class=\"r8-card-dates\">Períodos agrupados por mes de referencia</div>":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
  return '<details class="r8-unused" data-v15-month-totals="'+safe(month)+'"><summary>Totales por categoría</summary>'+status+sections+'</details>';
 }
 function oneV15WeekEvents(p){
@@ -456,7 +466,7 @@ function renderPlan(){
   const finalClosing=rows.at(-1)?.ending??firstOpening;
   const oldRows=staticRows.filter(r=>oneV15PlanMatches(r,level,value));
   const staticClosing=oldRows.at(-1)?.ending??firstOpening;
-  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?`${monthLabel(rows[0].budgetMonth)} · ${rows[0].fortnight===1?"1.ª":"2.ª"} quincena`:selectedLabel(level,value);
+  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?fortnightLabel(rows[0]):selectedLabel(level,value);
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
   document.getElementById("planTitle").textContent=title;
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
@@ -480,7 +490,7 @@ function renderPlan(){
     `<div class="summary-box"><div class="summary-label">${label}</div><div class="summary-value ${tone}">${amount}</div></div>`
   ).join("");
   document.getElementById("planMonths").innerHTML=months.length?months.map((month)=>{
-    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>num(a.fortnight)-num(b.fortnight));
+    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>a.date.localeCompare(b.date));
     const monthIncome=monthRows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
     const monthExpenses=monthRows.reduce((sum,r)=>sum+num(r.expenses),0);
     const flow=monthIncome-monthExpenses;
@@ -503,13 +513,13 @@ function renderPlan(){
       ).join("");
       return `<article class="r8-fortnight-card ${current?"current":""}">
         <div class="r8-card-main">
-          <div class="r8-fortnight-heading"><h3>${r.fortnight===1?"1.ª quincena":"2.ª quincena"}</h3><span class="r8-chip${statusClass}">${status}</span></div>
-          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneShiftDate(end,1))}</div>
+          <div class="r8-fortnight-heading"><h3>${safe(oneV15PeriodCaption(r))}</h3><span class="r8-chip${statusClass}">${status}</span></div>
+          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneV15IsFlexiblePeriod(r)?end:oneShiftDate(end,1))}</div>
           <div class="r8-card-closing-label">Cierre proyectado</div>
           <div class="r8-card-closing ${tone}">${money(r.ending)}</div>
           ${r8BudgetSection("Ingreso","Ingresos",r)}
           ${r8BudgetSection(["Gasto","Pago deuda"],"Gastos, deudas y ahorro",r)}
-          ${oneV15WeekDetail(r)}
+          ${oneV15IsFlexiblePeriod(r)&&r.frequency==="weekly"?"":oneV15WeekDetail(r)}
         </div>
         <div class="r8-card-footer">
           <button type="button" data-r8-add-category="${key}" title="Crear una categoría presupuestable">+ Agregar categoría</button>
@@ -517,7 +527,7 @@ function renderPlan(){
         </div>
         <div class="r8-card-details" data-r8-technical="${key}" ${open?"":"hidden"}>
           <div class="r8-detail-grid">
-            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}"></div>
+            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}" ${oneV15IsFlexiblePeriod(r)?"disabled":""}></div>
             <div class="r8-detail-item"><label>Saldo base utilizado</label>${openingEdit}</div>
             <div class="r8-detail-item"><label>Ingresos presupuestados</label><strong>${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</strong></div>
             <div class="r8-detail-item"><label>Disponible antes de compromisos</label><strong>${money(r.available)}</strong></div>
@@ -598,7 +608,7 @@ function initR8(){
       if(p){
         document.getElementById("planMonth").value=p.budgetMonth;
         syncHierarchicalFilter("plan");
-        document.getElementById("planFortnight").value=String(p.fortnight);
+        document.getElementById("planFortnight").value=oneV15PeriodOption(p);
       }
     }
     renderPlan();
@@ -656,7 +666,7 @@ function renderMovements(){
   const rows=selectedMovements(level,value).filter(m=>!type||m.type===type).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("movementCount").textContent=`${rows.length} movimientos`;
   document.getElementById("movementTable").innerHTML=`<thead><tr><th>Fecha</th><th>Mes presupuestario</th><th>Quincena</th><th>Tipo</th><th>Categoría</th><th>Deuda</th><th>Cuenta</th><th>Descripción</th><th>Monto</th><th></th></tr></thead><tbody>${
-    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
+    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(oneV15IsFlexiblePeriod(p)?safe(oneV15PeriodCaption(p)):p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
   }</tbody>`;
 }
 function renderDebts(){

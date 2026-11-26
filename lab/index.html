@@ -4549,12 +4549,18 @@ function monthLabel(key){
   const [year,month]=key.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(Date.UTC(year,month-1,1)));
 }
-function fortnightLabel(p){return `${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
+function oneV15PeriodCaption(p){
+ if(!oneV15IsFlexiblePeriod(p))return p.fortnight===1?"1.ª quincena":"2.ª quincena";
+ return {weekly:"Semana",biweekly:"Período de 14 días",semimonthly:"Quincena calendario",monthly:"Período mensual"}[p.frequency]||"Período";
+}
+function oneV15PeriodOption(p){return oneV15IsFlexiblePeriod(p)?periodKey(p):String(p.fortnight)}
+function oneV15HasFlexiblePeriods(){return data.periods.some(oneV15IsFlexiblePeriod)}
+function fortnightLabel(p){return oneV15IsFlexiblePeriod(p)?oneV15PeriodCaption(p)+" · "+dateLabel(p.date)+" – "+dateLabel(p.endDate):`${p.fortnight===1?"1.ª":"2.ª"} quincena de ${monthLabel(p.budgetMonth)}`}
 function filterOptions(level){
   if(level==="fortnight"){
     return allProjectedRows().map(p=>({
       value:periodKey(p),
-      label:`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
+      label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):`${fortnightLabel(p)} · ingreso ${dateLabel(p.date)}`
     }));
   }
   if(level==="month"){
@@ -4768,7 +4774,7 @@ function currentFinancialContext(){
   const calendarMonth=today.slice(0,7);
   const financialMonth=active?.budgetMonth||nearestValue(availableBudgetMonths(),calendarMonth);
   const financialQuarter=budgetQuarterFromMonth(financialMonth||calendarMonth);
-  return {today,active,financialMonth,financialQuarter,fortnight:String(active?.fortnight||1)};
+  return {today,active,financialMonth,financialQuarter,fortnight:active?oneV15PeriodOption(active):"1"};
 }
 function currentFilterDefaults(level){
   const ctx=currentFinancialContext();
@@ -4786,10 +4792,14 @@ function syncHierarchicalFilter(prefix,resetCurrent=false){
   if(qEl)fillSelect(qEl,quarters,qCurrent);
   if(mEl)fillObjectSelect(mEl,months.map(m=>({value:m,label:monthLabel(m)})),mCurrent);
   if(fEl){
-    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).map(p=>String(p.fortnight));
-    const desired=!resetCurrent&&available.includes(fEl.value)?fEl.value:(defaults.fortnight||available[0]||"1");
-    fillObjectSelect(fEl,[{value:"1",label:"Quincena 1"},{value:"2",label:"Quincena 2"}].filter(x=>available.includes(x.value)),desired);
+    const available=data.periods.filter(p=>(p.budgetMonth||deriveBudgetMeta(p).budgetMonth)===(mEl?.value||mCurrent)).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>({value:oneV15PeriodOption(p),label:oneV15IsFlexiblePeriod(p)?fortnightLabel(p):"Quincena "+p.fortnight}));
+    const values=available.map(x=>x.value);
+    const desired=!resetCurrent&&values.includes(fEl.value)?fEl.value:values.includes(defaults.fortnight)?defaults.fortnight:values[0]||"1";
+    fillObjectSelect(fEl,available,desired);
   }
+  const generic=oneV15HasFlexiblePeriods();
+  const singleOption=[...levelEl.options].find(o=>o.value==="fortnight");
+  if(singleOption)singleOption.textContent=generic?"Período":"Quincena";
   const dateMode=prefix==="plan"&&["week","custom"].includes(level);
   if(qWrap)qWrap.hidden=level!=="quarter";
   if(mWrap)mWrap.hidden=level==="quarter"||dateMode;
@@ -4802,9 +4812,9 @@ function hierarchicalSelection(prefix){
   const month=document.getElementById(prefix+"Month")?.value||"";
   if(level==="month")return {level,value:month};
   if(prefix==="plan"&&(level==="half"||level==="year"))return {level,value:oneV15FinancialGroup(month,level),month};
-  const fortnight=Number(document.getElementById(prefix+"Fortnight")?.value||1);
-  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&Number(r.fortnight)===fortnight);
-  return {level,value:p?periodKey(p):"",month,fortnight};
+  const option=document.getElementById(prefix+"Fortnight")?.value||"1";
+  const p=data.periods.find(r=>(r.budgetMonth||deriveBudgetMeta(r).budgetMonth)===month&&oneV15PeriodOption(r)===option);
+  return {level,value:p?periodKey(p):"",month,fortnight:p?.fortnight||0};
 }
 function selectionQuarter(prefix){
   const s=hierarchicalSelection(prefix);if(s.level==="quarter")return s.value;
@@ -5085,7 +5095,17 @@ function oneV15RenderDatePlan(level,r){
 // V15.4: native, collapsed breakdowns. No writes to the financial model.
 function oneV15MonthCategoryTotals(month){
  let result;
- try{result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings))}
+ try{
+  const grouped=data.periods.filter(p=>p.budgetMonth===month);
+  if(grouped.some(oneV15IsFlexiblePeriod)){
+   const sums=new Map();
+   for(const p of grouped){
+    const exact=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"period",key:periodKey(p)},x=>periodEndDate(x,data.periods,data.settings));
+    for(const a of exact.totals||[]){const k=JSON.stringify([a.categoryId,a.currency]),minor=(sums.get(k)?.minor||0)+a.minor;if(!Number.isSafeInteger(minor))throw Error("Monto fuera de rango");sums.set(k,{...a,minor})}
+   }
+   result={coverage:"grouped",knownSubtotal:[...sums.values()]};
+  }else result=oneV15QueryCore.queryBudget(data,{basis:"financial",mode:"month",month},p=>periodEndDate(p,data.periods,data.settings));
+ }
  catch{return '<details class="r8-unused"><summary>Totales por categoría</summary><div class="r8-empty-row">Presupuesto pendiente de revisión</div></details>'}
  const values=result.totals||result.knownSubtotal;
  const sections=[["Ingresos",["Ingreso"]],["Gastos, deudas y ahorro",["Gasto","Pago deuda"]]].map(([label,types])=>{
@@ -5095,7 +5115,7 @@ function oneV15MonthCategoryTotals(month){
   }).filter(Boolean);
   return '<div class="r8-section"><div class="r8-section-heading"><span>'+label+'</span></div>'+(rows.join("")||'<div class="r8-empty-row">Sin asignaciones</div>')+'</div>';
  }).join("");
- const status=result.coverage==="complete"?"":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
+ const status=result.coverage==="complete"?"":result.coverage==="grouped"?"<div class=\"r8-card-dates\">Períodos agrupados por mes de referencia</div>":"<div class=\"r8-card-dates\">Subtotal disponible · mes incompleto</div>";
  return '<details class="r8-unused" data-v15-month-totals="'+safe(month)+'"><summary>Totales por categoría</summary>'+status+sections+'</details>';
 }
 function oneV15WeekEvents(p){
@@ -5293,7 +5313,7 @@ function renderPlan(){
   const finalClosing=rows.at(-1)?.ending??firstOpening;
   const oldRows=staticRows.filter(r=>oneV15PlanMatches(r,level,value));
   const staticClosing=oldRows.at(-1)?.ending??firstOpening;
-  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?`${monthLabel(rows[0].budgetMonth)} · ${rows[0].fortnight===1?"1.ª":"2.ª"} quincena`:selectedLabel(level,value);
+  const rawTitle=level==="month"?monthLabel(value):level==="fortnight"&&rows[0]?fortnightLabel(rows[0]):selectedLabel(level,value);
   const title=rawTitle?rawTitle[0].toUpperCase()+rawTitle.slice(1):"Presupuesto";
   document.getElementById("planTitle").textContent=title;
   document.getElementById("r8PlanEyebrow").textContent=`PLAN FINANCIERO · ${(rows[0]?.planningQuarter||"").replace("-"," ")}`;
@@ -5317,7 +5337,7 @@ function renderPlan(){
     `<div class="summary-box"><div class="summary-label">${label}</div><div class="summary-value ${tone}">${amount}</div></div>`
   ).join("");
   document.getElementById("planMonths").innerHTML=months.length?months.map((month)=>{
-    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>num(a.fortnight)-num(b.fortnight));
+    const monthRows=rows.filter(r=>r.budgetMonth===month).sort((a,b)=>a.date.localeCompare(b.date));
     const monthIncome=monthRows.reduce((sum,r)=>sum+num(r.incomeCRC)+num(r.otherIncomeCRC),0);
     const monthExpenses=monthRows.reduce((sum,r)=>sum+num(r.expenses),0);
     const flow=monthIncome-monthExpenses;
@@ -5340,13 +5360,13 @@ function renderPlan(){
       ).join("");
       return `<article class="r8-fortnight-card ${current?"current":""}">
         <div class="r8-card-main">
-          <div class="r8-fortnight-heading"><h3>${r.fortnight===1?"1.ª quincena":"2.ª quincena"}</h3><span class="r8-chip${statusClass}">${status}</span></div>
-          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneShiftDate(end,1))}</div>
+          <div class="r8-fortnight-heading"><h3>${safe(oneV15PeriodCaption(r))}</h3><span class="r8-chip${statusClass}">${status}</span></div>
+          <div class="r8-card-dates">${dateLabel(r.date)} → ${dateLabel(oneV15IsFlexiblePeriod(r)?end:oneShiftDate(end,1))}</div>
           <div class="r8-card-closing-label">Cierre proyectado</div>
           <div class="r8-card-closing ${tone}">${money(r.ending)}</div>
           ${r8BudgetSection("Ingreso","Ingresos",r)}
           ${r8BudgetSection(["Gasto","Pago deuda"],"Gastos, deudas y ahorro",r)}
-          ${oneV15WeekDetail(r)}
+          ${oneV15IsFlexiblePeriod(r)&&r.frequency==="weekly"?"":oneV15WeekDetail(r)}
         </div>
         <div class="r8-card-footer">
           <button type="button" data-r8-add-category="${key}" title="Crear una categoría presupuestable">+ Agregar categoría</button>
@@ -5354,7 +5374,7 @@ function renderPlan(){
         </div>
         <div class="r8-card-details" data-r8-technical="${key}" ${open?"":"hidden"}>
           <div class="r8-detail-grid">
-            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}"></div>
+            <div class="r8-detail-item"><label>Fecha de referencia</label><input class="editable" type="date" data-plan="${key}|date" value="${r.date}" ${oneV15IsFlexiblePeriod(r)?"disabled":""}></div>
             <div class="r8-detail-item"><label>Saldo base utilizado</label>${openingEdit}</div>
             <div class="r8-detail-item"><label>Ingresos presupuestados</label><strong>${money(num(r.incomeCRC)+num(r.otherIncomeCRC))}</strong></div>
             <div class="r8-detail-item"><label>Disponible antes de compromisos</label><strong>${money(r.available)}</strong></div>
@@ -5435,7 +5455,7 @@ function initR8(){
       if(p){
         document.getElementById("planMonth").value=p.budgetMonth;
         syncHierarchicalFilter("plan");
-        document.getElementById("planFortnight").value=String(p.fortnight);
+        document.getElementById("planFortnight").value=oneV15PeriodOption(p);
       }
     }
     renderPlan();
@@ -5493,7 +5513,7 @@ function renderMovements(){
   const rows=selectedMovements(level,value).filter(m=>!type||m.type===type).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("movementCount").textContent=`${rows.length} movimientos`;
   document.getElementById("movementTable").innerHTML=`<thead><tr><th>Fecha</th><th>Mes presupuestario</th><th>Quincena</th><th>Tipo</th><th>Categoría</th><th>Deuda</th><th>Cuenta</th><th>Descripción</th><th>Monto</th><th></th></tr></thead><tbody>${
-    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
+    rows.length?rows.map(m=>{const p=movementPeriod(m);return `<tr><td>${dateLabel(m.date)}</td><td>${p?monthLabel(p.budgetMonth):""}</td><td class="center">${p?(oneV15IsFlexiblePeriod(p)?safe(oneV15PeriodCaption(p)):p.fortnight===1?"1.ª":"2.ª"):""}</td><td><span class="pill">${m.type}</span></td><td>${safe(movementCategoryName(m))}</td><td>${safe(movementDebtName(m))}</td><td>${safe(m.account||"")}</td><td>${safe(m.description||"")}</td><td class="num">${money(movementAmountCRC(m))}${originalHint(m.amount,m.currency)}</td><td><button class="btn danger small" data-delete-movement="${safe(m.id)}">Eliminar</button></td></tr>`}).join(""):`<tr><td colspan="10" class="empty">Aún no hay movimientos en este periodo.</td></tr>`
   }</tbody>`;
 }
 function renderDebts(){
@@ -8953,6 +8973,7 @@ function bind(){
     }
     if(e.target.dataset.plan){
       const [key,field]=e.target.dataset.plan.split("|"),p=periodByKey(key);
+      if(p&&field==="date"&&oneV15HasFlexiblePeriods()){e.target.value=p.date;return alert("No se modifican fechas de períodos cuando existe un calendario flexible.")}
       if(p){p[field]=field==="date"?e.target.value:num(e.target.value);const meta=deriveBudgetMeta(p);p.budgetMonth=meta.budgetMonth;p.fortnight=meta.fortnight;save();syncQuarterSelectors();renderPlan()}
     }
     if(e.target.dataset.planCurrency){
@@ -9138,12 +9159,14 @@ function bind(){
   });
 
   document.getElementById("newQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La ampliación del calendario flexible todavía no está disponible.");
     const q=prompt("Nombre del trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido. Usa AAAA-T1, AAAA-T2, AAAA-T3 o AAAA-T4.");
     data.periods.push(...rows);syncIncomeProjectionsForData(data);save();syncQuarterSelectors();document.getElementById("planLevel").value="quarter";syncHierarchicalFilter("plan",false);document.getElementById("planQuarter").value=q;renderPlan()
   });
   document.getElementById("duplicateQuarterBtn").addEventListener("click",()=>{
+    if(oneV15HasFlexiblePeriods())return alert("La duplicación entre calendarios requiere revisión.");
     const source=selectionQuarter("plan"),q=prompt("Nombre del nuevo trimestre, por ejemplo 2027-T2");
     if(!q||planningQuarters().includes(q))return;
     const src=getQuarterPeriods(source),rows=makeQuarter(q);if(!rows.length)return alert("Formato inválido.");
@@ -9691,7 +9714,7 @@ function m2SyncMovementPeriod(reset=false){
   const select=document.getElementById("movementPeriod");
   if(value&&Array.from(select.options).some(o=>o.value===value))select.value=value;
   const fortnight=document.getElementById("movementFortnight");
-  if(fortnight)Array.from(fortnight.options).forEach(o=>o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena");
+  if(fortnight)Array.from(fortnight.options).forEach(o=>{if(o.value==="1"||o.value==="2")o.textContent=o.value==="1"?"Primera quincena":"Segunda quincena"});
   document.querySelectorAll("[data-one-move-level]").forEach(b=>{
     const active=b.dataset.oneMoveLevel===level;
     b.classList.toggle("active",active);
@@ -10061,6 +10084,7 @@ function oneInitPaydayControls(){
     const a=Number(first.value),b=Number(second.value);
     if(!Number.isInteger(a)||!Number.isInteger(b)||a<1||a>27||b<=a||b>31)return alert("Ingresá dos días válidos; el segundo debe ser posterior al primero.");
     if(!confirm("¿Aplicar las fechas de salario desde el mes actual? Los movimientos, montos y meses anteriores no se eliminan."))return;
+    if(oneV15HasFlexiblePeriods())return alert("Revisá primero el calendario flexible; no se cambiarán las fechas existentes.");
     data.settings.payDays={first:a,second:b};oneUpdatePaydayPeriods(todayIso().slice(0,7));
     save();syncQuarterSelectors();m2SyncMovementPeriod();renderPlan();renderMovements();renderDashboard();sync();
   });
@@ -10204,7 +10228,7 @@ function initV7(){
       const period=periodByKey(next.value);if(!period)return;
       document.getElementById("movementMonth").value=period.budgetMonth;
       syncHierarchicalFilter("movement",false);
-      document.getElementById("movementFortnight").value=String(period.fortnight);
+      document.getElementById("movementFortnight").value=oneV15PeriodOption(period);
     }
     updateMovementPeriod();
   };
