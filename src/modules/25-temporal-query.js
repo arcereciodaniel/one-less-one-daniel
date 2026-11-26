@@ -120,7 +120,63 @@ function queryBudget(raw,scope,endFor){
  const resolvedCategoryIds=covered?[...new Set(knownSubtotal.map(x=>x.categoryId))].filter(cid=>!unresolved.has(cid)):[];
  return {...base,coverage:complete?"complete":"partial",knownSubtotal,totals:complete?knownSubtotal.map(x=>({...x})):null,resolvedCategoryIds,unresolvedCategoryIds:[...unresolved],weeklyCategoryIds:[...knownWeekly],allocationReview:review};
 }
-return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview};
+// V15.6a: a prospective calendar independent from income frequency and legacy periods.
+function planningCalendar(start,frequency,days=90){
+ if(!validDate(start)||!["weekly","biweekly","semimonthly","monthly"].includes(frequency)||!Number.isInteger(days)||days<1||days>366)throw Error("Invalid planning calendar");
+ const end=shiftDate(start,days-1),periods=[];
+ for(let cursor=start;cursor<=end;){
+  let next;
+  if(frequency==="weekly"||frequency==="biweekly")next=shiftDate(cursor,frequency==="weekly"?7:14);
+  else if(frequency==="semimonthly"&&Number(cursor.slice(8))<16)next=cursor.slice(0,7)+"-16";
+  else next=shiftMonth(cursor.slice(0,7),1)+"-01";
+  const naturalEnd=shiftDate(next,-1),last=naturalEnd>end?end:naturalEnd;
+  periods.push({start:cursor,end:last,truncated:last!==naturalEnd});
+  cursor=next;
+ }
+ return periods;
+}
+function projectedIncomeDates(config,start,end){
+ if(!validDate(start)||!validDate(end)||end<start||((Date.parse(end)-Date.parse(start))/86400000)>366)throw Error("Invalid income interval");
+ if(!config||!config.projectAutomatically||config.frequency==="irregular"||config.expectedAmount<=0)return [];
+ const amount=minor(config.expectedAmount),currency=config.expectedCurrency;
+ if(!["CRC","USD"].includes(currency))throw Error("Invalid income currency");
+ const out=[],add=date=>{if(validDate(date)&&date>=start&&date<=end)out.push({date,minor:amount,currency})};
+ const dayInMonth=(m,d)=>{
+  if(!Number.isInteger(d)||d<1||d>31)throw Error("Invalid income day");
+  const last=Number(shiftDate(shiftMonth(m,1)+"-01",-1).slice(8));
+  return m+"-"+String(Math.min(d,last)).padStart(2,"0");
+ };
+ if(["monthly","semimonthly"].includes(config.frequency)){
+  for(let m=start.slice(0,7);m<=end.slice(0,7);m=shiftMonth(m,1)){
+   if(config.frequency==="monthly")add(dayInMonth(m,config.monthlyDay));
+   else{if(config.day1===config.day2)throw Error("Duplicate income days");add(dayInMonth(m,config.day1));add(dayInMonth(m,config.day2))}
+  }
+ }else if(config.frequency==="weekly"||config.frequency==="biweekly"){
+  if(config.frequency==="weekly"&&(!Number.isInteger(config.weekday)||config.weekday<0||config.weekday>6))throw Error("Invalid weekday");
+  if(config.frequency==="biweekly"&&!validDate(config.biweeklyStart))throw Error("Missing biweekly anchor");
+  for(let d=start;d<=end;d=shiftDate(d,1)){
+   if(config.frequency==="weekly"?new Date(d+"T00:00:00Z").getUTCDay()===config.weekday:d>=config.biweeklyStart&&((Date.parse(d)-Date.parse(config.biweeklyStart))/86400000)%14===0)add(d);
+  }
+ }else if(config.frequency==="once"){if(!validDate(config.onceDate))throw Error("Missing income date");add(config.onceDate)}
+ else throw Error("Unknown income frequency");
+ return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function previewPlanningCalendar(raw,start,frequency,days=90){
+ const periods=planningCalendar(start,frequency,days).map(p=>({...p,incomes:[]}));
+ const warnings=[];
+ for(const c of raw.categories||[]){
+  if(c.type!=="Ingreso"||c.active===false||c.budgetable===false)continue;
+  try{
+   const occurrences=projectedIncomeDates(c.incomeConfig,start,periods.at(-1).end);
+   for(const event of occurrences){
+    const p=periods.find(x=>event.date>=x.start&&event.date<=x.end);
+    if(p)p.incomes.push({...event,categoryId:c.id});
+   }
+  }catch{warnings.push(c.id)}
+ }
+ return {periods,warnings};
+}
+return {auditLedger,queryBudget,calendarRange,weeklyBreakdown,allocationState,allocationPreview,planningCalendar,projectedIncomeDates,previewPlanningCalendar};
 
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV15QueryCore;

@@ -785,6 +785,16 @@
   <div class="one-module-footer"><button type="button" class="btn" id="closeModulesBtn">Listo</button></div>
 </dialog>
 
+<dialog id="v15CalendarDialog" class="one-budget-copy-dialog" aria-labelledby="v15CalendarTitle">
+ <form id="v15CalendarForm">
+  <div class="one-budget-copy-head"><h2 id="v15CalendarTitle">Calendario presupuestario</h2></div>
+  <label for="v15CalendarFrequency">Frecuencia de planificación</label><select id="v15CalendarFrequency"><option value="weekly">Semanal</option><option value="biweekly">Cada 2 semanas</option><option value="semimonthly">Quincenal calendario (1 y 16)</option><option value="monthly">Mensual</option></select>
+  <label for="v15CalendarStart">Desde</label><input type="date" id="v15CalendarStart" required>
+  <p class="muted">Propuesta de 90 días. Los ingresos programados conservan sus propias fechas. No modifica los presupuestos existentes.</p>
+  <div id="v15CalendarPreview" class="one-budget-copy-preview" aria-live="polite"></div>
+  <div class="one-budget-copy-actions"><button class="btn secondary" id="v15CalendarCancel" type="button">Cerrar</button><button class="btn" id="v15CalendarSave" type="submit">Guardar propuesta</button></div>
+ </form>
+</dialog>
 <dialog id="oneSettingsDialog" class="one-settings-dialog" aria-labelledby="oneSettingsTitle">
  <div class="dialog-body">
   <button type="button" class="dialog-close" aria-label="Cerrar">×</button>
@@ -798,6 +808,7 @@
   <div class="one-settings-group">
    <h3>Moneda y calendario</h3>
    <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
+   <button type="button" id="v15CalendarOpen" class="one-settings-action"><span><strong>Calendario presupuestario</strong><small>Planificación futura · propuesta</small></span><span aria-hidden="true">›</span></button>
    <div id="oneSettingsPaydayMount"></div>
   </div>
   <div class="one-settings-group">
