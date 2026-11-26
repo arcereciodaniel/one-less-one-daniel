@@ -589,7 +589,7 @@ function suggestDebtCategoryId(d){
   return (needle?rows.find(c=>needle.test(c.name)):null)?.id||rows[0].id;
 }
 function categoryUsageCount(c){return (data.movements||[]).filter(m=>movementMatchesCategory(m,c)).length}
-function categoryBudgetUsage(c){return (data.periods||[]).filter(p=>num(p.categoryBudgets?.[c.id])!==0).length+(Array.isArray(data.flexBudgets)?data.flexBudgets:[]).filter(p=>p.entries.some(e=>e.categoryId===c.id)).length}
+function categoryBudgetUsage(c){return (data.periods||[]).filter(p=>num(p.categoryBudgets?.[c.id])!==0).length+(Array.isArray(data.flexBudgets)?data.flexBudgets:[]).filter(p=>p.entries.some(e=>e.categoryId===c.id)).length+(data.livingBudgets||[]).filter(e=>e.categoryId===c.id).length}
 function renderCategories(){
   const status=document.getElementById("categoryStatusFilter")?.value||"active",type=document.getElementById("categoryTypeFilter")?.value||"";
   const all=sortedCategories(data.categories||[]),active=all.filter(categoryIsActive),archived=all.filter(c=>!categoryIsActive(c));

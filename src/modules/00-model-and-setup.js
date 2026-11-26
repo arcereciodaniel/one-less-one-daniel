@@ -313,6 +313,8 @@ function migrateData(raw){
   raw.periods=Array.isArray(raw.periods)?raw.periods:[];
   // Preserve native flexible allocations in the same local backup; older data has no such field.
   if(raw.flexBudgets===undefined)raw.flexBudgets=[];
+  oneLivingValidate(raw.livingBudgets);
+  if(raw.livingBudgets===undefined)raw.livingBudgets=[];
   raw.movements=Array.isArray(raw.movements)?raw.movements:[];
   raw.movementTemplates=Array.isArray(raw.movementTemplates)?raw.movementTemplates:[];
   raw.movementAudit=Array.isArray(raw.movementAudit)?raw.movementAudit:[];
@@ -572,6 +574,7 @@ function restoreValidate(raw){
       throw Error("La lista "+key+" no tiene el formato esperado.");
   }
   oneFlexValidateBudgets(raw.flexBudgets);
+  oneLivingValidate(raw.livingBudgets);
   if(raw.settings!==undefined&&!restoreIsRecord(raw.settings))
     throw Error("La configuración financiera no es válida.");
   if(raw.settings?.fxHistory!==undefined&&!Array.isArray(raw.settings.fxHistory))

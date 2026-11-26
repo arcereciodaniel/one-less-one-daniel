@@ -147,6 +147,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
  }
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
+ if((data.livingBudgets||[]).some(e=>e.date>asOf&&e.date<=until))warnings.push("Living Budget: esta proyección todavía no incorpora los ajustes V14.1. Consultá el presupuesto actualizado antes de decidir.");
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
  if(flexible&&sources.some(p=>p.native&&p.start<=until&&p.end>asOf))warnings.push("Los presupuestos flexibles prevalecen sobre los anteriores cuando se superponen. Los gastos se distribuyen como estimación y los ingresos se fechan con el calendario actual de cada categoría.");
