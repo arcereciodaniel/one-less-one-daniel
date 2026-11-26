@@ -204,3 +204,32 @@ test("V13.3.1: monetary totals round once, not each daily fraction",()=>{
  assert.equal(w.oneFutureMoney(265000.00000000006),265000);
  assert.equal(w.oneFutureMoney(-0.123456),-0.12);
 });
+
+test("V14.4: weekly replacement affects full source once and preserves confirmed movements",()=>{
+ const sample=seed();sample.livingBudgets=[];
+ const e=boot(sample),w=e.w;
+ const rows=w.oneLivingReplace([],"cat-exp",{start:"2026-11-21",end:"2026-11-27"},30000,"CRC");
+ sample.livingBudgets=Array.from(rows);
+ const a=boot(sample),before=a.serialized(),m=a.w.oneFutureForecast(AS_OF,30);
+ assert.equal(m.living,true);assert.equal(m.recurringIncome,200000);assert.equal(m.scheduledDebt,20000);assert.equal(m.budgetExpense,35000);assert.equal(m.balance,245000);
+ assert.equal(m.balance,a.w.oneFutureForecast(AS_OF,90).points[30].balance);assert.equal(a.serialized(),before);assert.deepEqual(a.errors,[]);
+});
+test("V14.4: forecast uses dated overrides in gaps and does not fabricate coverage",()=>{
+ const sample=seed();sample.settings.financialPeriods={enabled:true,mode:"month",day:1};
+ sample.flexBudgets=[{id:"n",mode:"month",start:"2026-11-01",end:"2026-11-30",entries:[{categoryId:"cat-exp",amount:20000,currency:"CRC"}]}];
+ const w=boot(sample).w;sample.livingBudgets=Array.from(w.oneLivingReplace([],"cat-exp",{start:"2026-12-01",end:"2026-12-07"},7000,"CRC"));
+ const a=boot(sample),m=a.w.oneFutureForecast(AS_OF,30);
+ assert.equal(m.budgetExpense,22000);assert.equal(m.daysWithoutBudget,13);
+ assert.equal(m.items.filter(x=>x.kind==="budget"&&x.date>="2026-12-01"&&x.date<="2026-12-07").reduce((s,x)=>s-x.amount,0),7000);
+ assert.equal(m.recurringIncome,200000);assert.deepEqual(a.errors,[]);
+});
+test("V14.5: restore round trip preserves original plans and dated overrides",()=>{
+ const sample=seed();const e=boot(sample),w=e.w;
+ sample.flexBudgets=[{id:"n",mode:"month",start:"2026-12-01",end:"2026-12-31",entries:[{categoryId:"cat-exp",amount:160000,currency:"CRC"}]}];
+ sample.livingBudgets=Array.from(w.oneLivingReplace([],"cat-exp",{start:"2026-12-21",end:"2026-12-27"},60000,"CRC"));
+ const restored=w.restorePrepare(sample);
+ assert.equal(JSON.stringify(restored.flexBudgets),JSON.stringify(sample.flexBudgets));
+ assert.equal(JSON.stringify(restored.livingBudgets),JSON.stringify(sample.livingBudgets));
+ assert.equal(restored.movements.length,sample.movements.length);
+ assert.throws(()=>w.restorePrepare({...sample,livingBudgets:[...sample.livingBudgets,sample.livingBudgets[0]]}));
+});

@@ -2812,10 +2812,10 @@ header .topbar>.one-utility-bar button:focus-visible{
    <button type="button" id="oneSettingsFx" class="one-settings-action"><span><strong>Tipo de cambio</strong><small id="oneSettingsFxDetail">Compra, venta e histórico CRC/USD</small></span><span aria-hidden="true">›</span></button>
    <div id="oneSettingsPaydayMount"></div>
   </div>
-  <div class="one-settings-group"><h3>Períodos financieros · Beta</h3>
+  <div class="one-settings-group"><h3>Calendario de consulta</h3>
 <form id="oneFlexSettingsForm" class="one-flex-settings">
-<label class="one-flex-check"><input id="oneFlexEnabled" type="checkbox"> Activar vistas flexibles de presupuesto y movimientos</label>
-<p class="muted">Las fechas de ingreso se configuran por categoría. Esta beta permite consultar rangos independientes sin redistribuir el plan quincenal existente.</p>
+<label class="one-flex-check"><input id="oneFlexEnabled" type="checkbox"> Abrir directamente la vista universal</label>
+<p class="muted">Los filtros universales están disponibles siempre. Elegí tu vista inicial y los cortes de consulta; no cambian las fechas de ingreso ni las asignaciones guardadas.</p>
 <div class="field"><label for="oneFlexMode">Vista predeterminada</label><select id="oneFlexMode"><option value="week">Semanal</option><option value="fortnight">Quincenal</option><option value="month">Mensual</option><option value="quarter">Trimestral</option></select></div>
 <div data-flex-fields="fortnight" class="one-flex-fields"><div class="field"><label for="oneFlexFirst">Primer corte</label><input type="number" id="oneFlexFirst" min="1" max="27" required></div><div class="field"><label for="oneFlexSecond">Segundo corte</label><input type="number" id="oneFlexSecond" min="2" max="31" required></div></div>
 <div data-flex-fields="week" class="field"><label for="oneFlexWeekday">Inicio de semana</label><select id="oneFlexWeekday"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
@@ -3468,6 +3468,7 @@ function migrateData(raw){
   raw.settings.payDays=onePayDays(raw.settings);
   raw.periods=Array.isArray(raw.periods)?raw.periods:[];
   // Preserve native flexible allocations in the same local backup; older data has no such field.
+  oneFlexValidateBudgets(raw.flexBudgets);
   if(raw.flexBudgets===undefined)raw.flexBudgets=[];
   oneLivingValidate(raw.livingBudgets);
   if(raw.livingBudgets===undefined)raw.livingBudgets=[];
@@ -3854,12 +3855,12 @@ function restoreValidate(raw){
 }
 function restoreDetailsHtml(raw,file){
  const safeFile=String(file||"respaldo.json").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
- const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0]];
+ const groups=[["Períodos",raw.periods.length],["Movimientos",raw.movements.length],["Deudas",raw.debts.length],["Categorías",raw.categories?.length||0],["Cobros",raw.sharedCharges?.length||0],["Proyectos",raw.projects?.length||0],["Conciliaciones",raw.reconciliations?.length||0],["Planes flexibles",raw.flexBudgets?.length||0],["Asignaciones Living",raw.livingBudgets?.length||0]];
  return '<p><strong>Archivo:</strong> '+safeFile+'</p><div class="one-restore-counts">'+groups.map(([n,v])=>'<div><span>'+n+'</span><strong>'+v+'</strong></div>').join("")+'</div>';
 }
 function restorePrepare(raw){
  const valid=restoreValidate(raw),migrated=migrateData(clone(valid));
- for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans"]){
+ for(const field of ["periods","movements","debts","reconciliations","reserves","reserveMovements","sharedCharges","sharedChargeGroups","receivableRecurring","projects","projectLinks","projectPlans","flexBudgets","livingBudgets"]){
   if(Array.isArray(valid[field])&&migrated[field].length!==valid[field].length)
     throw Error("La conversión no conservó todos los registros de "+field+".");
  }
@@ -5917,6 +5918,38 @@ function oneFutureIncomeAllocations(amount,dates){
 
 function oneFutureMoney(value){return Number(value.toFixed(2))}
 
+function oneFutureLivingSources(sources,overrides){
+ const gaps=[...new Set(overrides.map(e=>e.date).filter(date=>!sources.some(p=>p.start<=date&&p.end>=date)))].sort();
+ const synthetic=[];
+ for(const date of gaps){
+  const last=synthetic.at(-1);
+  if(last&&addDaysIso(last.end,1)===date&&last.start.slice(0,7)===date.slice(0,7))last.end=date;
+  else synthetic.push({start:date,end:date,synthetic:true});
+ }
+ return [...sources,...synthetic].sort((a,b)=>a.start.localeCompare(b.start));
+}
+
+function oneFutureWeighted(amount,dates,weights){
+ const cents=Math.round(Math.max(0,amount)*100),sum=weights.reduce((s,v)=>s+Math.max(0,v),0);
+ let cursor=0,previous=0;
+ return dates.map((date,i)=>{
+  cursor+=sum?Math.max(0,weights[i]):1;
+  const end=i===dates.length-1?cents:Math.round(cents*cursor/(sum||dates.length));
+  const amount=(end-previous)/100;previous=end;return {date,amount};
+ });
+}
+
+function oneFutureLivingDaily(source,c,overrides,dates){
+ const entry=source.native?.entries.find(e=>e.categoryId===c.id);
+ const raw=source.synthetic?0:source.native?num(entry?.amount):num(source.legacy?.categoryBudgets?.[c.id]);
+ const currency=normalizeCurrency(source.native?entry?.currency:source.legacy?.categoryBudgetCurrencies?.[c.id]);
+ const index=new Map(overrides.filter(e=>e.categoryId===c.id&&e.date>=source.start&&e.date<=source.end).map(e=>[e.date,e]));
+ return dates.map(date=>{
+  const e=index.get(date);
+  return e?currentToCRC(e.amount,e.currency,"pay"):currentToCRC(oneUniversalSlice(raw,source,{start:date,end:date}),currency,"pay");
+ });
+}
+
 function oneFutureForecast(asOf=todayIso(),days=90){
  if(!restoreValidDate(asOf)||!ONE_FUTURE_WINDOWS.includes(days))throw Error("Ventana de proyección inválida.");
  const until=addDaysIso(asOf,days),tomorrow=addDaysIso(asOf,1);
@@ -5945,8 +5978,22 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  // Una cuota del día 25 puede quedar fuera de una vista de 30 días, pero
  // dentro de la quincena iniciada: debe reducir el presupuesto de deuda
  // para que 30, 60 y 90 días coincidan en las fechas compartidas.
- const flexible=oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings)).enabled;
- const sources=oneFuturePlanSources(data.periods,data.flexBudgets,p=>periodEndDate(p),flexible);
+ const overrides=data.livingBudgets||[],living=overrides.length>0;
+ const flexible=oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings)).enabled||living||(data.flexBudgets||[]).length>0;
+ const originalSources=oneFuturePlanSources(data.periods,data.flexBudgets,p=>periodEndDate(p),flexible);
+ const sources=living?oneFutureLivingSources(originalSources,overrides):originalSources;
+ // Living income is scheduled independently of the spending calendar.
+ if(living){
+  for(const c of (data.categories||[]).filter(c=>c.type==="Ingreso"&&c.active!==false)){
+   const cfg=normalizeIncomeConfig(c.incomeConfig||{});
+   const occurrences=oneFlexIncomeDates(cfg,tomorrow,until),counts=new Map();
+   for(const date of occurrences)counts.set(date,(counts.get(date)||0)+1);
+   for(const [date,count] of counts){
+    const registered=futureMovements.filter(m=>m.date===date&&m.type==="Ingreso"&&!oneIsCobroReimbursement(m)&&movementMatchesCategory(m,c)).reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
+    add(date,Math.max(0,currentToCRC(cfg.expectedAmount*count,cfg.expectedCurrency,"receive")-registered),"income",c.name,"Ingreso programado · calendario propio");
+   }
+  }
+ }
  const coveringEnds=sources.filter(p=>p.start<=until).map(p=>p.end).filter(end=>end>=asOf).sort();
  const debtPlanningUntil=coveringEnds.at(-1)||until;
  const dueDates=[];
@@ -5980,10 +6027,18 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  for(const source of periods){
   const p=source.legacy,native=source.native,start=source.start,end=source.end,rangeStart=start>tomorrow?start:tomorrow;
   if(end<rangeStart||start>until)continue;
-  const categories=type=>native?(data.categories||[]).filter(c=>c.type===type&&native.entries.some(e=>e.categoryId===c.id)):budgetCategories(type,p);
-  const planned=(c,intent)=>{if(!native)return periodCategoryBudgetCRC(p,c.id,intent);const e=native.entries.find(x=>x.categoryId===c.id);return e?currentToCRC(e.amount,e.currency,intent):0};
+  const sourceOverrides=overrides.filter(e=>e.date>=start&&e.date<=end),overrideIds=new Set(sourceOverrides.map(e=>e.categoryId));
+  const hasLiving=sourceOverrides.length>0;
+  const categories=type=>hasLiving?(data.categories||[]).filter(c=>c.type===type&&(overrideIds.has(c.id)||(native?native.entries.some(e=>e.categoryId===c.id):!source.synthetic&&budgetCategories(type,p).some(x=>x.id===c.id)))):native?(data.categories||[]).filter(c=>c.type===type&&native.entries.some(e=>e.categoryId===c.id)):budgetCategories(type,p);
+  const allDates=hasLiving?oneFutureDates(start,end):[];
+  const planned=(c,intent)=>{
+   if(c.type!=="Ingreso"&&hasLiving&&overrideIds.has(c.id))return oneFutureMoney(oneFutureLivingDaily(source,c,sourceOverrides,allDates).reduce((a,b)=>a+b,0));
+   if(source.synthetic)return 0;
+   if(!native)return periodCategoryBudgetCRC(p,c.id,intent);
+   const e=native.entries.find(x=>x.categoryId===c.id);return e?currentToCRC(e.amount,e.currency,intent):0;
+  };
   const wholeDates=oneFutureDates(rangeStart,end);
-  wholeDates.filter(date=>date<=until).forEach(date=>coverage.add(date));
+  if(!source.synthetic)wholeDates.filter(date=>date<=until).forEach(date=>coverage.add(date));
   const count=wholeDates.length;if(!count)continue;
   const movements=(data.movements||[]).filter(m=>flexible?m.date>=start&&m.date<=end:m.period===periodKey(p)&&m.date<=end);
   // Ingresos: únicamente los presupuestados que poseen fechas de pago conocidas.
@@ -5992,6 +6047,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
    const budget=Math.max(0,planned(c,"receive"));
    if(!(budget>0))continue;
    const cfg=normalizeIncomeConfig(c.incomeConfig||{});
+   if(living){if(!cfg.projectAutomatically)manualIncomeGroups++;else if(!oneFlexIncomeDates(cfg,start,end).length)undatedIncomeGroups++;continue}
    const occurrences=(native?oneFlexIncomeDates(cfg,start,end):(p.categoryBudgetScheduledDates?.[c.id]||scheduledIncomeForPeriod(c,p)?.dates||[]))
      .filter(date=>restoreValidDate(date)&&date>=start&&date<=end);
    const dates=native?occurrences:[...new Set(occurrences)].sort();
@@ -6017,7 +6073,12 @@ function oneFutureForecast(asOf=todayIso(),days=90){
    const paid=movements.filter(m=>m.type==="Gasto").reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0);
    const goals=flexible?(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date>=start&&t.date<=end&&oneContributionCategory(t)===c.id).reduce((s,t)=>s+reserveTxnHistoricalCRC(t,"pay"),0):oneBudgetSavingsActual(p,c.id,end);
    const remaining=Math.max(0,amount-paid-goals);
-   if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
+   if(hasLiving&&overrideIds.has(c.id)&&remaining>.005){
+    const isSavings=savingsCategoryIds.has(c.id);
+    const daily=oneFutureLivingDaily(source,c,sourceOverrides,wholeDates);
+    const weights=daily.map((v,i)=>Math.max(0,v-movements.filter(m=>m.type==="Gasto"&&m.date===wholeDates[i]).reduce((sum,m)=>sum+movementCategoryAmountCRC(m,c),0)-(isSavings?(data.reserveMovements||[]).filter(t=>t.type==="Aporte"&&t.date===wholeDates[i]&&oneContributionCategory(t)===c.id).reduce((sum,t)=>sum+reserveTxnHistoricalCRC(t,"pay"),0):0)));
+    for(const x of oneFutureWeighted(remaining,wholeDates,weights))add(x.date,-x.amount,isSavings?"budget-savings":"budget",c.name,"Living Budget · asignación estimada");
+   }else if(savingsCategoryIds.has(c.id))plannedSavings+=remaining;else ordinary+=remaining;
   }
   if(ordinary>.005){
    const daily=-ordinary/count;
@@ -6042,7 +6103,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
   }
  }
  daysWithoutBudget=dates.filter(date=>!coverage.has(date)).length;
- if((data.livingBudgets||[]).some(e=>e.date>asOf&&e.date<=until))warnings.push("Living Budget: esta proyección todavía no incorpora los ajustes V14.1. Consultá el presupuesto actualizado antes de decidir.");
+ if(living)warnings.push("Living Budget: los ajustes por fecha sustituyen el plan anterior. Los gastos pendientes se estiman según las asignaciones; las cuotas mínimas conservan su vencimiento. El ingreso automático usa el calendario de cada categoría.");
  if(!lastReconciliation)warnings.push("El saldo de partida no tiene conciliación reciente: puede ser aproximado.");
  if(daysWithoutBudget)warnings.push(daysWithoutBudget+" día(s) sin período presupuestario: pueden faltar ingresos y gastos previstos.");
  if(flexible&&sources.some(p=>p.native&&p.start<=until&&p.end>asOf))warnings.push("Los presupuestos flexibles prevalecen sobre los anteriores cuando se superponen. Los gastos se distribuyen como estimación y los ingresos se fechan con el calendario actual de cada categoría.");
@@ -6067,7 +6128,7 @@ function oneFutureForecast(asOf=todayIso(),days=90){
  return {asOf,until,days,base:monetary(base),balance:monetary(balance),lowest:monetary(lowest),lowestDate,income:monetary(income),outgo:monetary(outgo),
   points:flexible?points.map(p=>({...p,balance:monetary(p.balance),delta:monetary(p.delta),income:monetary(p.income),outgo:monetary(p.outgo)})):points,
   items:items.sort((a,b)=>a.date.localeCompare(b.date)),warnings,
-  coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,flexible,
+  coverageDays:days-daysWithoutBudget,daysWithoutBudget,hasReconciliation:!!lastReconciliation,flexible,living,
   recurringIncome:monetary(byKind("income")),scheduledDebt:monetary(byKind("debt")),
   budgetExpense:monetary(byKind("budget")+byKind("budget-savings")+byKind("budget-debt"))};
 }
@@ -6100,7 +6161,7 @@ function renderFuture(){
   button.classList.toggle("active",active);button.setAttribute("aria-pressed",String(active));
  });
  const q=id=>document.getElementById(id);
- q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until)+(forecast.flexible?" · Planificación flexible":"");
+ q("oneFutureAsOf").textContent="Desde "+dateLabel(forecast.asOf)+" hasta "+dateLabel(forecast.until)+(forecast.living?" · Living Budget":forecast.flexible?" · Planificación flexible":"");
  q("oneFutureNumbers").innerHTML=[
   ["Saldo operativo de hoy",forecast.base],
   ["Saldo estimado al final",forecast.balance],
@@ -9242,7 +9303,7 @@ function oneFlexDashboard(r,activeRange,label,universal=false){
  const planText=v=>v===null?"Sin plan completo":"Plan: "+money(v);
  const balance=actualBalanceAt(today);
  const knownBalance=!!latestReconciliation(today)||(data.periods||[]).some(p=>p.date<=today&&p.opening!==null&&p.opening!==undefined&&p.opening!=="")||(data.movements||[]).some(x=>x.date<=today)||(data.reserveMovements||[]).some(x=>x.date<=today);
- const ready=knownBalance&&current.coverage.complete&&current.plannedOut>0;
+ const ready=(universal?oneLivingBalanceKnown(today):knownBalance)&&current.coverage.complete&&current.pending!==null;
  const livingLiquidity=universal?oneLivingLiquidity(balance,current.pending,oneLivingBalanceKnown(today),current.coverage.complete):null;
  get("dashboardHeroNote").innerHTML='<div class="one-available-kicker">Disponible estimado</div><strong class="one-available-value '+(ready&&balance-current.pending<0?"negative":"")+'">'+(ready?money(balance-current.pending):"—")+'</strong><span class="one-available-caption">'+safe(ready?"Después de compromisos presupuestados hasta "+dateLabel(activeRange.end):"Necesitamos un saldo y un presupuesto completo del período vigente.")+'</span>'+(ready?'<details class="one-available-details"><summary>Ver cálculo</summary><div class="one-available-math"><div><span>Saldo operativo hoy</span><strong>'+money(balance)+'</strong></div><div><span>Compromisos pendientes</span><strong>− '+money(current.pending)+'</strong></div><p>No incluye ingresos futuros ni gastos sin presupuestar.</p></div></details>':"");
  get("kpiGrid").innerHTML=[
@@ -9487,7 +9548,7 @@ function oneLivingAdjustmentMessage(next,activeRange,today){
 
 function oneFlexRuntime(){
   const get=id=>document.getElementById(id),cfg=()=>oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings));
-  let anchor="",mode="",universal=(data.livingBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null,breakdownMode="week";
+  let anchor="",mode="",universal=cfg().enabled||(data.livingBudgets||[]).length>0||(data.flexBudgets||[]).length>0,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null,breakdownMode="week";
   const plans=()=>Array.isArray(data.flexBudgets)?data.flexBudgets:[];
   const range=()=>storedRange||oneUniversalRange(anchor||todayIso(),cfg(),mode==="custom"?cfg().mode:mode||cfg().mode),label=r=>dateLabel(r.start)+" – "+dateLabel(r.end);
   const actualRows=r=>oneFlexDateRows(data.movements,r);
@@ -9504,8 +9565,8 @@ function oneFlexRuntime(){
     const summary=[["Ingresos reales",income],["Gastos y pagos de deuda",expense+debt],["Neto de movimientos",income+reimbursements-expense-debt]];
     const help=universal?(coverage.complete?"Distribución estimada de gastos por días; ingresos según fechas de pago conocidas. Los ingresos sin fecha solo se incluyen en su rango completo.":"Hay días sin cobertura de presupuesto. No se inventan importes faltantes."):exact?"Presupuesto flexible propio de este rango.":coverage.complete?"Presupuesto consolidado de períodos completos, sin duplicar el plan quincenal.":"El rango no está cubierto por presupuestos completos. Mostramos los movimientos reales sin inventar repartos.";
     const action=universal?'<button class="btn" type="button" data-living-edit>Editar presupuesto</button><button class="btn secondary" type="button" data-living-distribute>Distribuir</button>':exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
-    const history=plans().length?'<details class="v7-card"><summary>Mis presupuestos flexibles · '+plans().length+'</summary>'+[...plans()].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>'<div class="one-flex-history"><span>'+safe(labels[p.mode]+' · '+label(p))+'</span><button class="btn secondary small" type="button" data-flex-open="'+safe(p.id)+'">Abrir</button></div>').join("")+'</details>':"";
-    const notice=universal?'<p class="muted">Living Budget · Los cambios reemplazan la asignación de la categoría solo en estas fechas. Los totales superiores se recalculan. Futuro todavía no incorpora estos ajustes.</p>':'<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro utiliza los planes flexibles cuando existen, sin duplicar el presupuesto anterior.</p>';
+    const history=plans().length?'<details class="v7-card"><summary>Planes originales · '+plans().length+'</summary>'+[...plans()].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>'<div class="one-flex-history"><span>'+safe(labels[p.mode]+' · '+label(p))+'</span><button class="btn secondary small" type="button" data-flex-open="'+safe(p.id)+'">Abrir</button></div>').join("")+'</details>':"";
+    const notice=universal?'<p class="muted">Living Budget · Los ajustes reemplazan el importe de la categoría en esas fechas. Futuro incorpora las asignaciones y los movimientos reales.</p>':'<p class="muted">El editor anterior conserva las asignaciones históricas. Inicio y Movimientos comparten el rango seleccionado.</p>';
     const knownOut=metrics.categories.filter(x=>x.c.type!=="Ingreso"&&x.p!==null).reduce((sum,x)=>sum+x.p,0);
     const budgetSummary=universal?[["Presupuesto de salidas"+(coverage.complete?"":" · conocido"),knownOut],...summary]:summary;
     const contextHtml=context?renderLivingContext(context,catRows,metrics,r):"";
@@ -9553,7 +9614,7 @@ function oneFlexRuntime(){
     const active=activePlan();panel.hidden=false;
     hide(document.querySelector("#view-plan .r8-plan-title-actions"),active);
     ["r8PlanOptions","planQuarterSummary","planMonths"].forEach(id=>hide(get(id),active));
-    if(active){const r=range();panel.innerHTML=controls("plan",r)+table(r);get("planSub").textContent=label(r)+(universal?" · Consulta universal":" · Vista flexible Beta");oneRenderGoalBudgetPreview("flex",r)}
+    if(active){const r=range();panel.innerHTML=controls("plan",r)+table(r);get("planSub").textContent=label(r)+(universal?" · Consulta universal":" · Plan anterior");oneRenderGoalBudgetPreview("flex",r)}
     else panel.innerHTML=controls("plan",range(),false);
   };
   renderMovements=function(){
@@ -9570,7 +9631,7 @@ function oneFlexRuntime(){
   const update=()=>{const c=read();form.querySelectorAll("[data-flex-fields]").forEach(el=>{el.hidden=!el.dataset.flexFields.split(" ").includes(c.mode);el.querySelectorAll("input,select").forEach(x=>x.disabled=el.hidden)});get("oneFlexPreview").textContent=c.mode==="fortnight"&&!valid(c)?"Ingresá dos días válidos y diferentes.":"Período actual: "+label(oneFlexRange(todayIso(),c))};
   const fill=()=>{const c=cfg();get("oneFlexEnabled").checked=c.enabled;get("oneFlexMode").value=c.mode;Object.entries(fields).forEach(([k,id])=>get(id).value=c[k]);update()};
   form.addEventListener("input",update);
-  form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;legacyPlan=legacyMove=legacyHome=false;fill();redraw();get("oneFlexStatus").textContent="Configuración guardada. Tus movimientos y presupuestos históricos siguen intactos."});
+  form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;universal=raw.enabled||(data.livingBudgets||[]).length>0||(data.flexBudgets||[]).length>0;legacyPlan=legacyMove=legacyHome=false;fill();redraw();get("oneFlexStatus").textContent="Configuración guardada. Tus movimientos y presupuestos históricos siguen intactos."});
   get("oneSettingsBtn").addEventListener("click",fill);
   document.addEventListener("change",e=>{if(e.target.matches("[data-living-breakdown]")&&scales.includes(e.target.value)){breakdownMode=e.target.value;renderPlan();return;}if(e.target.matches("[data-flex-mode]")&&labels[e.target.value]){
     const prior=range();if(storedRange)anchor=storedRange.start;mode=e.target.value;universal=true;legacyPlan=legacyMove=legacyHome=false;
@@ -9587,8 +9648,9 @@ function oneFlexRuntime(){
   const readDistribution=()=>{
     const d=distribution,parts=oneLivingPartition(d.r,cfg(),d.scale);
     if(parts.length>80)throw Error("Elegí una escala más amplia: máximo 80 bloques.");
-    d.parts=parts;d.original=parts.map(p=>{
+    d.parts=parts;d.complete=true;d.original=parts.map(p=>{
       const x=oneUniversalMetrics(p,todayIso()).categories.find(x=>x.c.id===d.categoryId);
+      if(!x||x.partial)d.complete=false;
       return x?.p===null||x?.p===undefined?null:Math.round(x.p*100)/100;
     });
     d.values=d.original.map(v=>v??0);d.initial=distTotal(d.values);d.last=-1;
@@ -9597,7 +9659,7 @@ function oneFlexRuntime(){
     const d=distribution,delta=Math.round((distTotal(d.values)-d.initial)*100)/100;
     distDialog.querySelector("[data-dist-total]").textContent=distLabel(distTotal(d.values));
     distDialog.querySelector("[data-dist-impact]").textContent=delta===0?"El total del período se mantiene.":"El total del período "+(delta>0?"aumenta ":"disminuye ")+distLabel(Math.abs(delta))+".";
-    distDialog.querySelector("[data-dist-redistribute]").disabled=d.last<0||d.parts.length<2||d.original.some(v=>v===null);
+    distDialog.querySelector("[data-dist-redistribute]").disabled=d.last<0||d.parts.length<2||!d.complete||d.original.some(v=>v===null);
   };
   const renderDistribution=()=>{
     const d=distribution;
@@ -9738,7 +9800,7 @@ function oneFlexRuntime(){
     }
     if(b.hasAttribute("data-flex-open")){
       const p=plans().find(x=>x.id===b.dataset.flexOpen);if(!p)return;
-      mode=p.mode;anchor=p.start;storedRange={start:p.start,end:p.end,next:addDaysIso(p.end,1)};legacyPlan=false;redraw();return;
+      mode=p.mode;anchor=p.start;storedRange={start:p.start,end:p.end,next:addDaysIso(p.end,1)};legacyPlan=false;universal=true;redraw();return;
     }
     const r=range(),p=plans().find(x=>x.start===r.start&&x.end===r.end);
     openEditor(r,b.hasAttribute("data-flex-edit")?p:null);
