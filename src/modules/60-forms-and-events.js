@@ -562,6 +562,22 @@ function bind(){
   });
   const restoreDialog=document.getElementById("restorePreviewDialog");
   let pendingRestore=null;
+  // Lab reads a point-in-time copy only; never writes to Daniel's key.
+  if(STORAGE_KEY==="rastro_lab_v7_1_data_v1"){
+    const copy=document.createElement("button");copy.type="button";copy.id="oneLabCopyDaniel";copy.className="btn secondary";copy.textContent="Copiar datos de Daniel";
+    document.getElementById("oneSettingsRestore").parentNode.appendChild(copy);
+    copy.addEventListener("click",()=>{
+      try{
+        const raw=localStorage.getItem("daniel_finanzas_local_v1");
+        if(raw===null)throw Error("No hay datos de Daniel en este navegador y dirección.");
+        if(new Blob([raw]).size>RESTORE_MAX_BYTES)throw Error("La copia supera 25 MB.");
+        const parsed=restoreValidate(JSON.parse(raw));restorePrepare(parsed);oneStorageAssertCurrent();
+        pendingRestore=parsed;
+        document.getElementById("restorePreviewDetails").innerHTML='<p><strong>Daniel → Lab</strong> · Se reemplazará únicamente la copia de Lab. Daniel no cambiará. Los cambios posteriores no se sincronizan.</p>'+restoreDetailsHtml(parsed,"Copia local de Daniel");
+        document.getElementById("oneSettingsDialog").close();restoreDialog.showModal();
+      }catch(error){pendingRestore=null;alert("No se copió ningún dato. "+(error?.message||"Revisá el almacenamiento."))}
+    });
+  }
   document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
   document.getElementById("restorePreviewCancel").addEventListener("click",()=>restoreDialog.close());
   document.getElementById("restorePreviewClose").addEventListener("click",()=>restoreDialog.close());

@@ -8519,6 +8519,22 @@ function bind(){
   });
   const restoreDialog=document.getElementById("restorePreviewDialog");
   let pendingRestore=null;
+  // Lab reads a point-in-time copy only; never writes to Daniel's key.
+  if(STORAGE_KEY==="rastro_lab_v7_1_data_v1"){
+    const copy=document.createElement("button");copy.type="button";copy.id="oneLabCopyDaniel";copy.className="btn secondary";copy.textContent="Copiar datos de Daniel";
+    document.getElementById("oneSettingsRestore").parentNode.appendChild(copy);
+    copy.addEventListener("click",()=>{
+      try{
+        const raw=localStorage.getItem("daniel_finanzas_local_v1");
+        if(raw===null)throw Error("No hay datos de Daniel en este navegador y dirección.");
+        if(new Blob([raw]).size>RESTORE_MAX_BYTES)throw Error("La copia supera 25 MB.");
+        const parsed=restoreValidate(JSON.parse(raw));restorePrepare(parsed);oneStorageAssertCurrent();
+        pendingRestore=parsed;
+        document.getElementById("restorePreviewDetails").innerHTML='<p><strong>Daniel → Lab</strong> · Se reemplazará únicamente la copia de Lab. Daniel no cambiará. Los cambios posteriores no se sincronizan.</p>'+restoreDetailsHtml(parsed,"Copia local de Daniel");
+        document.getElementById("oneSettingsDialog").close();restoreDialog.showModal();
+      }catch(error){pendingRestore=null;alert("No se copió ningún dato. "+(error?.message||"Revisá el almacenamiento."))}
+    });
+  }
   document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
   document.getElementById("restorePreviewCancel").addEventListener("click",()=>restoreDialog.close());
   document.getElementById("restorePreviewClose").addEventListener("click",()=>restoreDialog.close());
@@ -9211,8 +9227,8 @@ function oneFlexMetrics(r,through=""){
  return {coverage,categories,movements,savings,income,expense,debt,reimbursements,plannedIncome,plannedOut,actualSpend,actualOut,pending};
 }
 
-function oneFlexDashboard(r,activeRange,label){
- const get=id=>document.getElementById(id),today=todayIso(),m=oneFlexMetrics(r,today),current=oneFlexMetrics(activeRange,today);
+function oneFlexDashboard(r,activeRange,label,universal=false){
+ const get=id=>document.getElementById(id),today=todayIso(),m=universal?oneUniversalMetrics(r,today):oneFlexMetrics(r,today),current=oneFlexMetrics(activeRange,today);
  const planText=v=>v===null?"Sin plan completo":"Plan: "+money(v);
  const balance=actualBalanceAt(today);
  const knownBalance=!!latestReconciliation(today)||(data.periods||[]).some(p=>p.date<=today&&p.opening!==null&&p.opening!==undefined&&p.opening!=="")||(data.movements||[]).some(x=>x.date<=today)||(data.reserveMovements||[]).some(x=>x.date<=today);
@@ -9236,24 +9252,77 @@ function oneFlexDashboard(r,activeRange,label){
  if(legend)legend.hidden=!m.coverage.complete;
 }
 
+function oneUniversalRange(date,config,mode){
+ if(!["half","year"].includes(mode))return oneFlexRange(date,config,mode);
+ const d=new Date(date+"T00:00:00Z");
+ if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==date)throw Error("Fecha inválida");
+ const y=d.getUTCFullYear(),month=mode==="year"?0:Math.floor(d.getUTCMonth()/6)*6;
+ const start=new Date(Date.UTC(y,month,1)),next=new Date(Date.UTC(y,month+(mode==="year"?12:6),1));
+ return {start:start.toISOString().slice(0,10),end:new Date(next.getTime()-86400000).toISOString().slice(0,10),next:next.toISOString().slice(0,10)};
+}
+
+function oneUniversalCustom(start,end){
+ const valid=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+"T00:00:00Z"))&&new Date(s+"T00:00:00Z").toISOString().slice(0,10)===s;
+ if(!valid(start)||!valid(end)||end<start||(Date.parse(end)-Date.parse(start))/86400000>3660)throw Error("Elegí fechas válidas, en orden y dentro de diez años.");
+ return {start,end,next:new Date(Date.parse(end+"T00:00:00Z")+86400000).toISOString().slice(0,10)};
+}
+
+function oneUniversalSlice(amount,source,r){
+ const day=s=>Date.parse(s+"T00:00:00Z")/86400000;
+ const a=day(source.start),b=day(source.end),lo=Math.max(a,day(r.start)),hi=Math.min(b,day(r.end));
+ if(hi<lo)return 0;
+ const cents=Math.round(amount*100),n=b-a+1;
+ return (Math.round(cents*(hi-a+1)/n)-Math.round(cents*(lo-a)/n))/100;
+}
+
+function oneUniversalSources(legacy,native,endFor,r){
+ const original=(legacy||[]).filter(p=>p.date).map(p=>({start:p.date,end:endFor(p),legacy:p}));
+ const fresh=(native||[]).map(p=>({start:p.start,end:p.end,native:p}));
+ const overlap=(a,b)=>a.start<=b.end&&a.end>=b.start;
+ const rows=[...original.filter(p=>!fresh.some(n=>overlap(p,n))),...fresh].filter(p=>overlap(p,r)).sort((a,b)=>a.start.localeCompare(b.start));
+ let cursor=Date.parse(r.start),finish=Date.parse(r.end)+86400000,complete=true;
+ for(const p of rows){const a=Math.max(Date.parse(p.start),Date.parse(r.start)),b=Math.min(Date.parse(p.end)+86400000,finish);if(a!==cursor)complete=false;cursor=Math.max(cursor,b)}
+ return {rows,complete:complete&&cursor===finish};
+}
+
+function oneUniversalMetrics(r,through=""){
+ const base=oneFlexMetrics(r,through),coverage=oneUniversalSources(data.periods,data.flexBudgets,p=>periodEndDate(p),r);
+ const slice=(s,c)=>{
+  const intent=c.type==="Ingreso"?"receive":"pay",entry=s.native?s.native.entries.find(e=>e.categoryId===c.id):null;
+  const amount=s.native?(entry?.amount||0):num(s.legacy.categoryBudgets?.[c.id]);
+  const currency=normalizeCurrency(s.native?entry?.currency:s.legacy.categoryBudgetCurrencies?.[c.id]);
+  if(c.type==="Ingreso"){
+   const cfg=normalizeIncomeConfig(c.incomeConfig||{});
+   const dates=(s.native?oneFlexIncomeDates(cfg,s.start,s.end):(s.legacy.categoryBudgetScheduledDates?.[c.id]||oneFlexIncomeDates(cfg,s.start,s.end))).filter(d=>d>=s.start&&d<=s.end);
+   if(dates.length){const cents=Math.round(amount*100),n=dates.length;return currentToCRC(dates.reduce((sum,d,i)=>sum+(d>=r.start&&d<=r.end?Math.round(cents*(i+1)/n)-Math.round(cents*i/n):0),0)/100,currency,intent)}
+   return r.start<=s.start&&r.end>=s.end?currentToCRC(amount,currency,intent):0;
+  }
+  return currentToCRC(oneUniversalSlice(amount,s,r),currency,intent);
+ };
+ const categories=base.categories.map(x=>({...x,p:coverage.complete?coverage.rows.reduce((sum,s)=>sum+slice(s,x.c),0):null}));
+ const plannedIncome=coverage.complete?categories.filter(x=>x.c.type==="Ingreso").reduce((s,x)=>s+x.p,0):null;
+ const plannedOut=coverage.complete?categories.filter(x=>x.c.type!=="Ingreso").reduce((s,x)=>s+x.p,0):null;
+ return {...base,coverage,categories,plannedIncome,plannedOut,pending:coverage.complete?categories.filter(x=>x.c.type!=="Ingreso").reduce((s,x)=>s+Math.max(0,x.p-x.a),0):null};
+}
+
 function oneFlexRuntime(){
   const get=id=>document.getElementById(id),cfg=()=>oneFlexConfig(data.settings.financialPeriods,onePayDays(data.settings));
-  let anchor="",mode="",legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null;
+  let anchor="",mode="",universal=false,legacyPlan=false,legacyMove=false,legacyHome=false,storedRange=null,editing=null;
   const plans=()=>Array.isArray(data.flexBudgets)?data.flexBudgets:[];
-  const range=()=>storedRange||oneFlexRange(anchor||todayIso(),cfg(),mode||cfg().mode),label=r=>dateLabel(r.start)+" – "+dateLabel(r.end);
+  const range=()=>storedRange||oneUniversalRange(anchor||todayIso(),cfg(),mode==="custom"?cfg().mode:mode||cfg().mode),label=r=>dateLabel(r.start)+" – "+dateLabel(r.end);
   const actualRows=r=>oneFlexDateRows(data.movements,r);
-  const activePlan=()=>cfg().enabled&&!legacyPlan,activeMove=()=>cfg().enabled&&!legacyMove;
-  const labels={week:"Semana",fortnight:"Quincena",month:"Mes",quarter:"Trimestre"};
-  const controls=(where,r)=>`<div class="one-flex-toolbar"><label>Vista <select data-flex-mode="${where}">${Object.entries(labels).map(([k,v])=>`<option value="${k}" ${k===(mode||cfg().mode)?"selected":""}>${v}</option>`).join("")}</select></label><div class="one-flex-nav"><button class="btn secondary small" type="button" data-flex-step="-1" aria-label="Anterior">‹</button><strong>${safe(label(r))}</strong><button class="btn secondary small" type="button" data-flex-step="1" aria-label="Siguiente">›</button><button type="button" class="btn secondary small" data-flex-today>Hoy</button></div><button class="btn secondary small" type="button" data-flex-legacy="${where}">${where==="plan"?"Editar plan quincenal":"Vista histórica"}</button></div>`;
+  const enabled=()=>universal||cfg().enabled,activePlan=()=>enabled()&&!legacyPlan,activeMove=()=>enabled()&&!legacyMove;
+  const labels={week:"Semana",fortnight:"Quincena",month:"Mes",quarter:"Trimestre",half:"Semestre",year:"Año",custom:"Personalizado"};
+  const controls=(where,r,active=true)=>`<div class="one-flex-toolbar"><label>Vista <select data-flex-mode="${where}">${active?"":'<option value="" selected>Elegir intervalo</option>'}${Object.entries(labels).map(([k,v])=>`<option value="${k}" ${active&&k===(mode||cfg().mode)?"selected":""}>${v}</option>`).join("")}</select></label>${active?`<div class="one-flex-nav"><button class="btn secondary small" type="button" data-flex-step="-1" aria-label="Anterior" ${mode==="custom"?"disabled":""}>‹</button><strong>${safe(label(r))}</strong><button class="btn secondary small" type="button" data-flex-step="1" aria-label="Siguiente" ${mode==="custom"?"disabled":""}>›</button><button type="button" class="btn secondary small" data-flex-today>Hoy</button></div><button class="btn secondary small" type="button" data-flex-legacy="${where}">${where==="plan"?"Editar plan anterior":"Vista anterior"}</button>`:""}</div>${active&&mode==="custom"?`<div class="one-flex-toolbar"><label>Desde <input type="date" data-flex-start value="${safe(r.start)}"></label><label>Hasta <input type="date" data-flex-end value="${safe(r.end)}"></label><button type="button" class="btn secondary small" data-flex-custom>Aplicar fechas</button></div>`:""}`;
   const hide=(el,v)=>{if(el)el.hidden=v};
   const table=r=>{
-    const metrics=oneFlexMetrics(r,todayIso()),coverage=metrics.coverage;
+    const metrics=universal?oneUniversalMetrics(r,todayIso()):oneFlexMetrics(r,todayIso()),coverage=metrics.coverage;
     const exact=plans().find(p=>p.start===r.start&&p.end===r.end),overlap=oneFlexBudgetOverlap(plans(),r.start,r.end);
     const catRows=metrics.categories.filter(x=>x.p>0||x.a>0);
     const {income,expense,debt,reimbursements}=metrics;
     const summary=[["Ingresos reales",income],["Gastos y pagos de deuda",expense+debt],["Neto de movimientos",income+reimbursements-expense-debt]];
-    const help=exact?"Presupuesto flexible propio de este rango.":coverage.complete?"Presupuesto consolidado de períodos completos, sin duplicar el plan quincenal.":"El rango no está cubierto por presupuestos completos. Mostramos los movimientos reales sin inventar repartos.";
-    const action=exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
+    const help=universal?(coverage.complete?"Distribución estimada de gastos por días; ingresos según fechas de pago conocidas. Los ingresos sin fecha solo se incluyen en su rango completo.":"Hay días sin cobertura de presupuesto. No se inventan importes faltantes."):exact?"Presupuesto flexible propio de este rango.":coverage.complete?"Presupuesto consolidado de períodos completos, sin duplicar el plan quincenal.":"El rango no está cubierto por presupuestos completos. Mostramos los movimientos reales sin inventar repartos.";
+    const action=universal?'<p class="muted">Consulta distribuida · editá las asignaciones originales desde el plan anterior.</p>':exact?'<button class="btn" type="button" data-flex-edit>Editar presupuesto</button>':overlap?'<p class="muted">Ya existen planes flexibles dentro de este rango. Abrilos desde Mis presupuestos; no se pueden superponer.</p>':r.end<todayIso()?'<p class="muted">Este período ya cerró. Se conserva la planificación histórica.</p>':'<button class="btn" type="button" data-flex-new>Crear presupuesto</button>';
     const history=plans().length?'<details class="v7-card"><summary>Mis presupuestos flexibles · '+plans().length+'</summary>'+[...plans()].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>'<div class="one-flex-history"><span>'+safe(labels[p.mode]+' · '+label(p))+'</span><button class="btn secondary small" type="button" data-flex-open="'+safe(p.id)+'">Abrir</button></div>').join("")+'</details>':"";
     const notice='<p class="muted">Beta: el plan flexible no modifica el plan quincenal anterior. Inicio y Movimientos comparten este rango. Futuro utiliza los planes flexibles cuando existen, sin duplicar el presupuesto anterior.</p>';
     return `<div class="plan-quarter-summary">${summary.map(([k,v])=>`<div class="summary-box"><div class="summary-label">${k}</div><div class="summary-value">${money(v)}</div></div>`).join("")}</div><div class="v7-card"><div class="one-flex-toolbar"><h3>Presupuesto por categoría</h3><div class="one-flex-toolbar">${action}<button class="btn secondary small" type="button" data-flex-export>Exportar CSV</button></div></div>${notice}<p class="muted">${help} Los aportes vinculados a metas se incluyen por categoría, no como gastos de efectivo duplicados.</p><div class="table-wrap"><table><thead><tr><th>Categoría</th><th class="num">Plan</th><th class="num">Real</th><th class="num">Diferencia</th></tr></thead><tbody>${catRows.length?catRows.map(({c,p,a})=>`<tr><td>${safe(c.name)}</td><td class="num">${coverage.complete?money(p):"—"}</td><td class="num">${money(a)}</td><td class="num">${coverage.complete?money(c.type==="Ingreso"?a-p:p-a):"—"}</td></tr>`).join(""):`<tr><td colspan="4" class="empty">Sin actividad por categoría en este rango.</td></tr>`}</tbody></table></div></div>${history}`;
@@ -9265,26 +9334,26 @@ function oneFlexRuntime(){
   get("dashboardFilters").parentNode.appendChild(homeControls);
   const chartNote=document.createElement("p");chartNote.id="oneFlexChartNote";chartNote.className="muted";chartNote.hidden=true;get("expenseChart").parentNode.appendChild(chartNote);
   renderDashboard=function(){
-    const active=cfg().enabled&&!legacyHome;
+    const active=enabled()&&!legacyHome;
     hide(get("expenseChart"),false);hide(get("expenseChartLegend"),false);hide(chartNote,true);
-    oldHome();homeControls.hidden=!cfg().enabled;hide(get("dashboardFilters"),active);
-    if(active){const r=range();homeControls.innerHTML=controls("home",r);oneFlexDashboard(r,oneFlexRange(todayIso(),cfg()),label)}
-    else if(cfg().enabled)homeControls.innerHTML='<button class="btn secondary small" type="button" data-flex-legacy="home">Volver a vista flexible</button>';
+    oldHome();homeControls.hidden=false;hide(get("dashboardFilters"),active);
+    if(active){const r=range();homeControls.innerHTML=controls("home",r);oneFlexDashboard(r,oneFlexRange(todayIso(),cfg()),label,universal)}
+    else homeControls.innerHTML=controls("home",range(),false);
   };
   renderPlan=function(){
     oldPlan();const panel=get("oneFlexPlan");if(!panel)return;
-    const enabled=cfg().enabled,active=activePlan();panel.hidden=!enabled;
+    const active=activePlan();panel.hidden=false;
     hide(document.querySelector("#view-plan .r8-plan-title-actions"),active);
     ["r8PlanOptions","planQuarterSummary","planMonths"].forEach(id=>hide(get(id),active));
-    if(active){const r=range();panel.innerHTML=controls("plan",r)+table(r);get("planSub").textContent=label(r)+" · Vista flexible Beta";oneRenderGoalBudgetPreview("flex",r)}
-    else if(enabled)panel.innerHTML='<button class="btn secondary small" type="button" data-flex-legacy="plan">Volver a vista flexible</button>';
+    if(active){const r=range();panel.innerHTML=controls("plan",r)+table(r);get("planSub").textContent=label(r)+(universal?" · Consulta universal":" · Vista flexible Beta");oneRenderGoalBudgetPreview("flex",r)}
+    else panel.innerHTML=controls("plan",range(),false);
   };
   renderMovements=function(){
     oldMoves();const panel=get("oneFlexMoves");if(!panel)return;
-    const enabled=cfg().enabled,active=activeMove();panel.hidden=!enabled;
+    const active=activeMove();panel.hidden=false;
     hide(document.querySelector("#view-movements .one-move-period-control"),active);
     if(active){const r=range();panel.innerHTML=controls("move",r);const insight=document.querySelector("#movementQuick .one-move-insight-period");if(insight)insight.textContent=label(r);oneRenderGoalMovementPreview("flex",r)}
-    else if(enabled)panel.innerHTML='<button class="btn secondary small" type="button" data-flex-legacy="move">Volver a vista flexible</button>';
+    else panel.innerHTML=controls("move",range(),false);
   };
   const redraw=()=>{renderPlan();renderMovements();renderDashboard();if(get("view-future")?.classList.contains("active"))renderFuture()},form=get("oneFlexSettingsForm");
   const fields={first:"oneFlexFirst",second:"oneFlexSecond",weekday:"oneFlexWeekday",day:"oneFlexDay",quarterMonth:"oneFlexQuarterMonth"};
@@ -9295,8 +9364,12 @@ function oneFlexRuntime(){
   form.addEventListener("input",update);
   form.addEventListener("submit",e=>{e.preventDefault();const raw=read();if(raw.mode==="fortnight"&&!valid(raw))return alert("El segundo corte debe ser posterior al primero.");const prev=data.settings.financialPeriods;data.settings.financialPeriods=oneFlexConfig(raw,onePayDays(data.settings));try{save()}catch(err){if(prev===undefined)delete data.settings.financialPeriods;else data.settings.financialPeriods=prev;fill();return alert("No se pudo guardar. No se modificaron tus movimientos.")}anchor="";mode="";storedRange=null;legacyPlan=legacyMove=legacyHome=false;fill();redraw();get("oneFlexStatus").textContent="Configuración guardada. Tus movimientos y presupuestos históricos siguen intactos."});
   get("oneSettingsBtn").addEventListener("click",fill);
-  document.addEventListener("change",e=>{if(e.target.matches("[data-flex-mode]")){mode=e.target.value;storedRange=null;redraw()}});
-  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-step],[data-flex-today],[data-flex-legacy]");if(!b)return;if(b.hasAttribute("data-flex-step")){const r=range();anchor=b.dataset.flexStep==="1"?r.next:addDaysIso(r.start,-1);storedRange=null}else if(b.hasAttribute("data-flex-today")){anchor=todayIso();storedRange=null}else if(b.dataset.flexLegacy==="plan")legacyPlan=!legacyPlan;else if(b.dataset.flexLegacy==="move")legacyMove=!legacyMove;else if(b.dataset.flexLegacy==="home")legacyHome=!legacyHome;redraw()});
+  document.addEventListener("change",e=>{if(e.target.matches("[data-flex-mode]")&&labels[e.target.value]){
+    const prior=range();mode=e.target.value;universal=true;legacyPlan=legacyMove=legacyHome=false;
+    storedRange=mode==="custom"?oneUniversalCustom(prior.start,prior.end):null;redraw();
+  }});
+  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-custom]");if(!b)return;const panel=b.parentNode;try{storedRange=oneUniversalCustom(panel.querySelector("[data-flex-start]").value,panel.querySelector("[data-flex-end]").value);anchor=storedRange.start;redraw()}catch(err){alert(err.message)}});
+  document.addEventListener("click",e=>{const b=e.target.closest("[data-flex-step],[data-flex-today],[data-flex-legacy]");if(!b)return;if(b.hasAttribute("data-flex-step")){const r=range();anchor=b.dataset.flexStep==="1"?r.next:addDaysIso(r.start,-1);storedRange=null}else if(b.hasAttribute("data-flex-today")){anchor=todayIso();if(mode==="custom")mode=cfg().mode;storedRange=null}else if(b.dataset.flexLegacy==="plan")legacyPlan=!legacyPlan;else if(b.dataset.flexLegacy==="move")legacyMove=!legacyMove;else if(b.dataset.flexLegacy==="home")legacyHome=!legacyHome;redraw()});
 
   // Explicit range plans; old quincenal allocations stay untouched and never enter a native range twice.
   const dialog=document.createElement("dialog");dialog.className="one-settings-dialog";dialog.id="oneFlexBudgetDialog";
@@ -9347,7 +9420,7 @@ function oneFlexRuntime(){
   document.addEventListener("click",e=>{
     const b=e.target.closest("[data-flex-new],[data-flex-edit],[data-flex-open],[data-flex-export]");if(!b)return;
     if(b.hasAttribute("data-flex-export")){
-      const r=range(),m=oneFlexMetrics(r,todayIso()),currency=displayCurrency();
+      const r=range(),m=universal?oneUniversalMetrics(r,todayIso()):oneFlexMetrics(r,todayIso()),currency=displayCurrency();
       const amount=v=>v===null?"":Math.round(fromCRC(v,currency)*100)/100;
       const rows=[["Desde","Hasta","Categoría","Tipo","Moneda de visualización","Presupuesto","Real hasta hoy","Diferencia favorable","Cobertura del plan"],...m.categories.filter(x=>x.p>0||x.a>0).map(x=>[r.start,r.end,x.c.name,x.c.type,currency,amount(x.p),amount(x.a),amount(x.p===null?null:x.c.type==="Ingreso"?x.a-x.p:x.p-x.a),m.coverage.complete?"Completa":"Incompleta"])];
       download("presupuesto-"+r.start+"-"+r.end+".csv","\ufeff"+rows.map(row=>row.map(csvEscape).join(",")).join("\n"),"text/csv");return;
