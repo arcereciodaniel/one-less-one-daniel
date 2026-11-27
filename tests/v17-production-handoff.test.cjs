@@ -140,3 +140,13 @@ test("production remaps both historical quincenas to the reference month with no
  assert.throws(()=>E.stage(model,{kind:"create-range",categoryId:"food",currency:"CRC",amount:5,start:"2026-11-28",end:"2026-11-30",transactionId:"overlap"}),/histórico|Ya existe/);
  assert.equal(JSON.stringify(raw),before);
 });
+
+test("transition audit reconciles every category, month boundary, debt and split without rewriting the ledger",()=>{
+ const A=require("../src/experimental/v17-transition-audit.cjs"),F=require("../src/experimental/v16-financial-assignments.cjs");
+ const categories=[{id:"food",name:"Supermercado",type:"Gasto"},{id:"loan",name:"Préstamo",type:"Pago deuda"},{id:"card",name:"Tarjetas de crédito",type:"Pago deuda"}],periods=[{key:"N",financialMonth:"2026-11",start:"2026-10-28",end:"2026-11-27"},{key:"D",financialMonth:"2026-12",start:"2026-11-28",end:"2026-12-27"}];
+ const item=(id,categoryId,minor,date,parentKey,financialMonth,type="Gasto")=>({id,sourceId:id,categoryId,minor,date,parentKey,financialMonth,type,currency:"CRC",source:"movement"});
+ const model={categories,periods,issues:[],calendarSlots:{N:{start:"2026-11-01",end:"2026-11-30"}},allocations:[{id:"p",categoryId:"food",currency:"CRC",minor:10000000,parentKey:"N",source:"legacy",start:"2026-10-28",end:"2026-11-27"}],actuals:[item("f1","food",1000000,"2026-10-29","N","2026-11"),item("f2","food",8525000,"2026-11-15","N","2026-11"),item("f3","food",200000,"2026-11-29","D","2026-12"),item("l","loan",5000000,"2026-10-29","N","2026-11","Pago deuda"),item("c","card",1900000,"2026-11-05","N","2026-11","Pago deuda")]};
+ const before=JSON.stringify(model),r=A.inspect(model,"2026-11",F),food=r.rows.find(x=>x.id==="food"),loan=r.rows.find(x=>x.id==="loan");
+ assert.equal(food.oldPlan,10000000);assert.equal(food.newPlan,10000000);assert.equal(food.oldActual,9525000);assert.equal(food.newActual,8725000);assert.equal(food.onlyOld,1000000);assert.equal(food.onlyNew,200000);assert.equal(loan.newActual,0);assert.equal(loan.oldActual,5000000);
+ const dec=A.inspect(model,"2026-12",F);assert.equal(dec.rows.find(x=>x.id==="food").onlyOld,200000);assert.equal(JSON.stringify(model),before);
+});

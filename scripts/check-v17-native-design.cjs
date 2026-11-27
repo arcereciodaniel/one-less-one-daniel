@@ -39,6 +39,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    const expectedText=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(expected);
    const shown=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount small").textContent.trim().replace(/^\/\s*/,"")),candidate.id);
    assert(shown.includes(expectedText),"Historical category budget differs: "+JSON.stringify({candidate,expectedText,shown}));
+   await page.getByRole("button",{name:"Conciliar presupuesto",exact:true}).click();assert(await page.locator("#rc-transitionAudit").isVisible());assert((await page.locator("#rc-transitionText").inputValue()).includes("real calendario"));await page.locator("#rc-closeTransitionAudit").click();assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE),baseline);
    await page.locator("#olo-today").click();await page.locator('.olo-original-header [data-view="dashboard"]').click();
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
    for(const theme of ["dark","light"]){
