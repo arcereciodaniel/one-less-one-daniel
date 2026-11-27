@@ -10,3 +10,41 @@ test("available uses original period and balance, adds only incremental residual
 test("remaining uses recorded execution once; inconsistent native row or period blocks numeric estimate",()=>{const {model,native,rows}=fixture();rows.P[0].spentCRC=9000;rows.P[0].remainingCRC=0;native.pending=0;model.allocations.push({id:"a",categoryId:"food",date:"2026-11-25",minor:200000,currency:"CRC"});const calc=()=>V.calculate(model,today,native,rows,{sell:500});assert.equal(calc().incrementMinor,100000);assert.equal(calc().availableMinor,900000);native.pending=1;assert(!calc().ready);native.pending=0;model.periods.push({...model.periods[0],key:"duplicate"});assert(!calc().ready)});
 test("browser: native settings, balance reconciliation dialog and available estimate survive module switch",async()=>{const e=boot(),{w,d,g,raw}=e;try{assert.match(g("rc-content").textContent,/Disponible estimado/);const before=JSON.stringify(raw());g("rc-integrity").click();g("rc-categorySettings").click();assert(g("categoryManagerDialog").open,e.errors.join("\n"));g("categoryManagerDialog").close();await tick();g("rc-integrity").click();g("rc-debtSettings").click();assert(g("oneDebtTypesDialog").open,e.errors.join("\n"));g("oneDebtTypesDialog").close();await tick();d.querySelector('[data-native-action="reconcile"]').click();assert(g("reconcileDialog").open,e.errors.join("\n"));g("reconcileDialog").close();await tick();assert.equal(JSON.stringify(raw()),before);assert.match(g("rc-content").textContent,/Disponible estimado/);assert.deepEqual(e.errors,[])}finally{w.close()}});
 test("browser: classification persists without adding a movement, survives reload",async()=>{const e=boot(),{w,d,g,raw}=e;let saved;try{g("rc-manageModules").click();const c=d.querySelector('#rc-moduleChoices input[value="collections"]');c.checked=true;c.dispatchEvent(new w.Event("change"));g("rc-closeModules").click();d.querySelector('[data-module="collections"]').click();d.querySelector('[data-native-action="collection"]').click();for(const [id,value] of Object.entries({scPerson:"Persona RC7",scDescription:"Cena",scAmount:"2000",scDate:today,scDueDate:"2026-11-22"}))g(id).value=value;g("sharedChargeForm").dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));await tick();const item=raw().sharedCharges.find(x=>x.person==="Persona RC7");assert(item,e.errors.join("\n"));const before=raw();d.querySelector('[data-native-action="classify-collection"][data-native-id="'+item.id+'"]').click();assert(g("rc-commitmentDialog").open);g("rc-commitmentMode").value="reimbursement";g("rc-commitmentMode").dispatchEvent(new w.Event("change"));g("rc-commitmentConfirm").click();assert(!g("rc-commitmentDialog").open,g("rc-commitmentError").textContent);assert.deepEqual(raw().movements,before.movements);assert.deepEqual(raw().periods,before.periods);assert(raw().v17CashCommitmentLinks.some(x=>x.id===item.id&&x.mode==="reimbursement"));saved=w.localStorage.getItem(KEY);await tick()}finally{w.close()}const r=boot(saved);try{assert(r.raw().v17CashCommitmentLinks.some(x=>x.mode==="reimbursement"));assert.match(r.g("rc-content").textContent,/Disponible estimado/)}finally{r.w.close()}});
+
+test("browser: debt and project links are explicitly saved and restored; assignments change available not operating balance",async()=>{
+ const e=boot(),{w,d,g,raw}=e;let saved;
+ try{
+  const balance=w.actualBalanceAt(today),native=w.oneEstimatedAvailable(today),fmt=n=>new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(n);
+  const shown=()=>d.querySelector("[data-available-value]")?.textContent.trim();
+  assert.equal(shown(),fmt(native.available));
+  g("rc-manageModules").click();for(const name of ["debts","projects"]){const c=d.querySelector('#rc-moduleChoices input[value="'+name+'"]');c.checked=true;c.dispatchEvent(new w.Event("change"))}g("rc-closeModules").click();await tick();
+  const pay=w.oneFutureForecast(today,90).items.find(x=>x.kind==="debt"&&x.debtId==="debt1"&&x.date==="2026-11-25");
+  assert(pay);const amount=-pay.amount;assert(amount>0&&amount<=30000);
+  const go=name=>d.querySelector('[data-module="'+name+'"]').click();
+  const distribute=(category,parts)=>{
+   go("budget");const button=[...d.querySelectorAll("[data-distribute]")].find(x=>x.dataset.distribute===JSON.stringify(["P0",category]));
+   assert(button,category+" "+g("rc-content").textContent);button.click();
+   while(g("rc-parts").children.length<parts.length)g("rc-addPart").click();
+   for(const [i,[date,value]] of parts.entries()){const row=g("rc-parts").children[i];row.children[0].value=date;row.children[1].value=value}
+   g("rc-editForm").dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));assert(!g("rc-confirm").disabled,g("rc-error").textContent);g("rc-confirm").click();assert(!g("rc-edit").open,g("rc-error").textContent);
+  };
+  distribute("cat-debt",[["2026-11-25",amount],...(amount<30000?[["2026-11-15",30000-amount]]:[])]);
+  go("debts");const b=[...d.querySelectorAll('[data-native-action="link-debt"]')].find(x=>x.dataset.nativeId===JSON.stringify(["debt1","2026-11-25"]));
+  assert(b);b.click();const opts=g("rc-commitmentAssignment").options;assert(opts.length>1,g("rc-commitmentContext").textContent);g("rc-commitmentAssignment").value=opts[1].value;g("rc-commitmentConfirm").click();assert(!g("rc-commitmentDialog").open,g("rc-commitmentError").textContent);
+  assert(raw().v17CashCommitmentLinks.some(x=>x.kind==="debt"));
+  distribute("cat-exp",[["2026-11-16",70000],["2026-11-26",10000]]);
+  go("projects");d.querySelector('[data-native-action="project"]').click();
+  for(const [id,value] of Object.entries({oneProjectName:"Viaje RC7",oneProjectBudget:"10000",oneProjectStart:"2026-11-20",oneProjectEnd:"2026-11-27"}))g(id).value=value;
+  g("oneProjectForm").dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));await tick();
+  const project=raw().projects.find(x=>x.name==="Viaje RC7");assert(project,e.errors.join("\n"));
+  d.querySelector('[data-native-action="project-plan"][data-native-id="'+project.id+'"]').click();
+  g("oneProjectPlanName").value="Hotel";g("oneProjectPlanAmount").value="10000";g("oneProjectPlanDue").value="2026-11-26";g("oneProjectPlanForm").dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));await tick();
+  const plan=raw().projectPlans.find(x=>x.name==="Hotel");assert(plan,e.errors.join("\n"));const before=raw();
+  d.querySelector('[data-native-action="link-project"][data-native-id="'+plan.id+'"]').click();assert(g("rc-linkAssignment").options.length>1);g("rc-linkAssignment").value=g("rc-linkAssignment").options[1].value;g("rc-linkConfirm").click();assert(!g("rc-linkDialog").open,g("rc-linkError").textContent);assert(raw().v17ProjectBudgetLinks.some(x=>x.planId===plan.id));
+  assert.deepEqual(raw().movements,before.movements);assert.deepEqual(raw().periods,before.periods);
+  go("home");assert.equal(shown(),fmt(native.available));
+  go("budget");g("rc-current").click();d.querySelector('[data-add=""]').click();g("rc-category").value="cat-exp";g("rc-date").value=today;g("rc-amount").value="1234";g("rc-editForm").dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));assert(!g("rc-confirm").disabled,g("rc-error").textContent);g("rc-confirm").click();assert(!g("rc-edit").open,g("rc-error").textContent);go("home");
+  assert.equal(shown(),fmt(native.available-1234));assert.equal(w.actualBalanceAt(today),balance);saved=w.localStorage.getItem(KEY);await tick();
+ }finally{w.close()}
+ const r=boot(saved);try{assert(r.raw().v17CashCommitmentLinks.some(x=>x.kind==="debt"));assert(r.raw().v17ProjectBudgetLinks.length===1);assert.match(r.g("rc-content").textContent,/Disponible estimado/)}finally{r.w.close()}
+});
