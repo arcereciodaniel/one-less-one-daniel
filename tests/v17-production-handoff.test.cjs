@@ -20,6 +20,7 @@ test("local migration rehearses actual UI and blocks production transport on cha
   return new JSDOM(html,{url:H.ORIGIN+H.PATH,runScripts:"dangerously",pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
    w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event("close"))};
    w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}});
+   const schedule=w.setTimeout.bind(w);w.setTimeout=(fn,delay,...args)=>delay===400?0:schedule(fn,delay,...args); // Focus is triggered explicitly; isolate initial background poll from assertion timing.
    w.confirm=()=>true;w.alert=x=>errors.push(String(x));w.prompt=()=>null;Object.defineProperty(w.navigator,"locks",{value:{request:async(name,opts,callback)=>{assert.equal(name,"olo-v17-daniel-mobile-sync");assert.equal(opts.ifAvailable,true);return callback(lockAvailable?{}:null)}}});
    w.fetch=async(url,opt)=>{calls.push({url,method:opt?.method});return {ok:true,json:async()=>url.endsWith("/api/health")?{ok:true,service:"One Less One Mobile",version:1}:url.endsWith("/api/inbox")?{items:[]}:{ok:true}}};
    for(const [k,v] of Object.entries(entries))w.localStorage.setItem(k,v);
