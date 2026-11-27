@@ -7,6 +7,8 @@ on:
       - "tests/v17-mobile-bridge.test.cjs"
       - "scripts/build-v17-mobile-bridge.cjs"
       - "scripts/build-v17-staging.cjs"
+      - "src/experimental/v17-mobile-bridge-ui.js"
+      - "mobile-pilot/staging/**"
       - ".github/workflows/v17-mobile-bridge.yml"
   workflow_dispatch:
 permissions:
@@ -23,3 +25,10 @@ jobs:
           node-version: "22"
       - run: npm install jsdom@26 --no-save --no-package-lock
       - run: node --test tests/v17-mobile-bridge.test.cjs tests/v17-prerelease.test.cjs tests/v17-rc8-continuity.test.cjs mobile-pilot/staging/staging.test.mjs
+      - run: node scripts/build-v17-mobile-bridge.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLO-V17-MOBILE-BRIDGE-SYNTHETIC
+          path: preview-v17-mobile-bridge/
+          if-no-files-found: error
+          retention-days: 14

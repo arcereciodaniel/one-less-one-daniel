@@ -21,7 +21,7 @@ export default {async fetch(request,env){
  }catch{return fail()}
  const scoped={DB:stagingDB(env.V17_STAGING_DB),ASSETS:env.ASSETS,ALLOWED_DESKTOP_ORIGINS:DESKTOP,MOBILE_WRITE_KEY:phone,DESKTOP_SYNC_KEY:desktop};
  if(url.pathname==="/api/health"&&request.method==="GET"){
-  return new Response(JSON.stringify({ok:true,service:"One Less One Mobile V17 Staging",mode:"synthetic-only"}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+  return new Response(JSON.stringify({ok:true,service:"One Less One Mobile V17 Staging",mode:"synthetic-only"}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff",...(origin?{"Access-Control-Allow-Origin":origin,"Vary":"Origin"}:{})}});
  }
  // Enforce the mobile scope even if someone bypasses the UI. The base validates all financial fields.
  if(url.pathname==="/api/inbox"&&request.method==="POST"&&request.headers.get("Authorization")==="Bearer "+phone){

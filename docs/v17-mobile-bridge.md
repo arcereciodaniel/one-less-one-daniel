@@ -1,3 +1,6 @@
 # V17 mobile bridge — verification core
 
 Synthetic staging only. Receipt checks ensure matching payload, original currency, relevant FX and project links and local ledger rows before acknowledgement. Failed verification or transport leaves entries pending. A duplicate with a changed payload or missing rows is never acknowledged. Split captures remain pending until batch verification is implemented. Not a deployment, and not yet an enabled browser connector. Actual staging hosts and device tests remain outstanding. No changes to main.
+
+## Native synthetic web candidate
+Separate browser storage and a manual sync control in settings; private backup activation is disabled. The key is held only for the request, not saved. One exact Worker origin is permitted by CSP. The Worker health endpoint responds with CORS only for permitted origins. Native catalog and apply logic is reused for expenses, income, and simple receivables; the guarded receipt and row are written together using native save. The original offline package remains offline. No live deployment. The synthetic convention depends on the user not manually entering real data. Split batches remain pending; tests have not yet been confirmed. No actual iPhone or Cloudflare validation.
