@@ -123,7 +123,7 @@ render=function(){
  nativeHome.hidden=!home;nativeHome.classList.toggle("active",home);const native=!nativeBlocked?nativeSections[moduleName]:null;el("content").hidden=home||!!native;
  for(const section of Object.values(nativeSections)){section.hidden=section!==native;section.classList.toggle("active",section===native)}
  nativeExtras.hidden=true;futureChart.hidden=true;nativeHeaderSync();
- if(native){const range=agg(T.select(state));if(moduleName==="collections")document.getElementById("sharedStatementMonth").value=state.month;nativeRenderers[moduleName]();renderNativeExtras(moduleName,range)}
+ if(native){const range=agg(T.select(state));if(moduleName==="collections")document.getElementById("sharedStatementMonth").value=state.month;nativeRenderers[moduleName]();native.after(nativeExtras);renderNativeExtras(moduleName,range)}
  if(moduleName==="budget"&&!nativeBlocked)styleBudget();
  if(moduleName==="future"&&!nativeBlocked){futureChart.hidden=false;renderOriginalFuture(agg(T.select(state)))}
  // Native chart layout needs the real visible canvas, not its former hidden container.

@@ -27,7 +27,9 @@
   finally{busy=false;btn.disabled=nativeBlocked;autoControls()}
  }
  btn.onclick=()=>syncNow(true);
- forgetAuto.onclick=()=>{generation++;localStorage.removeItem(AUTO_KEY);key.value="";autoControls();status.textContent="Sincronización automática desvinculada."};
+ function disconnectAuto(){generation++;localStorage.removeItem(AUTO_KEY);key.value="";autoControls();status.textContent="Sincronización automática desvinculada."}
+ forgetAuto.onclick=disconnectAuto;
+ enableAuto.onchange=()=>{if(!enableAuto.checked&&autoToken())disconnectAuto()};
  autoControls();
  window.addEventListener("storage",e=>{if(e.key===AUTO_KEY){generation++;autoControls()}});
  window.addEventListener("focus",()=>{void runAutomatic()});

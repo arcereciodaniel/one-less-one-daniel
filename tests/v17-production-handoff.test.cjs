@@ -14,13 +14,13 @@ test("production candidate uses distinct key and exact origin, never automatical
 
 test("local migration rehearses actual UI and blocks production transport on changed V16",async()=>{
  const {JSDOM,VirtualConsole}=require("jsdom"),pre=require("../scripts/build-v17-prerelease.cjs"),calls=[],errors=[];
- const tick=()=>new Promise(r=>setTimeout(r,60));
+ const tick=()=>new Promise(r=>setTimeout(r,60));let lockAvailable=true;
  const boot=(html,entries={})=>{
   const vc=new VirtualConsole();vc.on("jsdomError",e=>{if(!/navigation \(except hash changes\)/.test(e.message))errors.push(e.message)});vc.on("error",e=>errors.push(String(e)));
   return new JSDOM(html,{url:H.ORIGIN+H.PATH,runScripts:"dangerously",pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
    w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event("close"))};
    w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}});
-   w.confirm=()=>true;w.alert=x=>errors.push(String(x));w.prompt=()=>null;
+   w.confirm=()=>true;w.alert=x=>errors.push(String(x));w.prompt=()=>null;Object.defineProperty(w.navigator,"locks",{value:{request:async(name,opts,callback)=>{assert.equal(name,"olo-v17-daniel-mobile-sync");assert.equal(opts.ifAvailable,true);return callback(lockAvailable?{}:null)}}});
    w.fetch=async(url,opt)=>{calls.push({url,method:opt?.method});return {ok:true,json:async()=>url.endsWith("/api/health")?{ok:true,service:"One Less One Mobile",version:1}:url.endsWith("/api/inbox")?{items:[]}:{ok:true}}};
    for(const [k,v] of Object.entries(entries))w.localStorage.setItem(k,v);
   }});
@@ -51,7 +51,15 @@ test("local migration rehearses actual UI and blocks production transport on cha
   assert.match(g("rc-mobileStagingStatus").textContent,/V16 cambió/);assert.equal(calls.length,0);
   w.localStorage.setItem(H.LEGACY,source);g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
   assert.equal(calls.length,3);assert(calls.every(x=>x.url.startsWith(B.ENDPOINT+"/")));assert.equal(w.localStorage.getItem(H.ACTIVE+"_mobile_auto_v1"),null);assert.match(g("rc-mobileStagingStatus").textContent,/0 pendiente/);
-  assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.deepEqual(errors,[]);
+  const autoKey=H.ACTIVE+"_mobile_auto_v1";
+  g("rc-mobileAuto").checked=true;g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
+  assert.equal(calls.length,6);assert.equal(w.localStorage.getItem(autoKey),"x".repeat(40));assert.equal(w.localStorage.getItem(H.PREFS),null);
+  lockAvailable=false;w.dispatchEvent(new w.Event("focus"));await tick();assert.equal(calls.length,6);
+  lockAvailable=true;w.dispatchEvent(new w.Event("focus"));await tick();assert.equal(calls.length,9);
+  w.localStorage.setItem(H.LEGACY,source+" ");w.dispatchEvent(new w.Event("focus"));await tick();assert.equal(calls.length,9);
+  w.localStorage.setItem(H.LEGACY,source);g("rc-mobileForget").click();assert.equal(w.localStorage.getItem(autoKey),null);assert.equal(g("rc-mobileAuto").checked,false);
+  w.dispatchEvent(new w.Event("focus"));await tick();assert.equal(calls.length,9);
+  assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.equal(w.localStorage.getItem(H.ACTIVE),exact);assert.deepEqual(errors,[]);
  }finally{await tick();second.window.close()}
 });
 
