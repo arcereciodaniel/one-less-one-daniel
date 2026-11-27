@@ -73,7 +73,7 @@ const oneV16System=(()=>{
  }
  function view(model,range,asOf,F){
   if(!valid(asOf)||!valid(range.start)||!valid(range.end)||range.start>range.end)throw Error("Intervalo inválido");
-  const budget=F.project(model,{basis:"calendar",...range}),m=model.modules||{};
+  const budget=(F.budgetProject||F.project)(model,{basis:"calendar",...range}),m=model.modules||{};
   const dateRows=k=>list(m,k).filter(x=>inRange(range,x.date));
   const pending=(k)=>list(m,k).filter(x=>x.minor>0&&!valid(x.date));
   const debts=dateRows("debts").filter(x=>x.minor>0),collections=dateRows("collections").filter(x=>x.minor>0);

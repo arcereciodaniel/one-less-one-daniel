@@ -6,7 +6,7 @@ const oneV16Intelligence=(()=>{
  const rangeOK=r=>r&&valid(r.start)&&valid(r.end)&&r.start<=r.end;
  function analyze(model,range,asOf,F){
   if(!valid(asOf)||!rangeOK(range))throw Error("Intervalo inválido");
-  const p=F.project(model,{basis:"calendar",...range}),status=asOf<range.start?"future":asOf>range.end?"closed":"current";
+  const p=(F.budgetProject||F.project)(model,{basis:"calendar",...range}),status=asOf<range.start?"future":asOf>range.end?"closed":"current";
   const rows=p.rows.filter(r=>r.type!=="Ingreso").map(r=>{
    const match=a=>a.categoryId===r.id&&a.currency===r.currency;
    const actual=p.actuals.filter(a=>match(a)&&a.date<=asOf).reduce((s,a)=>add(s,a.minor),0);
@@ -19,7 +19,7 @@ const oneV16Intelligence=(()=>{
  }
  function donors(model,range,asOf,F,destination){
   if(!rangeOK(range)||!valid(asOf)||!inside(range,asOf)||!valid(destination.date)||!inside(range,destination.date)||destination.date<asOf||model.issues?.length)return [];
-  const p=F.project(model,{basis:"calendar",...range});
+  const p=(F.budgetProject||F.project)(model,{basis:"calendar",...range});
   const protectedCat=c=>!c||c.synthetic||c.active===false||c.budgetable===false||c.type!=="Gasto"||c.isSavings||c.protected||/ahorro|inversi[oó]n|meta/i.test(c.name||"")||model.actuals.some(a=>a.categoryId===c.id&&a.source==="saving");
   const c=model.categories.find(c=>c.id===destination.categoryId);
   if(protectedCat(c))return [];
@@ -32,7 +32,7 @@ const oneV16Intelligence=(()=>{
    const r=p.rows.find(r=>r.id===a.categoryId&&r.currency===a.currency);
    if(protectedCat(model.categories.find(c=>c.id===a.categoryId))||!r||r.pendingMinor)return [];
    const month=a.date.slice(0,7),last=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).toISOString().slice(0,10);
-   const wider=F.project(model,{basis:"calendar",start:month+"-01"<range.start?month+"-01":range.start,end:last>range.end?last:range.end});
+   const wider=(F.budgetProject||F.project)(model,{basis:"calendar",start:month+"-01"<range.start?month+"-01":range.start,end:last>range.end?last:range.end});
    const wr=wider.rows.find(x=>x.id===a.categoryId&&x.currency===a.currency);
    if(!wr||wr.pendingMinor)return [];
    const maxMinor=Math.min(a.minor,r.plannedMinor-r.actualMinor,wr.plannedMinor-wr.actualMinor,need);

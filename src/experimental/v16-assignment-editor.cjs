@@ -14,6 +14,7 @@ const oneV16Editor=(()=>{
  function stage(model,command){
   if(!model||!Array.isArray(model.allocations)||!Array.isArray(model.categories)||!Array.isArray(model.actuals)||!command)throw Error("Modelo inválido.");
   if(model.issues?.length)throw Error("Revisá las incidencias del historial antes de editar.");
+  const F=typeof oneV16Finance!=="undefined"?oneV16Finance:require("./v16-financial-assignments.cjs");
   const old=model.allocations,ids=new Set();totals(old);for(const a of old){if(typeof a.id!=="string"||!a.id||ids.has(a.id))throw Error("ID de asignación duplicado");ids.add(a.id)}
   const {kind,id}=command;
   const creating=kind==="create"||kind==="create-range";
@@ -40,11 +41,10 @@ const oneV16Editor=(()=>{
    const cid=command.categoryId??target.categoryId,unit=command.currency??target.currency;
    if(unit!==target.currency)throw Error("Para cambiar moneda, eliminá y creá una nueva asignación explícitamente.");
    const historical=target.parentKey||target.originId;
-   if(historical&&(cid!==target.categoryId||amount(command.amount)!==target.minor||target.parentKey&&!model.periods.some(p=>p.key===target.parentKey&&inside(p,command.date))||target.originId&&!inside({start:target.originStart,end:target.originEnd},command.date)))throw Error("El monto y categoría históricos se conservan; solo podés mover la fecha dentro del período original.");
+   if(historical&&(cid!==target.categoryId||amount(command.amount)!==target.minor||target.parentKey&&!model.periods.some(p=>p.key===target.parentKey&&inside(p,command.date))&&!inside(model.calendarSlots?.[target.parentKey]||{start:"~",end:""},command.date)||target.originId&&!inside({start:target.originStart,end:target.originEnd},command.date)&&!inside(model.calendarSlots?.[target.parentKey]||{start:"~",end:""},command.date)))throw Error("El monto y categoría históricos se conservan; solo podés mover la fecha dentro del período original.");
    removed=[target];created=[dated(cid,command.date,amount(command.amount),unit,target.id,{...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{}),...(target.originId?{originId:target.originId,originStart:target.originStart,originEnd:target.originEnd}:{})})];
   }else if(kind==="transfer"){
    const {destinationCategoryId,date,range,asOf}=command,minor=amount(command.amount);
-   const F=typeof oneV16Finance!=="undefined"?oneV16Finance:require("./v16-financial-assignments.cjs");
    const I=typeof oneV16Intelligence!=="undefined"?oneV16Intelligence:require("./v16-budget-intelligence.cjs");
    const option=I.donors(model,range,asOf,F,{categoryId:destinationCategoryId,date,currency:target.currency}).find(x=>x.id===target.id);
    if(!option||minor>option.maxMinor)throw Error("El monto supera el presupuesto que se puede redistribuir.");
@@ -58,13 +58,14 @@ const oneV16Editor=(()=>{
   }else if(kind==="distribute"){
    if(target.source==="range"||target.date||!valid(target.start)||!valid(target.end)||target.start>target.end)throw Error("La asignación no es un intervalo pendiente.");
    if(!Array.isArray(command.parts)||!command.parts.length||command.parts.length>60)throw Error("Ingresá las fechas de distribución.");
-   created=command.parts.map((p,i)=>{if(!inside(target,p.date))throw Error("La fecha debe estar dentro del intervalo original.");return dated(target.categoryId,p.date,amount(p.amount),target.currency,baseId+":"+i,{originId:target.originId||target.id,originStart:target.originStart||target.start,originEnd:target.originEnd||target.end,...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{})})});
+   created=command.parts.map((p,i)=>{if(!inside(model.calendarSlots?.[target.parentKey]?F.budgetBounds(model,target):target,p.date))throw Error("La fecha debe estar dentro del intervalo del presupuesto.");return dated(target.categoryId,p.date,amount(p.amount),target.currency,baseId+":"+i,{originId:target.originId||target.id,originStart:target.originStart||target.start,originEnd:target.originEnd||target.end,...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{})})});
    if(created.reduce((s,x)=>add(s,x.minor),0)!==target.minor)throw Error("La distribución debe conservar exactamente el total original.");
    removed=[target];
   }else throw Error("Operación no disponible.");
   const retained=old.filter(a=>!removed.some(r=>r.id===a.id)),used=new Set(retained.map(a=>a.id)),slots=new Set(retained.filter(a=>a.date).map(a=>JSON.stringify([a.categoryId,a.currency,a.date])));
   for(const a of created){
    if(used.has(a.id))throw Error("ID de asignación duplicado.");used.add(a.id);
+   if(model.calendarSlots&&!a.parentKey&&["create","create-range","edit","edit-range","transfer"].includes(kind)&&retained.some(x=>x.parentKey&&F.budgetOverlaps(model,a,x)&&!F.budgetAllocation(model,x).date))throw Error("Ya existe presupuesto histórico en este intervalo. Distribuí el monto existente.");
    if(a.source==="range"){
     const overlaps=x=>x.categoryId===a.categoryId&&x.currency===a.currency&&(x.date?inside(a,x.date):x.start<=a.end&&a.start<=x.end);
     if(retained.some(overlaps)||created.some(x=>x!==a&&overlaps(x)))throw Error("Ya existe presupuesto para esta categoría en parte del intervalo. Editá el existente.");
