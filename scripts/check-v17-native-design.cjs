@@ -25,6 +25,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    await page.addInitScript(({entries,origin})=>{if(location.origin===origin&&!localStorage.getItem("olo_v17_daniel_data_v1"))for(const [k,v] of Object.entries(entries))localStorage.setItem(k,v)},{origin:H.ORIGIN,entries:{[H.LEGACY]:source,[H.SOURCE]:source,[H.ACTIVE]:active}});
    await page.goto(root);await page.waitForURL(old);
    await page.locator(".olo-original-header").waitFor();
+   assert.equal(await page.locator("style#v17-native-module-css").count(),1);assert.equal(await page.locator("style#v17-original-design").count(),1);
    const baseline=await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE);assert.equal(baseline,active);
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
    for(const theme of ["dark","light"]){
