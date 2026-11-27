@@ -26,13 +26,13 @@ test("local migration rehearses actual UI and blocks production transport on cha
   }});
  };
  const fixture=boot(pre.buildCandidate());let source;
- try{source=fixture.window.localStorage.getItem("rastro_lab_v17_prerelease_data_v1");assert(source)}finally{await tick();fixture.window.close()}
+ try{const raw=JSON.parse(fixture.window.localStorage.getItem("rastro_lab_v17_prerelease_data_v1"));const [g,p]=raw.movements;const expense=g.categoryId,debt=p.categoryId;g.categoryId=debt;g.category=p.category;p.categoryId=expense;p.category="Supermercado";raw.movements.push({...g,id:"legacy-cross-third",seq:3,amount:125});raw.movementSeq=3;source=JSON.stringify(raw);assert(source)}finally{await tick();fixture.window.close()}
  const first=boot(B.buildInner(),{[H.LEGACY]:source,[H.PREFS]:"{}"});let active;
  try{
   const w=first.window,g=id=>w.document.getElementById(id);g("rc-integrity").click();g("rc-handoffRead").click();
   assert.match(g("rc-migrationStatus").textContent,/Desvinculá/);assert(g("rc-migrationConfirm").disabled);
   w.localStorage.removeItem(H.PREFS);const bad=JSON.parse(source);bad.movements[0].period="unlinked";w.localStorage.setItem(H.LEGACY,JSON.stringify(bad));const before=w.localStorage.getItem(H.ACTIVE);g("rc-handoffRead").click();assert.match(g("rc-migrationStatus").textContent,/missing-period-link \(1\)/);assert(g("rc-migrationConfirm").disabled);assert.equal(w.localStorage.getItem(H.ACTIVE),before);assert.equal(w.localStorage.getItem(H.SOURCE),null);w.localStorage.setItem(H.LEGACY,source);g("rc-handoffRead").click();assert(!g("rc-migrationConfirm").disabled,g("rc-migrationStatus").textContent);
-  g("rc-migrationConfirm").click();active=w.localStorage.getItem(H.ACTIVE);assert(M.isPrivate(JSON.parse(active)));assert.equal(w.localStorage.getItem(H.SOURCE),source);assert.equal(w.localStorage.getItem(H.LEGACY),source);
+  g("rc-migrationConfirm").click();active=w.localStorage.getItem(H.ACTIVE);assert(M.isPrivate(JSON.parse(active)));assert.deepEqual(JSON.parse(active).movements,JSON.parse(source).movements);assert.deepEqual(JSON.parse(active).debts,JSON.parse(source).debts);assert.deepEqual(JSON.parse(active).periods,JSON.parse(source).periods);assert.equal(w.localStorage.getItem(H.SOURCE),source);assert.equal(w.localStorage.getItem(H.LEGACY),source);
   assert.equal(calls.length,0);
  }finally{await tick();first.window.close()}
  const second=boot(B.buildInner(),{[H.LEGACY]:source,[H.SOURCE]:source,[H.ACTIVE]:active});
@@ -44,4 +44,25 @@ test("local migration rehearses actual UI and blocks production transport on cha
   assert.equal(calls.length,3);assert(calls.every(x=>x.url.startsWith(B.ENDPOINT+"/")));assert.match(g("rc-mobileStagingStatus").textContent,/0 pendiente/);
   assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.deepEqual(errors,[]);
  }finally{await tick();second.window.close()}
+});
+
+test("three historical cross-outflow category links retain original category, type, date, money and FX; income mismatch still blocks",()=>{
+ const F=require("../src/experimental/v16-financial-assignments.cjs");
+ const categories=[{id:"card",name:"Tarjetas de Crédito",type:"Pago deuda"},{id:"other",name:"Otros",type:"Gasto"},{id:"salary",name:"Salario",type:"Ingreso"}];
+ const raw={categories,periods:[{key:"P1",date:"2026-08-01",budgetMonth:"2026-08",categoryBudgets:{other:1000,card:100}}],movements:[
+  {id:"one",date:"2026-08-03",type:"Gasto",categoryId:"card",category:"Tarjetas de Crédito",amount:25,currency:"USD",fxBuy:490,fxSell:500,fxDate:"2026-08-03",period:"P1",financedDebtId:"card-debt"},
+  {id:"two",date:"2026-08-03",type:"Gasto",categoryId:"card",category:"Tarjetas de Crédito",amount:1500,currency:"CRC",period:"P1"},
+  {id:"three",date:"2026-08-14",type:"Pago deuda",categoryId:"other",category:"Otros",amount:4000,currency:"CRC",period:"P1",debtId:"loan"}
+ ]};
+ const before=JSON.stringify(raw),adapter={endFor:()=>"2026-08-31",allocationState:()=>null,contributionCategory:()=>null};
+ const m=F.adaptLegacy(raw,adapter);
+ assert.deepEqual(m.issues,[]);assert.equal(JSON.stringify(raw),before);
+ assert.deepEqual(m.actuals.map(a=>[a.sourceId,a.type,a.categoryId,a.date,a.currency,a.minor]),raw.movements.map(a=>[a.id,a.type,a.categoryId,a.date,a.currency,a.amount*100]));
+ assert.equal(m.actuals[0].fxSell,500);assert.equal(m.actuals[0].financed,true);
+ const q=F.project(m,{basis:"financial",parentKeys:["P1"]});
+ assert.equal(q.totals.CRC.outflow.actualMinor,550000);assert.equal(q.totals.USD.outflow.actualMinor,2500);
+ assert.equal(q.totals.CRC.income.actualMinor,0);assert.equal(F.valueCRC(q,{fxBuy:490,fxSell:510}).actualMinor,1800000);
+ assert.equal(q.rows.find(r=>r.id==="other").actualMinor,400000);
+ const invalid=JSON.parse(before);invalid.movements[0].categoryId="salary";assert(F.adaptLegacy(invalid,adapter).issues.some(x=>x.code==="movement-category-review"));
+ invalid.movements[0].categoryId="unknown";assert(F.adaptLegacy(invalid,adapter).issues.some(x=>x.code==="movement-category-review"));
 });

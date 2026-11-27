@@ -56,7 +56,10 @@ const oneV16Finance=(()=>{
   const movementRows=list("movements");unique(movementRows,m=>m.id);
   const reserves=list("reserveMovements");unique(reserves,m=>m.id);
   const synthetic=(id,name,type)=>{if(cat.has(id)){if(!cat.get(id).synthetic)throw Error("ID de categoría reservado");return id}const c={id,name,type,synthetic:true};cat.set(id,c);categories.push(c);return id};
-  const categoryFor=(m,type)=>{if(m.categoryId&&cat.get(m.categoryId)?.type===type)return m.categoryId;if(!m.categoryId){const matches=categories.filter(c=>!c.synthetic&&c.name===m.category&&c.type===type);if(matches.length===1)return matches[0].id}issue("movement-category-review",m.id);return synthetic("@v16:uncategorized:"+type,"Sin categoría",type)};
+  // Historical V16 can contain an explicitly linked expense in a debt-payment category, or vice versa.
+  // Preserve the original category ID AND movement type: both are outflows, not an income conversion.
+  // Missing IDs, ambiguous names and income/outflow mismatches remain review blockers.
+  const categoryFor=(m,type)=>{if(m.categoryId){const existing=cat.get(m.categoryId);const outflow=k=>k==="Gasto"||k==="Pago deuda";if(existing&&!existing.synthetic&&(existing.type===type||outflow(existing.type)&&outflow(type)))return m.categoryId;}if(!m.categoryId){const matches=categories.filter(c=>!c.synthetic&&c.name===m.category&&c.type===type);if(matches.length===1)return matches[0].id}issue("movement-category-review",m.id);return synthetic("@v16:uncategorized:"+type,"Sin categoría",type)};
   const snapshot=m=>({fxBuy:m.fxBuy,fxSell:m.fxSell,fxDate:m.fxDate});
   for(const m of movementRows){
    if(!kinds.includes(m.type))continue; // e.g. cobro: not budget income or expense.
