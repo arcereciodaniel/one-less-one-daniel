@@ -14,7 +14,7 @@ const oneV17Csv=(()=>{
  function rangeCheck(r){if(!r||!valid(r.start)||!valid(r.end)||r.start>r.end)throw Error("Intervalo inválido")}
  function budget(p,r){
   rangeCheck(r);
-  const rows=[["Desde","Hasta","Categoría ID","Categoría","Tipo","Moneda","Plan asignado","Ejecutado","Pendiente de distribuir (intervalo superpuesto; no sumar entre períodos)","Restante (solo si definido)","Estado","Incidencias del modelo"]];
+  const rows=[["Desde","Hasta","Categoría ID","Categoría","Tipo","Moneda","Plan dentro del intervalo (incluye bloques completos)","Ejecutado","Pendiente de distribuir (intervalo superpuesto; no sumar entre períodos)","Restante (solo si definido)","Estado","Incidencias del modelo"]];
   for(const x of p.rows){
    rows.push([r.start,r.end,x.id,x.name,x.type,x.currency,amount(x.plannedMinor),amount(x.actualMinor),amount(x.pendingMinor),optional(x.remainingMinor),x.status,p.issues.length]);
   }
