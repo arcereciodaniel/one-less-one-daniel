@@ -23,10 +23,10 @@ const oneV17Forecast=(()=>{
  }
  function forecast(model,asOf,requestedEnd,confirmed,nativeDebt,rates,F){
   if(!valid(asOf)||!valid(requestedEnd))throw Error("Fecha inválida");
-  if(requestedEnd<=asOf)return {end:requestedEnd,requestedEnd,partial:true,balance:null,lowest:null,netMinor:null,events:[],points:[],reasons:["no-future-range"],counts:{included:0,pending:0}};
+  if(requestedEnd<=asOf)return {end:requestedEnd,requestedEnd,partial:true,balance:null,lowest:null,netMinor:null,events:[],points:[],pendingItems:[],coverage:{days:0,uncoveredDays:0},reasons:["no-future-range"],counts:{included:0,pending:0}};
   const end=requestedEnd>shift(asOf,90)?shift(asOf,90):requestedEnd,range={start:shift(asOf,1),end};
-  const reasons=new Set(["not-full-liquidity-forecast"]),pending=new Set(),events=[],seen=new Set();
-  const mark=(a,code)=>{pending.add(a.id);reasons.add(code)};
+  const reasons=new Set(["not-full-liquidity-forecast"]),pending=new Map(),events=[],seen=new Set();
+  const mark=(a,code,namespace="allocation")=>{const key=JSON.stringify([namespace,a.id]);if(!pending.has(key))pending.set(key,{namespace,id:a.id,reasons:[]});const row=pending.get(key);if(!row.reasons.includes(code))row.reasons.push(code);reasons.add(code)};
   if(end!==requestedEnd)reasons.add("horizon-limited");
   const p=F.project(model,{basis:"calendar",...range});
   const cats=new Map(model.categories.map(c=>[c.id,c]));
@@ -35,14 +35,26 @@ const oneV17Forecast=(()=>{
   for(const [name,code] of [["projectPlans","project-review"],["collections","collection-review"],["debts","undated-debt"]]){
    for(const x of modules[name]||[]){
     const outstanding=name==="projectPlans"?x.remainingMinor:x.minor;
-    if(outstanding>0&&(!x.date||x.date<=end)&&(name!=="debts"||!x.date))mark({id:name+":"+x.id},code);
+    if(outstanding>0&&(!x.date||x.date<=end)&&(name!=="debts"||!x.date))mark(x,code,name);
    }
   }
+  let uncoveredDays=0;
+  for(let d=range.start;d<=end;d=shift(d,1))if(!model.periods.some(p=>inside(p,d)))uncoveredDays++;
+  if(uncoveredDays)reasons.add("budget-coverage-review");
   if(model.issues.length)reasons.add("historical-review");
   const push=e=>{if(seen.has(e.id)||!Number.isSafeInteger(e.minor)||!valid(e.date)||!inside(range,e.date))throw Error("Flujo inválido o duplicado");seen.add(e.id);if(e.minor)events.push(e)};
   let invalidCash=false;
-  for(const c of confirmed){if(!valid(c.date)){invalidCash=true;continue}if(!inside(range,c.date))continue;if(c.missingFX||!Number.isSafeInteger(c.minor)){invalidCash=true;mark(c,"confirmed-fx-review");continue}push({...c,id:"confirmed:"+c.id,kind:"confirmed"})}
-  for(const [i,d] of nativeDebt.entries()){if(d.kind!=="debt"||!inside(range,d.date))continue;if(!Number.isFinite(d.amount)||d.amount>=0){invalidCash=true;reasons.add("debt-review");continue}push({id:"debt:"+i,date:d.date,minor:Math.round(d.amount*100),kind:"debt",...(d.debtId&&d.due?{debtId:d.debtId,due:d.due}:{})})}
+  for(const c of confirmed){if(!valid(c.date)){invalidCash=true;mark(c,"confirmed-date-review","confirmed");continue}if(!inside(range,c.date))continue;if(c.missingFX||!Number.isSafeInteger(c.minor)){invalidCash=true;mark(c,"confirmed-fx-review","confirmed");continue}push({...c,id:"confirmed:"+c.id,kind:"confirmed"})}
+  const debtKeys=new Set();
+  for(const [i,d] of nativeDebt.entries()){
+   if(d.kind!=="debt")continue;
+   if(!valid(d.date)){invalidCash=true;mark({id:String(i)},"debt-review","nativeDebt");continue}
+   if(!inside(range,d.date))continue;
+   const identity=d.debtId&&d.due?JSON.stringify([d.debtId,d.due]):null;
+   if(!Number.isFinite(d.amount)||d.amount>=0||!Number.isSafeInteger(Math.round(d.amount*100))||identity&&(!valid(d.due)||debtKeys.has(identity))){invalidCash=true;mark({id:String(i)},"debt-review","nativeDebt");continue}
+   if(identity){debtKeys.add(identity);if(d.due<asOf)reasons.add("overdue-debt-estimate")}
+   push({id:"debt:"+(identity||i),date:d.date,minor:Math.round(d.amount*100),kind:"debt",...(identity?{debtId:d.debtId,due:d.due}:{})});
+  }
   const cache=new Map();
   for(const a of p.planned.filter(a=>a.date)){
    const cat=cats.get(a.categoryId),month=a.date.slice(0,7),key=JSON.stringify([a.categoryId,a.currency,month]);
@@ -70,12 +82,12 @@ const oneV17Forecast=(()=>{
   }
   events.sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
   const base=model.operating?.asOf===asOf?model.operating.minor:null;
-  if(!Number.isSafeInteger(base))invalidCash=true;
-  if(invalidCash||model.issues.length)return {end,requestedEnd,partial:true,balance:null,lowest:null,netMinor:null,events,points:[],reasons:[...reasons],counts:{included:events.length,pending:pending.size}};
+  if(!Number.isSafeInteger(base)){invalidCash=true;reasons.add("operating-balance-review")}
+  if(invalidCash||model.issues.length)return {end,requestedEnd,partial:true,balance:null,lowest:null,netMinor:null,events,points:[],reasons:[...reasons],pendingItems:[...pending.values()],coverage:{days:Math.round((Date.parse(end)-Date.parse(asOf))/86400000),uncoveredDays},counts:{included:events.length,pending:pending.size}};
   let balance=base,lowest=base,netMinor=0;const points=[{date:asOf,balance}];const grouped=new Map();
   for(const e of events){grouped.set(e.date,add(grouped.get(e.date)||0,e.minor));netMinor=add(netMinor,e.minor)}
   for(const [date,delta] of grouped){balance=add(balance,delta);lowest=Math.min(lowest,balance);points.push({date,balance})}
-  return {end,requestedEnd,partial:true,balance,lowest,netMinor,events,points,reasons:[...reasons],counts:{included:events.length,pending:pending.size}};
+  return {end,requestedEnd,partial:true,balance,lowest,netMinor,events,points,reasons:[...reasons],pendingItems:[...pending.values()],coverage:{days:Math.round((Date.parse(end)-Date.parse(asOf))/86400000),uncoveredDays},counts:{included:events.length,pending:pending.size}};
  }
  return {forecast,financialComparison};
 })();

@@ -50,7 +50,8 @@ const oneV17Commitments=(()=>{
   const relevantDebts=model.allocations.filter(a=>a.date>asOf&&a.date<=forecast.end&&model.categories.find(c=>c.id===a.categoryId)?.type==="Pago deuda");
   const relevantCollections=(model.modules?.collections||[]).filter(c=>c.minor>0&&(!c.date||c.date<=forecast.end));
   const reasons=forecast.reasons.filter(c=>c!=="debt-budget-review"||relevantDebts.some(a=>!coveredDebt.includes(a.id))).filter(c=>c!=="collection-review"||relevantCollections.some(x=>!coveredCollections.includes(x.id)));
-  return {...forecast,reasons,counts:{...forecast.counts,pending:Math.max(0,forecast.counts.pending-coveredDebt.length-coveredCollections.length),coveredDebt:coveredDebt.length,coveredCollections:coveredCollections.length},classification,review};
+  const pendingItems=Array.isArray(forecast.pendingItems)?forecast.pendingItems.filter(x=>!(x.namespace==="allocation"&&coveredDebt.includes(x.id)&&x.reasons.every(r=>r==="debt-budget-review"))&&!(x.namespace==="collections"&&coveredCollections.includes(x.id))):null;
+  return {...forecast,reasons,...(pendingItems?{pendingItems}:{}),counts:{...forecast.counts,pending:pendingItems?pendingItems.length:Math.max(0,forecast.counts.pending-coveredDebt.length-coveredCollections.length),coveredDebt:coveredDebt.length,coveredCollections:coveredCollections.length},classification,review};
  }
  return {FIELD,read,occurrences,options,stage,reconcile};
 })();

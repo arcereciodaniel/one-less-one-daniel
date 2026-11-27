@@ -35,7 +35,8 @@ const oneV17Links=(()=>{
    else review.push(p.id);
   }
   const reasons=forecast.reasons.filter(c=>c!=="project-review"||review.length>0);
-  return {...forecast,reasons,counts:{...forecast.counts,pending:Math.max(0,forecast.counts.pending-covered.length),coveredProjects:covered.length},coveredProjects:covered,reviewProjects:review};
+  const pendingItems=Array.isArray(forecast.pendingItems)?forecast.pendingItems.filter(x=>x.namespace!=="projectPlans"||!covered.includes(x.id)):null;
+  return {...forecast,reasons,...(pendingItems?{pendingItems}:{}),counts:{...forecast.counts,pending:pendingItems?pendingItems.length:Math.max(0,forecast.counts.pending-covered.length),coveredProjects:covered.length},coveredProjects:covered,reviewProjects:review};
  }
  return {FIELD,read,options,stage,status,reconcile};
 })();
