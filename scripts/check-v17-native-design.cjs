@@ -33,7 +33,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
     for(const name of modules){
      const button=page.locator('.olo-original-header [data-view="'+name+'"]');await button.click();
      assert(await button.evaluate(b=>b.classList.contains("active")));
-     assert.equal(await page.locator(".demo-filter:visible").count(),1);
+     assert.equal(await page.locator(".demo-filter:visible").count(),["dashboard","plan","movements","shared","future"].includes(name)?1:0);
      assert.equal(await page.locator(".demo-header:visible").count(),0);
      assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
      if(name==="dashboard"){
@@ -45,7 +45,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
        await page.waitForFunction(id=>{const c=document.getElementById(id);if(!c||!c.width||!c.height)return false;const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i])return true;return false},id);
       }
       if(width!==320)await page.screenshot({path:path.join(out,"Inicio-"+width+"-"+theme+".png"),fullPage:true});
-     }else {assert(!(await page.locator("#view-dashboard").isVisible()));if(["movements","debts","shared","capital","projects"].includes(name))assert(await page.locator("#view-"+name).isVisible());if(name==="future")assert(await page.locator(".one-future-panel:visible").count()>=1);if(name==="plan")assert(await page.locator(".r8-fortnight-card:visible").count()>=1);}
+     }else {assert(!(await page.locator("#view-dashboard").isVisible()));if(["movements","debts","shared","capital","projects"].includes(name))assert(await page.locator("#view-"+name).isVisible());if(name==="future")assert(await page.locator(".one-future-panel:visible").count()>=1);if(name==="plan")assert.equal(await page.locator(".olo-budget-shell:visible").count(),1);}
      if(width===1440&&name!=="dashboard")await page.screenshot({path:path.join(out,name+"-"+theme+".png"),fullPage:true});
      const overflow=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1?[]:[...document.querySelectorAll("body *")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left< -1)&&!e.closest(".table-wrap")}).slice(0,20).map(e=>({id:e.id,cls:String(e.className).slice(0,100),width:Math.round(e.getBoundingClientRect().width),right:Math.round(e.getBoundingClientRect().right)})));
      if(overflow.length){await page.screenshot({path:path.join(out,"OVERFLOW-"+name+"-"+width+"-"+theme+".png"),fullPage:true});console.error(JSON.stringify(overflow))}
@@ -53,6 +53,15 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
      checks.push({width,theme,module:name});
     }
    }
+   await page.locator('.olo-original-header [data-view="plan"]').click();
+   for(const level of ["week","fortnight","month","quarter","half","year"]){
+    await page.locator("#olo-period-level").selectOption(level);assert.equal(await page.locator(".olo-budget-shell:visible").count(),1);assert(!/^\d{4}-\d{2}$/.test(await page.locator("#olo-period-label").textContent()));
+    await page.locator("#olo-prev").click();await page.locator("#olo-next").click();
+    for(const group of ["Ingreso","Pago deuda","Gasto"])await page.locator('[data-budget-group="'+group+'"]').click();
+    assert.equal(await page.locator("[data-budget-total]").count(),3);
+    if(level==="week"&&width===1440)await page.screenshot({path:path.join(out,"Presupuesto-semanal.png"),fullPage:true});
+   }
+   await page.locator("#olo-period-level").selectOption("month");
    await page.locator('.olo-original-header [data-display-currency="USD"]').click();
    assert.equal(await page.locator("#rc-displayCurrency").inputValue(),"USD");
    await page.locator('.olo-original-header [data-view="dashboard"]').click();
