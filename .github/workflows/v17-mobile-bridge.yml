@@ -1,0 +1,25 @@
+name: V17 mobile bridge verification (no deployment)
+on:
+  push:
+    branches: [release/v17-0-prerelease]
+    paths:
+      - "src/experimental/v17-mobile-bridge.cjs"
+      - "tests/v17-mobile-bridge.test.cjs"
+      - "scripts/build-v17-mobile-bridge.cjs"
+      - "scripts/build-v17-staging.cjs"
+      - ".github/workflows/v17-mobile-bridge.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/release/v17-0-prerelease'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node --test tests/v17-mobile-bridge.test.cjs tests/v17-prerelease.test.cjs tests/v17-rc8-continuity.test.cjs mobile-pilot/staging/staging.test.mjs
