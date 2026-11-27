@@ -31,7 +31,7 @@ test("local migration rehearses actual UI and blocks production transport on cha
  try{
   const w=first.window,g=id=>w.document.getElementById(id);g("rc-integrity").click();g("rc-handoffRead").click();
   assert.match(g("rc-migrationStatus").textContent,/Desvinculá/);assert(g("rc-migrationConfirm").disabled);
-  w.localStorage.removeItem(H.PREFS);g("rc-handoffRead").click();assert(!g("rc-migrationConfirm").disabled,g("rc-migrationStatus").textContent);
+  w.localStorage.removeItem(H.PREFS);const bad=JSON.parse(source);bad.movements[0].period="unlinked";w.localStorage.setItem(H.LEGACY,JSON.stringify(bad));const before=w.localStorage.getItem(H.ACTIVE);g("rc-handoffRead").click();assert.match(g("rc-migrationStatus").textContent,/missing-period-link \(1\)/);assert(g("rc-migrationConfirm").disabled);assert.equal(w.localStorage.getItem(H.ACTIVE),before);assert.equal(w.localStorage.getItem(H.SOURCE),null);w.localStorage.setItem(H.LEGACY,source);g("rc-handoffRead").click();assert(!g("rc-migrationConfirm").disabled,g("rc-migrationStatus").textContent);
   g("rc-migrationConfirm").click();active=w.localStorage.getItem(H.ACTIVE);assert(M.isPrivate(JSON.parse(active)));assert.equal(w.localStorage.getItem(H.SOURCE),source);assert.equal(w.localStorage.getItem(H.LEGACY),source);
   assert.equal(calls.length,0);
  }finally{await tick();first.window.close()}
