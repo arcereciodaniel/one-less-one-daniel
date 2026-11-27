@@ -5,8 +5,9 @@ function buildInner(){
  let h=pre().replaceAll("rastro_lab_v17_prerelease_",H.PREFIX).replaceAll("V17.0 PRE","V17.0").replaceAll("V17 Pre-release","V17 Daniel");
  const rep=(a,b)=>{assert.equal(h.split(a).length,2,"Marker: "+a);h=h.replace(a,()=>b)};
  h=h.replace(/<title>[^<]*<\/title>/i,"<title>One Less One</title>");
+ h=h.replace("updateCurrencyHeader();oneFxAutoUpdate();","updateCurrencyHeader();");
  const appendStyle=css=>{const i=h.lastIndexOf("</body>");assert(i>0);h=h.slice(0,i)+css+h.slice(i)};
- rep("connect-src 'none'","connect-src "+ENDPOINT);
+ rep("connect-src 'none'","connect-src "+ENDPOINT+" https://api.hacienda.go.cr https://tipodecambio.paginasweb.cr");
  rep('const getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;','F.enableCalendarQuincenas();F.enableNovemberTransition();\nconst getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;');
  rep('const query=r=>F.project(model,{basis:"calendar",start:r.start,end:r.end});','const query=r=>F.budgetProject(model,{basis:"calendar",start:r.start,end:r.end});');
  rep('d.min=editing.target.start;d.max=editing.target.end;','const bounds=F.budgetBounds(model,editing.target);d.min=bounds.start;d.max=bounds.end;');

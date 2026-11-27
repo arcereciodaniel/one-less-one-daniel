@@ -171,3 +171,12 @@ test("November opening bridge preserves the original linked outflows and income,
  assert.equal(q("2026-10-01","2026-12-31").actuals.length,model.actuals.length);
  const report=A.inspect(model,"2026-11",F),food=report.rows.find(r=>r.id==="food");assert.equal(food.oldActual,1750000);assert.equal(food.newActual,800000);assert.equal(food.reconciledActual,2000000);assert.equal(food.carryMinor,1200000);assert.equal(JSON.stringify(model),before);
 });
+
+test("Consolidated category display uses historical FX, a single budget and one currency in CRC and USD",()=>{
+ const B=require("../src/experimental/v17-native-bridge.cjs");
+ const p={rows:[{id:"card",name:"Credit",type:"Pago deuda",currency:"CRC"},{id:"card",name:"Credit",type:"Pago deuda",currency:"USD"},{id:"food",name:"Food",type:"Gasto",currency:"CRC"}],planned:[{categoryId:"card",minor:20000000,currency:"CRC"},{categoryId:"food",minor:1000000,currency:"CRC"}],actuals:[{categoryId:"card",type:"Pago deuda",minor:10000000,currency:"CRC"},{categoryId:"card",type:"Pago deuda",minor:10000,currency:"USD",fxSell:510,fxBuy:490,fxDate:"2026-10-29"},{categoryId:"food",type:"Gasto",minor:200000,currency:"CRC"}],pending:[],issues:[]};
+ const before=JSON.stringify(p),rates={buy:495,sell:505},crc=B.categoryRows(p,rates,"CRC"),usd=B.categoryRows(p,rates,"USD");
+ assert.equal(crc.length,2);assert.equal(crc[0].plannedMinor,20000000);assert.equal(crc[0].actualMinor,15100000);assert.equal(crc[0].remainingMinor,4900000);assert.equal(usd[0].plannedMinor,40000);assert.equal(usd[0].actualMinor,30200);
+ assert.equal(B.totals(p,rates,"CRC","Pago deuda").actual,15100000);assert.equal(JSON.stringify(p),before);
+ delete p.actuals[1].fxSell;assert.equal(B.categoryRows(p,rates,"CRC")[0].actualMinor,null);assert.equal(B.totals(p,rates,"CRC","Pago deuda").actual,null);
+});

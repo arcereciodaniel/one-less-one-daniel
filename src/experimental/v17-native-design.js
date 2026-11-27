@@ -47,7 +47,7 @@ function designHome(){
  // Use the new calendar query for the original chart and category table. Undated
  // blocks remain pending, never allocated artificially to a week.
  const totals=B.totals(p,rates,"CRC");
- const amount=(items,kind,planned)=>{let n=0;for(const a of items){const type=planned?cat(a.categoryId)?.type:a.type;if(type!==kind)continue;const fx=a.currency==="CRC"?1:planned?(type==="Ingreso"?rates.buy:rates.sell):(type==="Ingreso"?a.fxBuy:a.fxSell);if(!Number.isFinite(fx)||fx<=0)return null;n+=a.minor*fx}return Math.round(n)};
+ const amount=(items,kind,planned)=>B.value(items.filter(a=>cat(a.categoryId)?.type===kind),rates,"CRC",planned,id=>cat(id)?.type);
  const grid=document.getElementById("kpiGrid");grid.innerHTML=[
   v7Kpi("↑","green","Ingresos reales",fmtCRC(amount(p.actuals,"Ingreso",false)),"Plan conocido: "+fmtCRC(amount(p.planned,"Ingreso",true)),"good"),
   v7Kpi("↓","red","Gastos reales",fmtCRC(amount(p.actuals,"Gasto",false)),"Plan conocido: "+fmtCRC(amount(p.planned,"Gasto",true))),
@@ -61,7 +61,7 @@ function designHome(){
  else{canvas.hidden=false;const msg=document.getElementById("v17ChartMissing");if(msg)msg.hidden=true;drawBarChart(canvas,chart.map(x=>x.label),chart.map(x=>x.planned/100),chart.map(x=>x.actual/100))}
  const rows=p.rows.filter(r=>r.type!=="Ingreso");
  document.getElementById("dashboardCategories").innerHTML='<table><thead><tr><th>Categoría</th><th>Presupuesto</th><th>Real</th><th>Disponible</th><th>Uso</th></tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr><td>'+esc(r.name)+(r.pendingMinor?'<small class="one-saving-category-label">Pendiente de distribuir</small>':'')+'</td><td class="num">'+(r.pendingMinor&&!r.plannedMinor?"—":f(r.plannedMinor,r.currency))+'</td><td class="num">'+f(r.actualMinor,r.currency)+'</td><td class="num '+(r.remainingMinor===null?"":r.remainingMinor<0?"negative":"positive")+'">'+(r.remainingMinor===null?"—":f(r.remainingMinor,r.currency))+'</td><td>'+(r.plannedMinor?'<div class="progress"><span style="width:'+Math.min(100,r.actualMinor/r.plannedMinor*100)+'%"></span></div><small>'+Math.round(r.actualMinor/r.plannedMinor*100)+'%</small>':'—')+'</td></tr>').join(""):'<tr><td colspan="5" class="empty">Sin registros para este período.</td></tr>')+'</tbody></table>';
- const insight=document.getElementById("dashboardInsight"),analysis=I.analyze(model,range,TODAY,F),signals=analysis.rows.filter(r=>["unplanned","over","ahead"].includes(r.signal));
+ const insight=document.getElementById("dashboardInsight"),signals=B.categoryRows({...p,actuals:p.actuals.filter(a=>a.date<=TODAY)},rates,"CRC").filter(r=>r.type!=="Ingreso"&&!r.pending&&!r.missing&&r.actualMinor>r.plannedMinor);
  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+ (signals.length?"Revisá tu presupuesto":"Dentro del presupuesto conocido")+'</h3><p>'+ (signals.length?signals.length+" categoría(s) por revisar.":p.pending.length?"Hay asignaciones sin fecha exacta; el presupuesto no está completo.":"No se detectan excesos en el período seleccionado.")+'</p>'+(totals.remaining!==null?'<span class="v7-status-pill">Restante: '+fmtCRC(totals.remaining)+'</span>':"");
 }
 renderDashboard=function(){originalDashboard();if(moduleName==="home"&&!nativeHome.hidden)designHome()};

@@ -18,21 +18,33 @@ const oneV17Bridge=(()=>{
   const stored=P.persist(io,expected,nextDisk);
   return {raw:clone(next),stored};
  }
- function totals(p,rates,display){
+ // Value in the original app's canonical CRC, using historical buy/sell
+ // for actuals and today's buy/sell for plans. Presentation in USD uses the
+ // current reference rate, exactly as V16 did. Round only after aggregation.
+ function value(items,rates,display,planned,typeFor){
   if(!["CRC","USD"].includes(display))throw Error("Moneda inválida");
-  const missing=new Set(),rate=(a,planned)=>a.currency==="CRC"?1:planned?(p.rows.find(r=>r.id===a.categoryId)?.type==="Ingreso"?rates.buy:rates.sell):(a.type==="Ingreso"?a.fxBuy:a.fxSell);
   const divisor=display==="USD"?(rates.buy+rates.sell)/2:1;
-  const out={planned:0,actual:0,pending:false,missing:false};
-  if(!Number.isFinite(divisor)||divisor<=0)return {...out,planned:null,actual:null,remaining:null,missing:true};
-  for(const [field,items,planned] of [["planned",p.planned,true],["actual",p.actuals,false]]){
-   let total=0;for(const a of items){if(p.rows.find(r=>r.id===a.categoryId)?.type==="Ingreso")continue;const fx=rate(a,planned);if(!Number.isFinite(fx)||fx<=0){missing.add(field);continue}total+=a.minor*fx}
-   out[field]=missing.has(field)?null:Math.round(total/divisor);
-   if(out[field]!==null&&!safe(out[field]))throw Error("Monto fuera de rango");
+  if(!Number.isFinite(divisor)||divisor<=0)return null;
+  let total=0;for(const a of items){
+   const type=planned?typeFor(a.categoryId):a.type;
+   const fx=a.currency==="CRC"?1:planned?(type==="Ingreso"?rates.buy:rates.sell):(type==="Ingreso"?a.fxBuy:a.fxSell);
+   if(!Number.isFinite(fx)||fx<=0)return null;
+   total+=a.minor*fx;
   }
-  out.pending=p.rows.some(r=>r.type!=="Ingreso"&&r.pendingMinor>0)||p.issues.length>0;
-  out.missing=missing.size>0;
-  out.remaining=out.pending||out.planned===null||out.actual===null?null:out.planned-out.actual;
-  return out;
+  const v=Math.round(total/divisor);if(!safe(v))throw Error("Monto fuera de rango");return v;
+ }
+ function categoryRows(p,rates,display){
+  const categories=new Map(p.rows.map(r=>[r.id,r])),typeFor=id=>categories.get(id)?.type;
+  return [...categories.values()].map(c=>{
+   const match=a=>a.categoryId===c.id,plans=p.planned.filter(match),actuals=p.actuals.filter(match),pending=p.pending.filter(match);
+   const plannedMinor=value(plans,rates,display,true,typeFor),actualMinor=value(actuals,rates,display,false,typeFor),pendingMinor=value(pending,rates,display,true,typeFor);
+   return {...c,currency:display,plannedMinor,actualMinor,pendingMinor,pending:pending.length>0,missing:[plannedMinor,actualMinor,pendingMinor].some(n=>n===null),remainingMinor:pending.length||p.issues.length||plannedMinor===null||actualMinor===null?null:plannedMinor-actualMinor,hasPlan:plans.some(a=>a.minor>0)};
+  });
+ }
+ function totals(p,rates,display,kind){
+  const typeFor=id=>p.rows.find(r=>r.id===id)?.type,match=a=>kind?typeFor(a.categoryId)===kind:typeFor(a.categoryId)!=="Ingreso";
+  const planned=value(p.planned.filter(match),rates,display,true,typeFor),actual=value(p.actuals.filter(match),rates,display,false,typeFor),pending=p.pending.some(match)||p.issues.length>0,missing=planned===null||actual===null;
+  return {planned,actual,pending,missing,remaining:pending||missing?null:planned-actual};
  }
  // A conservative dated scenario, not the native complete liquidity forecast.
  // Confirmed cash flows are taken from native signedMovement/reserveOperatingDelta.
@@ -60,6 +72,6 @@ const oneV17Bridge=(()=>{
   events.sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));const netMinor=events.reduce((s,e)=>{const n=s+e.minor;if(!safe(n))throw Error("Monto fuera de rango");return n},0);
   return {events,partial:true,reasons:[...reasons],netMinor};
  }
- return {snapshot,commit,totals,scenario};
+ return {snapshot,commit,totals,scenario,value,categoryRows};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV17Bridge;

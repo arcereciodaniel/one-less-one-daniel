@@ -48,35 +48,42 @@ document.addEventListener("click",e=>{if(!newFilter.contains(e.target))closePick
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closePicker()});
 const budgetGroups=[["Gasto","Gastos"],["Ingreso","Ingresos"],["Pago deuda","Deudas"]];
 let budgetGroup="Gasto";
-const groupRows=(p,g)=>p.rows.filter(r=>r.type===g);
-function groupTotals(p,g){
- const rows=groupRows(p,g),rates=currentRates(),divisor=display==="USD"?(rates.buy+rates.sell)/2:1;
- const total=(items,planned)=>{let n=0;for(const a of items.filter(a=>cat(a.categoryId)?.type===g)){const type=planned?cat(a.categoryId)?.type:a.type,fx=a.currency==="CRC"?1:planned?(type==="Ingreso"?rates.buy:rates.sell):(type==="Ingreso"?a.fxBuy:a.fxSell);if(!Number.isFinite(fx)||fx<=0||!Number.isFinite(divisor)||divisor<=0)return null;n+=a.minor*fx}return Math.round(n/divisor)};
- const planned=total(p.planned,true),actual=total(p.actuals,false),pending=rows.some(r=>r.pendingMinor>0)||p.issues.length>0;
- return {planned,actual,pending,remaining:pending||planned===null||actual===null?null:planned-actual};
-}
+const groupRows=(p,g)=>B.categoryRows(p,currentRates(),display).filter(r=>r.type===g);
+function groupTotals(p,g){return B.totals(p,currentRates(),display,g)}
 const fmt=n=>n===null?"—":f(n,display);
 function periodAssignmentLabel(a){return a.date?short(a.date):datesText(a)}
 function historicalEditor(a){return a.source==="legacy-scheduled-income"?"":a.source==="range"||a.date||a.originalDate?'<button class="demo-add" data-edit="'+esc(a.id)+'">Editar</button>':'<button class="demo-add" data-distribute="'+esc(a.id)+'">Asignar fechas</button>';}
 function compactRow(r,p,range,editable){
- const carries=p.actuals.filter(a=>a.transitionCarry&&a.categoryId===r.id&&a.currency===r.currency);
- const known=p.planned.filter(a=>a.categoryId===r.id&&a.currency===r.currency),hasKnown=r.plannedMinor>0,over=!r.pendingMinor&&r.type!=="Ingreso"&&r.actualMinor>r.plannedMinor,percent=hasKnown?Math.min(100,Math.max(0,r.actualMinor/r.plannedMinor*100)):0;
+ const carries=p.actuals.filter(a=>a.transitionCarry&&a.categoryId===r.id);
+ const known=p.planned.filter(a=>a.categoryId===r.id),hasKnown=r.hasPlan,over=!r.pending&&!r.missing&&r.type!=="Ingreso"&&r.actualMinor>r.plannedMinor,percent=hasKnown&&!r.missing&&r.plannedMinor>0?Math.min(100,Math.max(0,r.actualMinor/r.plannedMinor*100)):0;
  const button=editable&&!r.synthetic&&r.active!==false&&r.budgetable!==false?'<button class="olo-row-add" type="button" data-add="'+esc(r.id)+'" data-unit="'+r.currency+'" data-range="'+range.key+'" aria-label="Asignar a '+esc(r.name)+'">+</button>':"";
  const list=editable&&known.length?'<details class="olo-row-details"><summary>Editar presupuesto</summary>'+known.map(a=>'<div class="olo-detail-line"><span>'+esc(periodAssignmentLabel(a))+' · '+f(a.minor,a.currency)+'</span>'+historicalEditor(a)+'</div>').join("")+'</details>':"";
- return '<div class="olo-budget-row" data-category="'+esc(r.id)+'"><div class="olo-row-top"><span class="olo-row-name">'+esc(r.name)+'</span><span class="olo-row-amount '+(over?"negative":"")+'">'+f(r.actualMinor,r.currency)+' <small>/ '+(hasKnown?f(r.plannedMinor,r.currency):"—")+'</small></span>'+button+'</div>'+(hasKnown?'<div class="olo-track"><i class="'+(over?"is-over":"")+'" style="width:'+percent+'%"></i></div>':"")+(!hasKnown&&r.actualMinor?'<small class="olo-row-note">'+(r.pendingMinor?"Presupuesto de otro período":"Sin presupuesto")+'</small>':"")+(carries.length?'<details class="olo-row-details"><summary>Incluye arrastre de octubre · '+f(carries.reduce((n,a)=>n+a.minor,0),r.currency)+'</summary>'+carries.map(a=>'<div class="olo-detail-line"><span>'+esc(short(a.date))+'</span><strong>'+f(a.minor,a.currency)+'</strong></div>').join("")+'</details>':"")+list+'</div>';
+ return '<div class="olo-budget-row" data-category="'+esc(r.id)+'"><div class="olo-row-top"><span class="olo-row-name">'+esc(r.name)+'</span><span class="olo-row-amount '+(over?"negative":"")+'">'+fmt(r.actualMinor)+' <small>/ '+(hasKnown?fmt(r.plannedMinor):"—")+'</small></span>'+button+'</div>'+(hasKnown&&!r.missing?'<div class="olo-track"><i class="'+(over?"is-over":"")+'" style="width:'+percent+'%"></i></div>':"")+(r.missing?'<small class="olo-row-note">Tipo de cambio por revisar</small>':!hasKnown&&r.actualMinor?'<small class="olo-row-note">'+(r.pending?"Presupuesto de otro período":"Sin presupuesto")+'</small>':"")+(carries.length?'<details class="olo-row-details"><summary>Incluye arrastre de octubre · '+fmt(B.value(carries,currentRates(),display,false,id=>cat(id)?.type))+'</summary>'+carries.map(a=>'<div class="olo-detail-line"><span>'+esc(short(a.date))+'</span><strong>'+f(a.minor,a.currency)+'</strong></div>').join("")+'</details>':"")+list+'</div>';
 }
 function relatedBudgets(p,editable,g){
  const pending=p.pending.filter(a=>!g||cat(a.categoryId)?.type===g);
  if(!pending.length)return "";
- return '<details class="olo-related"><summary>Presupuestos relacionados <span>'+pending.length+'</span></summary><p>Estos presupuestos pertenecen a intervalos diferentes. No se suman al presupuesto seleccionado.</p>'+pending.map(a=>{
-  const used=F.budgetProject(model,{basis:"calendar",start:a.start,end:a.end}).actuals.filter(x=>x.categoryId===a.categoryId&&x.currency===a.currency).reduce((n,x)=>n+x.minor,0);
-  return '<div class="olo-detail-line"><span>'+esc(cat(a.categoryId)?.name||"Categoría")+' · '+esc(datesText(a))+'</span><strong>'+f(used,a.currency)+' / '+f(a.minor,a.currency)+'</strong>'+(editable?historicalEditor(a):"")+'</div>'
+ const groups=new Map();for(const a of pending){const k=JSON.stringify([a.categoryId,a.start,a.end]);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(a)}
+ return '<details class="olo-related"><summary>Presupuestos relacionados <span>'+groups.size+'</span></summary><p>Estos presupuestos pertenecen a intervalos diferentes. No se suman al presupuesto seleccionado.</p>'+[...groups.values()].map(items=>{
+  const a=items[0],r=F.budgetProject(model,{basis:"calendar",start:a.start,end:a.end}),rates=currentRates(),typeFor=id=>cat(id)?.type;
+  const used=B.value(r.actuals.filter(x=>x.categoryId===a.categoryId),rates,display,false,typeFor),plan=B.value(r.planned.filter(x=>x.categoryId===a.categoryId),rates,display,true,typeFor);
+  return '<div class="olo-detail-line"><span>'+esc(cat(a.categoryId)?.name||"Categoría")+' · '+esc(datesText(a))+'</span><strong>'+fmt(used)+' / '+fmt(plan)+'</strong>'+ (editable?items.map(x=>historicalEditor(x)).join(""):"")+'</div>'
+ }).join("")+'</details>';
+}
+function consolidatedIntelligence(range,editable){
+ const p=query(range),rates=currentRates(),typeFor=id=>cat(id)?.type;
+ const asOf={...p,actuals:p.actuals.filter(a=>a.date<=TODAY)},rows=B.categoryRows(asOf,rates,display).filter(r=>r.type!=="Ingreso"&&!r.pending&&!r.missing&&r.actualMinor>r.plannedMinor);
+ if(!rows.length)return "";
+ return '<details class="demo-alloc-list demo-intelligence"><summary>Revisar presupuesto · '+rows.length+'</summary>'+rows.map(r=>{
+  const single=new Set([...p.planned,...p.actuals].filter(a=>a.categoryId===r.id).map(a=>a.currency));
+  const transfer=editable&&single.size===1&&single.has(display)&&I.donors(model,range,TODAY,F,{categoryId:r.id,currency:display,date:TODAY}).length;
+  return '<div class="demo-alloc"><span>'+esc(r.name)+' · '+(r.hasPlan?"Exceso":"Sin presupuesto")+'</span><strong>'+fmt(r.actualMinor-r.plannedMinor)+'</strong>'+(transfer?'<button class="demo-add" data-transfer="'+esc(r.id)+'" data-unit="'+display+'" data-range="'+range.key+'">Redistribuir</button>':"")+'</div>'
  }).join("")+'</details>';
 }
 function renderFlexibleBudget(){
- const range=agg(T.select(state)),p=query(range),t=groupTotals(p,budgetGroup),rows=groupRows(p,budgetGroup).filter(r=>r.plannedMinor||r.actualMinor);
+ const range=agg(T.select(state)),p=query(range),t=groupTotals(p,budgetGroup),rows=groupRows(p,budgetGroup).filter(r=>r.plannedMinor||r.actualMinor||r.missing);
  const summary=[["Presupuesto",t.pending&&t.planned===0?null:t.planned],["Real",t.actual],[budgetGroup==="Ingreso"?"Por recibir":"Restante",t.remaining]];
- el("content").innerHTML='<section class="olo-budget-shell"><div class="olo-budget-summary">'+summary.map(([n,v],i)=>'<div><small>'+n+'</small><strong data-budget-total="'+i+'" class="'+(i===2&&v!==null&&v<0&&budgetGroup!=="Ingreso"?"negative":"")+'">'+fmt(v)+'</strong></div>').join("")+'</div>'+(t.pending?'<p class="olo-compact-hint">Hay presupuestos de otros períodos. El restante de este intervalo no está definido.</p>':"")+'<div class="olo-budget-panel"><div class="olo-budget-tools"><div class="olo-segment" role="group" aria-label="Tipo de presupuesto">'+budgetGroups.map(([id,name])=>'<button type="button" data-budget-group="'+id+'" aria-pressed="'+(id===budgetGroup)+'">'+name+'</button>').join("")+'</div><button type="button" class="btn secondary small" data-add="" data-range="'+range.key+'" data-group="'+budgetGroup+'">＋ Asignar</button></div>'+(rows.length?rows.map(r=>compactRow(r,p,range,true)).join(""):'<p class="olo-empty">No hay registros en este período.</p>')+'</div>'+relatedBudgets(p,true,budgetGroup)+intelligence(range,true)+'</section>';
+ el("content").innerHTML='<section class="olo-budget-shell"><div class="olo-budget-summary">'+summary.map(([n,v],i)=>'<div><small>'+n+'</small><strong data-budget-total="'+i+'" class="'+(i===2&&v!==null&&v<0&&budgetGroup!=="Ingreso"?"negative":"")+'">'+fmt(v)+'</strong></div>').join("")+'</div>'+(t.pending?'<p class="olo-compact-hint">Hay presupuestos de otros períodos. El restante de este intervalo no está definido.</p>':"")+'<div class="olo-budget-panel"><div class="olo-budget-tools"><div class="olo-segment" role="group" aria-label="Tipo de presupuesto">'+budgetGroups.map(([id,name])=>'<button type="button" data-budget-group="'+id+'" aria-pressed="'+(id===budgetGroup)+'">'+name+'</button>').join("")+'</div><button type="button" class="btn secondary small" data-add="" data-range="'+range.key+'" data-group="'+budgetGroup+'">＋ Asignar</button></div>'+(rows.length?rows.map(r=>compactRow(r,p,range,true)).join(""):'<p class="olo-empty">No hay registros en este período.</p>')+'</div>'+relatedBudgets(p,true,budgetGroup)+consolidatedIntelligence(range,true)+'</section>';
 }
 el("content").addEventListener("click",e=>{const b=e.target.closest("[data-budget-group]");if(b){budgetGroup=b.dataset.budgetGroup;renderFlexibleBudget()}});
 const baseEditor=openEditor,baseReview=review,dateInput=el("date"),dateLabelNode=el("edit").querySelector('label[for="rc-date"]');
@@ -119,7 +126,7 @@ renderDashboard=function(){
  if(moduleName!=="home"||nativeHome.hidden)return;
  const range=agg(T.select(state)),p=query(range),wrap=document.getElementById("dashboardCategories");
  wrap.classList.remove("table-wrap");wrap.classList.add("olo-home-category-list");
- const rows=p.rows.filter(r=>r.type!=="Ingreso"&&(r.actualMinor||r.plannedMinor));
+ const rows=B.categoryRows(p,currentRates(),display).filter(r=>r.type!=="Ingreso"&&(r.actualMinor||r.plannedMinor||r.missing));
  wrap.innerHTML=rows.length?rows.map(r=>compactRow(r,p,range,false)).join(""):'<p class="olo-empty">Sin actividad en este período.</p>';
  const insight=document.getElementById("dashboardInsight");
  if(p.pending.length)insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>Tu presupuesto</h3><p>Consultá los períodos relacionados.</p><button type="button" class="btn secondary small" id="olo-see-budget">Ver presupuesto</button>';
@@ -140,3 +147,33 @@ render=function(){
 };
 document.title="One Less One";
 nativeHeader.querySelector(".brand-version").hidden=true;
+
+// Restore access to the native FX settings and daily public quote. Only the
+// active private ledger may request a quote or write the FX settings.
+const fxSetting=document.createElement("details");fxSetting.className="demo-alloc-list";
+fxSetting.innerHTML='<summary>Tipo de cambio</summary><div class="olo-detail-line"><span id="olo-fx-status"></span><button type="button" class="btn secondary small" id="olo-fx-open">Consultar o editar</button></div>';
+el("integrityReport").before(fxSetting);
+function fxStatus(){const r=currentRates();uxq("fx-status").textContent=r.date?short(r.date)+" · Compra ₡"+r.buy.toFixed(2)+" · Venta ₡"+r.sell.toFixed(2):"Sin confirmar"}
+const originalFxSave=saveFxRate;
+saveFxRate=function(date,buy,sell,source="manual",checkedOn=todayIso()){
+ if(nativeBlocked||!M.isPrivate(data))return false;
+ handoffGuard();oneStorageAssertCurrent();
+ // Persist only the rate settings on the exact stored ledger; do not rewrite historical records.
+ if(!(Number.isFinite(buy)&&Number.isFinite(sell)&&buy>0&&sell>=buy&&restoreValidDate(date)))return false;
+ const disk=JSON.parse(oneStorageSnapshot),settings={...disk.settings},history=Array.isArray(settings.fxHistory)?settings.fxHistory.slice():[],row={date,buy,sell,source:["hacienda","bccr_mirror"].includes(source)?source:"manual"};
+ const i=history.findIndex(x=>x.date===date);if(i>=0)history[i]=row;else history.push(row);
+ const patch={fxBuy:buy,fxSell:sell,fx:(buy+sell)/2,fxDate:date,fxSource:row.source,fxCheckedOn:checkedOn,fxHistory:history};
+ oneStoragePersist(JSON.stringify({...disk,settings:{...settings,...patch}}));Object.assign(data.settings,patch);updateCurrencyHeader();fxStatus();refreshNative();return true;
+};
+uxq("fx-open").onclick=()=>{if(nativeBlocked||!M.isPrivate(data))return;el("integrityDialog").close();nativeDialog("fxDialog");openFxDialog(true)};
+let fxAttemptDay="";
+function dailyFx(){
+ if(nativeBlocked||!M.isPrivate(data)||document.visibilityState!=="visible")return;
+ const today=todayIso();if(data.settings.fxCheckedOn===today||fxAttemptDay===today)return;
+ try{handoffGuard();oneStorageAssertCurrent()}catch{return}
+ fxAttemptDay=today;void oneFxAutoUpdate().then(()=>{fxStatus();refreshNative()}).catch(()=>{});
+}
+const renderBeforeFx=render;
+render=function(){renderBeforeFx();fxStatus();queueMicrotask(dailyFx)};
+window.addEventListener("focus",dailyFx);
+document.addEventListener("visibilitychange",dailyFx);
