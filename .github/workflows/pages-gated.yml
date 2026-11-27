@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: "22"
       - name: Instalar dependencias
-        run: npm install jsdom@26 --no-save --no-package-lock
+        run: npm install jsdom@26 playwright --no-save --no-package-lock
       - name: Comprobar fuente modular V11
         run: node scripts/build-app.cjs --check
       - name: Comprobar Lab generado desde Daniel
@@ -51,6 +51,10 @@ jobs:
           node --test mobile-pilot/tests/*.test.mjs
       - name: Probar motor V15 y controles de lanzamiento
         run: node --test --test-concurrency=2 tests/v15-*.test.cjs tests/v16-release-candidate.test.cjs tests/v17-production-handoff.test.cjs tests/v17-prerelease.test.cjs tests/v17-mobile-bridge.test.cjs
+      - name: Verificar diseño original y acceso principal en Chromium
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/check-v17-native-design.cjs
       - name: Impedir publicar una candidata
         run: node -e 'const fs=require("node:fs");const html=fs.readFileSync("index.html","utf8");const m=html.match(/<small class="brand-version">([^<]+)<\/small>/);if(!m||!/^v[0-9]+\.[0-9]+\.[0-9]+$/.test(m[1]))throw Error("Solo una version estable puede publicarse");'
       - name: Construir el sitio publico sin codigo interno

@@ -16,8 +16,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: npm install jsdom@26 playwright --no-save --no-package-lock
       - run: node --test tests/v17-production-handoff.test.cjs tests/v17-prerelease.test.cjs tests/v17-mobile-bridge.test.cjs
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/check-v17-native-design.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: OLO-V17-NATIVE-DESIGN-VISUAL
+          path: |
+            preview-v17-native-design/*.png
+            preview-v17-native-design/visual-checks.json
+          if-no-files-found: warn
       - run: node scripts/build-app.cjs --check
       - run: node scripts/build-lab.cjs --check
       - run: node scripts/build-v17-production-site.cjs preview-v17-production-site > v17-site-manifest.json
