@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -84,6 +85,21 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          name: github-pages-${{ github.run_attempt }}
+      - name: Confirmar disponibilidad del artefacto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          for i in $(seq 1 12); do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.expired == false) | .name' | grep -Fx -c "$ARTIFACT_NAME" || true)
+            if [ "$count" = 1 ]; then exit 0; fi
+            if [ "$count" -gt 1 ]; then echo 'Artefacto ambiguo'; exit 1; fi
+            sleep 5
+          done
+          echo 'El artefacto aun no esta disponible'; exit 1
       - name: Publicar paginas verificadas
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
