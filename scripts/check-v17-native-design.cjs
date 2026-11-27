@@ -71,6 +71,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.LEGACY),source);
    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.SOURCE),source);
    if(width===1440){
+    await page.locator('.olo-original-header [data-display-currency="CRC"]').click();
     await page.locator('.olo-original-header [data-view="plan"]').click();
     await page.locator("#olo-period-level").selectOption("month");
     await page.locator("#olo-period-label").click();
