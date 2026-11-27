@@ -1,0 +1,36 @@
+name: V17 staging package and hosted verification (no deployment)
+on:
+  push:
+    branches: [release/v17-0-prerelease]
+    paths:
+      - "scripts/build-v17-staging.cjs"
+      - "scripts/check-v17-staging.cjs"
+      - ".github/workflows/v17-staging.yml"
+      - "scripts/build-v17-*.cjs"
+      - "src/experimental/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/release/v17-0-prerelease'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 playwright@1.56.1 --no-save --no-package-lock
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node --test tests/v17-prerelease.test.cjs
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/check-v17-staging.cjs
+      - run: node scripts/build-v17-staging.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLO-V17-STAGING-SITE
+          path: preview-v17-staging/
+          if-no-files-found: error
+          retention-days: 14
