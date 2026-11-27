@@ -11,11 +11,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - run: npm install jsdom@26 --no-save --no-package-lock
       - run: node --test tests/v17-production-handoff.test.cjs tests/v17-prerelease.test.cjs tests/v17-mobile-bridge.test.cjs
+      - run: node scripts/build-app.cjs --check
+      - run: node scripts/build-lab.cjs --check
+      - run: node scripts/build-v17-production-site.cjs preview-v17-production-site > v17-site-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLO-V17-VERIFIED-PAGES-SITE-NOT-DEPLOYED
+          path: |
+            preview-v17-production-site/
+            v17-site-manifest.json
+          if-no-files-found: error
       - run: node scripts/build-v17-production-handoff.cjs
       - uses: actions/upload-artifact@v4
         with:
