@@ -11,6 +11,33 @@ const oneV16Finance=(()=>{
  const overlaps=(a,b)=>a.start<=b.end&&b.start<=a.end;
  const included=(a,b)=>b.start<=a.start&&a.end<=b.end;
  const kinds=["Ingreso","Gasto","Pago deuda"];
+ // Production calendar-budget policy: original period keys and ledger dates remain authoritative
+ // for audit and cash flows. Only the budget interpretation is normalized.
+ let normalizeLegacyQuincenas=false;
+ function enableCalendarQuincenas(){normalizeLegacyQuincenas=true}
+ function calendarSlot(p){
+  if(p.periodKind==="flexible"||![1,2].includes(Number(p.fortnight))||!valid(p.budgetMonth+"-01"))return null;
+  const m=p.budgetMonth,last=new Date(Date.UTC(Number(m.slice(0,4)),Number(m.slice(5)),0)).toISOString().slice(0,10);
+  return {start:m+(Number(p.fortnight)===1?"-01":"-16"),end:Number(p.fortnight)===1?m+"-15":last};
+ }
+ function budgetAllocation(model,a){
+  const r=model.calendarSlots?.[a.parentKey];if(!r)return a;
+  if(a.date?inside(r,a.date):a.source==="legacy"?a.start===r.start&&a.end===r.end:included(a,r))return a;
+  // Never invent a date. A historical block or scheduled amount outside the new
+  // fortnight becomes a budget envelope in that fortnight; source dates stay intact.
+  const {date,start,end,...rest}=a;
+  return {...rest,start:r.start,end:r.end,calendarMapped:true,...(date?{originalDate:date}:{originalStart:start,originalEnd:end})};
+ }
+ function budgetBounds(model,a){
+  const b=budgetAllocation(model,a);return b.date?{start:b.date,end:b.date}:{start:b.start,end:b.end};
+ }
+ function budgetProject(model,scope){
+  return project(model.calendarSlots&&scope.basis==="calendar"?{...model,allocations:model.allocations.map(a=>budgetAllocation(model,a))}:model,scope);
+ }
+ function budgetOverlaps(model,a,b){
+  if(a.categoryId!==b.categoryId||a.currency!==b.currency)return false;
+  return overlaps(budgetBounds(model,a),budgetBounds(model,b));
+ }
  function createAssignment(categories,{id,categoryId,date,amount,currency:unit}){
   const c=categories.find(c=>c.id===categoryId);
   if(typeof id!=="string"||!id||!c||c.active===false||c.budgetable===false||!kinds.includes(c.type)||!valid(date))throw Error("Asignación inválida");
@@ -83,7 +110,7 @@ const oneV16Finance=(()=>{
    if(unit==="USD"&&!(Number.isFinite(t.fxSell)&&t.fxSell>0))issue("historical-fx-review",t.id);
    actuals.push({id:JSON.stringify(["saving",t.id]),sourceId:t.id,source:"saving",categoryId,date:t.date,currency:unit,minor:money(t.amount),type:"Gasto",parentKey:parent?.key||null,financialMonth:parent?.financialMonth||null,...snapshot(t)});
   }
-  return {categories,allocations,actuals,periods:periods.map(({p,...rest})=>rest),issues};
+  return {categories,allocations,actuals,periods:periods.map(({p,...rest})=>rest),issues,...(normalizeLegacyQuincenas?{calendarSlots:Object.fromEntries(periods.flatMap(({p,key})=>{const slot=calendarSlot(p);return slot?[[key,slot]]:[]}))}:{})};
  }
  function project(model,scope){
   const calendar=scope.basis==="calendar",financial=scope.basis==="financial";
@@ -114,6 +141,6 @@ const oneV16Finance=(()=>{
   for(const [kind,items] of [["plannedMinor",result.planned],["actualMinor",result.actuals]])for(const a of items){const v=convert(a,kind==="plannedMinor"?rates:a);if(v===null)values.missing.push(a.id);else values[kind]=add(values[kind],v)}
   return values;
  }
- return {createAssignment,adaptLegacy,project,valueCRC};
+ return {createAssignment,adaptLegacy,project,valueCRC,enableCalendarQuincenas,budgetAllocation,budgetBounds,budgetProject,budgetOverlaps};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV16Finance;

@@ -57,10 +57,11 @@ function groupTotals(p,g){
 }
 const fmt=n=>n===null?"—":f(n,display);
 function periodAssignmentLabel(a){return a.date?short(a.date):datesText(a)}
+function historicalEditor(a){return a.source==="legacy-scheduled-income"?"":a.source==="range"||a.date||a.originalDate?'<button class="demo-add" data-edit="'+esc(a.id)+'">Editar</button>':'<button class="demo-add" data-distribute="'+esc(a.id)+'">Asignar fechas</button>';}
 function compactRow(r,p,range,editable){
  const known=p.planned.filter(a=>a.categoryId===r.id&&a.currency===r.currency),hasKnown=r.plannedMinor>0,over=!r.pendingMinor&&r.type!=="Ingreso"&&r.actualMinor>r.plannedMinor,percent=hasKnown?Math.min(100,Math.max(0,r.actualMinor/r.plannedMinor*100)):0;
  const button=editable&&!r.synthetic&&r.active!==false&&r.budgetable!==false?'<button class="olo-row-add" type="button" data-add="'+esc(r.id)+'" data-unit="'+r.currency+'" data-range="'+range.key+'" aria-label="Asignar a '+esc(r.name)+'">+</button>':"";
- const list=editable&&known.length?'<details class="olo-row-details"><summary>Editar presupuesto</summary>'+known.map(a=>'<div class="olo-detail-line"><span>'+esc(periodAssignmentLabel(a))+' · '+f(a.minor,a.currency)+'</span>'+(a.date&&a.source!=="legacy-scheduled-income"||a.source==="range"?'<button class="demo-add" data-edit="'+esc(a.id)+'">Editar</button>':!a.date?'<button class="demo-add" data-distribute="'+esc(a.id)+'">Asignar fechas</button>':"")+'</div>').join("")+'</details>':"";
+ const list=editable&&known.length?'<details class="olo-row-details"><summary>Editar presupuesto</summary>'+known.map(a=>'<div class="olo-detail-line"><span>'+esc(periodAssignmentLabel(a))+' · '+f(a.minor,a.currency)+'</span>'+historicalEditor(a)+'</div>').join("")+'</details>':"";
  return '<div class="olo-budget-row" data-category="'+esc(r.id)+'"><div class="olo-row-top"><span class="olo-row-name">'+esc(r.name)+'</span><span class="olo-row-amount '+(over?"negative":"")+'">'+f(r.actualMinor,r.currency)+' <small>/ '+(hasKnown?f(r.plannedMinor,r.currency):"—")+'</small></span>'+button+'</div>'+(hasKnown?'<div class="olo-track"><i class="'+(over?"is-over":"")+'" style="width:'+percent+'%"></i></div>':"")+(!hasKnown&&r.actualMinor?'<small class="olo-row-note">'+(r.pendingMinor?"Presupuesto de otro período":"Sin presupuesto")+'</small>':"")+list+'</div>';
 }
 function relatedBudgets(p,editable,g){
@@ -68,7 +69,7 @@ function relatedBudgets(p,editable,g){
  if(!pending.length)return "";
  return '<details class="olo-related"><summary>Presupuestos relacionados <span>'+pending.length+'</span></summary><p>Estos presupuestos pertenecen a intervalos diferentes. No se suman al presupuesto seleccionado.</p>'+pending.map(a=>{
   const used=model.actuals.filter(x=>x.categoryId===a.categoryId&&x.currency===a.currency&&x.date>=a.start&&x.date<=a.end).reduce((n,x)=>n+x.minor,0);
-  return '<div class="olo-detail-line"><span>'+esc(cat(a.categoryId)?.name||"Categoría")+' · '+esc(datesText(a))+'</span><strong>'+f(used,a.currency)+' / '+f(a.minor,a.currency)+'</strong>'+(editable?(a.source==="range"?'<button class="demo-add" data-edit="'+esc(a.id)+'">Editar</button>':'<button class="demo-add" data-distribute="'+esc(a.id)+'">Asignar fechas</button>'):"")+'</div>'
+  return '<div class="olo-detail-line"><span>'+esc(cat(a.categoryId)?.name||"Categoría")+' · '+esc(datesText(a))+'</span><strong>'+f(used,a.currency)+' / '+f(a.minor,a.currency)+'</strong>'+(editable?historicalEditor(a):"")+'</div>'
  }).join("")+'</details>';
 }
 function renderFlexibleBudget(){
@@ -100,7 +101,7 @@ openEditor=function(kind,b){
   rangeContext.textContent=datesText({start:editing.range[0],end:editing.range[1]});
   if(b.dataset.group&&!b.dataset.add){const option=[...el("category").options].find(o=>cat(o.value)?.type===b.dataset.group);if(option)el("category").value=option.value}
   editorMode();
- }else {dateInput.hidden=false;dateLabelNode.hidden=false;dateInput.required=kind!=="distribute"}
+ }else {dateInput.hidden=false;dateLabelNode.hidden=false;dateInput.required=kind!=="distribute";if(kind==="edit"&&target?.parentKey&&model.calendarSlots?.[target.parentKey]){const slot=model.calendarSlots[target.parentKey];dateInput.min=slot.start;dateInput.max=slot.end;if(!T.contains(slot,dateInput.value))dateInput.value=slot.start}}
 };
 review=function(kind){
  if(kind==="create"&&modeChoice.value==="range"||kind==="edit-range"){

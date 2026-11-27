@@ -28,6 +28,18 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    assert.equal(await page.title(),"One Less One");assert.equal(await page.locator(".olo-original-header .brand-version:visible").count(),0);
    assert.equal(await page.locator("style#v17-native-module-css").count(),1);assert.equal(await page.locator("style#v17-original-design").count(),1);
    const baseline=await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE);assert.equal(baseline,active);
+   // Reconcile the rendered budget, not lexical implementation variables.
+   const raw=JSON.parse(baseline);
+   const legacy=raw.periods.filter(p=>p.periodKind!=="flexible"&&[1,2].includes(Number(p.fortnight)));
+   const candidate=legacy.flatMap(p=>Object.entries(p.categoryBudgets||{}).filter(([id,amount])=>amount>0&&(p.categoryBudgetCurrencies?.[id]||"CRC")==="CRC"&&raw.categories.some(c=>c.id===id&&c.type==="Gasto")).map(([id])=>({month:p.budgetMonth,id}))).find(Boolean);
+   assert(candidate,"Synthetic fixture must contain a historical CRC expense budget");
+   const expected=legacy.filter(p=>p.budgetMonth===candidate.month&&(p.categoryBudgetCurrencies?.[candidate.id]||"CRC")==="CRC").reduce((n,p)=>n+(p.categoryBudgets?.[candidate.id]||0),0);
+   await page.locator('.olo-original-header [data-view="plan"]').click();
+   await page.locator("#olo-period-level").selectOption("month");await page.locator("#olo-period-label").click();await page.locator("#olo-month-choice").selectOption(candidate.month);await page.locator('[data-budget-group="Gasto"]').click();
+   const expectedText=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(expected);
+   const shown=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount small").textContent.trim().replace(/^\/\s*/,"")),candidate.id);
+   assert(shown.includes(expectedText),"Historical category budget differs: "+JSON.stringify({candidate,expectedText,shown}));
+   await page.locator("#olo-today").click();await page.locator('.olo-original-header [data-view="dashboard"]').click();
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
    for(const theme of ["dark","light"]){
     await page.locator('.olo-original-header [data-theme-choice="'+theme+'"]').click();

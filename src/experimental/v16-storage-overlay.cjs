@@ -23,7 +23,7 @@ const oneV16Storage=(()=>{
    if(a.date)throw Error("No se sustituye un ingreso histórico fechado");
    removed.add(a.id);let total=0;
    for(const b of r.rows){
-    if(!b||b.source!=="dated"||b.originId!==a.id||b.originStart!==a.start||b.originEnd!==a.end||b.categoryId!==a.categoryId||b.currency!==a.currency||b.parentKey!==a.parentKey||b.financialMonth!==a.financialMonth||!valid(b.date)||!inRange(a,b.date)||!Number.isSafeInteger(b.minor)||b.minor<=0)throw Error("Distribución histórica inválida");
+    if(!b||b.source!=="dated"||b.originId!==a.id||b.originStart!==a.start||b.originEnd!==a.end||b.categoryId!==a.categoryId||b.currency!==a.currency||b.parentKey!==a.parentKey||b.financialMonth!==a.financialMonth||!valid(b.date)||(!inRange(a,b.date)&&!inRange(base.calendarSlots?.[a.parentKey]||{start:"~",end:""},b.date))||!Number.isSafeInteger(b.minor)||b.minor<=0)throw Error("Distribución histórica inválida");
     total=sum(total,b.minor);rows.push(clean(b));
    }
    if(total!==a.minor)throw Error("La distribución no conserva el presupuesto original");

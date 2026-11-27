@@ -20,6 +20,7 @@ test("local migration rehearses actual UI and blocks production transport on cha
   return new JSDOM(html,{url:H.ORIGIN+H.PATH,runScripts:"dangerously",pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
    w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event("close"))};
    w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}});
+   const schedule=w.setTimeout.bind(w);w.setTimeout=(fn,delay,...args)=>delay===400?0:schedule(fn,delay,...args); // Focus is triggered explicitly; isolate initial background poll from assertion timing.
    w.confirm=()=>true;w.alert=x=>errors.push(String(x));w.prompt=()=>null;Object.defineProperty(w.navigator,"locks",{value:{request:async(name,opts,callback)=>{assert.equal(name,"olo-v17-daniel-mobile-sync");assert.equal(opts.ifAvailable,true);return callback(lockAvailable?{}:null)}}});
    w.fetch=async(url,opt)=>{calls.push({url,method:opt?.method});return {ok:true,json:async()=>url.endsWith("/api/health")?{ok:true,service:"One Less One Mobile",version:1}:url.endsWith("/api/inbox")?{items:[]}:{ok:true}}};
    for(const [k,v] of Object.entries(entries))w.localStorage.setItem(k,v);
@@ -110,4 +111,32 @@ test("Flexible interval reserve uses actual execution inside its own dates and d
  assert(result.ready);assert.equal(result.rangePendingMinor,8000000);assert.equal(result.availableMinor,7000000);assert.equal(result.rangeConservative,true);
  rows.P[0].plannedCRC=20000;native.hasPlan=true;assert.equal(V.calculate(model,today,native,rows,{sell:500}).rangePendingMinor,10000000);
  model.allocations[0].end="2026-11-25";assert.equal(V.calculate(model,today,native,rows,{sell:500}).rangePendingMinor,0);
+});
+
+test("production remaps both historical quincenas to the reference month with no ledger writes",()=>{
+ const F=require("../src/experimental/v16-financial-assignments.cjs"),E=require("../src/experimental/v16-assignment-editor.cjs"),P=require("../src/experimental/v16-storage-overlay.cjs");
+ const raw={categories:[{id:"food",name:"Supermercado",type:"Gasto"},{id:"salary",name:"Salario",type:"Ingreso"}],periods:[
+ {key:"N1",budgetMonth:"2026-11",fortnight:1,date:"2026-10-28",categoryBudgets:{food:100000,salary:300000},categoryBudgetSources:{salary:"auto"},categoryBudgetScheduledDates:{salary:["2026-10-28"]}},
+ {key:"N2",budgetMonth:"2026-11",fortnight:2,date:"2026-11-14",categoryBudgets:{food:150000}},
+ {key:"D1",budgetMonth:"2026-12",fortnight:1,date:"2026-11-28",categoryBudgets:{food:99999}},
+ {key:"F2",budgetMonth:"2027-02",fortnight:2,date:"2027-02-14",categoryBudgets:{food:50},categoryBudgetCurrencies:{food:"USD"}}
+ ],movements:[{id:"m1",period:"N1",date:"2026-10-29",type:"Gasto",categoryId:"food",amount:1000,currency:"CRC"},{id:"m2",period:"N2",date:"2026-11-14",type:"Gasto",categoryId:"food",amount:2000,currency:"CRC"},{id:"m3",period:"D1",date:"2026-11-28",type:"Gasto",categoryId:"food",amount:3000,currency:"CRC"}]};
+ const before=JSON.stringify(raw),ends={N1:"2026-11-13",N2:"2026-11-27",D1:"2026-12-13",F2:"2027-02-27"},adapter={endFor:p=>ends[p.key],allocationState:()=>null,contributionCategory:()=>null};
+ F.enableCalendarQuincenas();const model=F.adaptLegacy(raw,adapter);
+ const q=(start,end,m=model)=>F.budgetProject(m,{basis:"calendar",start,end});
+ const a=q("2026-11-01","2026-11-15"),b=q("2026-11-16","2026-11-30"),m=q("2026-11-01","2026-11-30");
+ assert.equal(a.totals.CRC.outflow.plannedMinor,10000000);assert.equal(b.totals.CRC.outflow.plannedMinor,15000000);assert.equal(m.totals.CRC.outflow.plannedMinor,25000000);assert.equal(m.pending.length,0);
+ assert.equal(a.totals.CRC.income.plannedMinor,30000000);assert.equal(a.totals.CRC.outflow.actualMinor,200000);assert.equal(b.totals.CRC.outflow.actualMinor,300000);
+ assert.equal(q("2026-12-01","2026-12-31").totals.CRC.outflow.plannedMinor,9999900);
+ assert.equal(q("2027-02-16","2027-02-28").totals.USD.outflow.plannedMinor,5000);
+ assert.equal(q("2026-11-23","2026-11-29").pending[0].minor,15000000);
+ assert.equal(model.actuals[0].date,"2026-10-29");assert.equal(model.allocations.find(x=>x.source==="legacy-scheduled-income").date,"2026-10-28");
+ assert.equal(F.project(model,{basis:"financial",parentKeys:["N1","N2"]}).totals.CRC.outflow.plannedMinor,25000000);
+ const historical=model.allocations.find(x=>x.parentKey==="N2"&&x.categoryId==="food");
+ const cmd={kind:"distribute",id:historical.id,transactionId:"calendar-distribute",parts:[{date:"2026-11-30",amount:150000}]};
+ const stored=P.commit(raw,model,P.prepare(raw,model,cmd,F,E),F,E),hydrated=P.hydrate(stored,model,F);
+ assert.deepEqual(P.bare(stored),raw);assert.equal(q("2026-11-16","2026-11-30",hydrated).totals.CRC.outflow.plannedMinor,15000000);
+ assert.equal(q("2026-11-28","2026-11-30",hydrated).totals.CRC.outflow.plannedMinor,15000000);
+ assert.throws(()=>E.stage(model,{kind:"create-range",categoryId:"food",currency:"CRC",amount:5,start:"2026-11-28",end:"2026-11-30",transactionId:"overlap"}),/histórico|Ya existe/);
+ assert.equal(JSON.stringify(raw),before);
 });
