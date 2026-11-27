@@ -42,7 +42,7 @@ const oneV17Forecast=(()=>{
   const push=e=>{if(seen.has(e.id)||!Number.isSafeInteger(e.minor)||!valid(e.date)||!inside(range,e.date))throw Error("Flujo inválido o duplicado");seen.add(e.id);if(e.minor)events.push(e)};
   let invalidCash=false;
   for(const c of confirmed){if(!valid(c.date)){invalidCash=true;continue}if(!inside(range,c.date))continue;if(c.missingFX||!Number.isSafeInteger(c.minor)){invalidCash=true;mark(c,"confirmed-fx-review");continue}push({...c,id:"confirmed:"+c.id,kind:"confirmed"})}
-  for(const [i,d] of nativeDebt.entries()){if(d.kind!=="debt"||!inside(range,d.date))continue;if(!Number.isFinite(d.amount)||d.amount>=0){invalidCash=true;reasons.add("debt-review");continue}push({id:"debt:"+i,date:d.date,minor:Math.round(d.amount*100),kind:"debt"})}
+  for(const [i,d] of nativeDebt.entries()){if(d.kind!=="debt"||!inside(range,d.date))continue;if(!Number.isFinite(d.amount)||d.amount>=0){invalidCash=true;reasons.add("debt-review");continue}push({id:"debt:"+i,date:d.date,minor:Math.round(d.amount*100),kind:"debt",...(d.debtId&&d.due?{debtId:d.debtId,due:d.due}:{})})}
   const cache=new Map();
   for(const a of p.planned.filter(a=>a.date)){
    const cat=cats.get(a.categoryId),month=a.date.slice(0,7),key=JSON.stringify([a.categoryId,a.currency,month]);
