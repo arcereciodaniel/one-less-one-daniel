@@ -1,5 +1,8 @@
 
-body.olo-demo .demo-main{max-width:1320px;padding:24px 28px 48px}
+body.olo-demo .demo-main{width:100%;max-width:none;margin:0;padding:24px var(--r8-content-gutter,28px) 48px;box-sizing:border-box}
+body.olo-demo .demo-main #rc-content{width:100%;min-width:0;max-width:none;margin:0}
+body.olo-demo .olo-original-header .topbar{width:100%;max-width:none}
+body.olo-demo .olo-original-home,body.olo-demo .olo-original-module,body.olo-demo .one-future-panel{width:100%;max-width:none;margin-left:0;margin-right:0}
 body.olo-demo .demo-heading{margin:0 0 20px;align-items:center;gap:14px}
 body.olo-demo .demo-heading h1{font-size:1.45rem;font-weight:700}
 body.olo-demo .demo-filter{margin:0;padding:0;position:relative}
@@ -11,7 +14,7 @@ body.olo-demo #olo-period-label{min-width:145px;font-weight:600;white-space:norm
 body.olo-demo .olo-period-picker{position:absolute;right:0;top:calc(100% + 7px);z-index:6;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;width:min(290px,100%);box-shadow:0 8px 24px #0002}
 body.olo-demo .olo-period-picker label{display:grid;gap:4px;font-size:.73rem;color:var(--muted);margin:0 0 8px}
 body.olo-demo .olo-period-picker select{width:100%}
-body.olo-demo .olo-budget-shell{max-width:980px;margin:auto;display:grid;gap:14px}
+body.olo-demo .olo-budget-shell{width:100%;max-width:none;margin:0;display:grid;gap:14px;min-width:0}
 body.olo-demo .olo-budget-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 body.olo-demo .olo-budget-summary>div{padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:0}
 body.olo-demo .olo-budget-summary small{display:block;color:var(--muted);font-size:.74rem;margin-bottom:6px}

@@ -134,4 +134,5 @@ render=function(){
   if(g){const heading=g.querySelector("strong");if(heading?.textContent==="Actividad de tus fondos")heading.textContent="Transferencias de metas";let d=document.getElementById("olo-goal-movement-detail");if(!d){d=document.createElement("details");d.id="olo-goal-movement-detail";d.className="v7-card olo-related";d.innerHTML="<summary>Aportes y retiros de metas</summary>";g.after(d);d.append(g)}d.hidden=g.hidden; }
  }
 };
-nativeHeader.querySelector(".brand-version").textContent="v17.1.0";
+document.title="One Less One";
+nativeHeader.querySelector(".brand-version").hidden=true;

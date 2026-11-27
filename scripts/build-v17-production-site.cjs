@@ -13,7 +13,7 @@ function build(dir){
   manifest.files[dest]=crypto.createHash("sha256").update(current).digest("hex");
  }
  // Default entrypoint opens V17; V16 is archived byte-for-byte at v16.html (same origin and relative asset paths).
- const launcher='<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>One Less One</title><body><a href="./v17/">Abrir One Less One V17</a><script>location.replace(new URL("./v17/",location.href).href)</script></body></html>';
+ const launcher='<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>One Less One</title><body><a href="./v17/">Abrir One Less One</a><script>location.replace(new URL("./v17/",location.href).href)</script></body></html>';
  fs.writeFileSync(path.join(dir,"index.html"),launcher);manifest.files["index.html"]=crypto.createHash("sha256").update(launcher).digest("hex");
  const v17=buildCandidate();fs.mkdirSync(path.join(dir,"v17"),{recursive:true});fs.writeFileSync(path.join(dir,"v17/index.html"),v17);
  manifest.files["v17/index.html"]=crypto.createHash("sha256").update(v17).digest("hex");

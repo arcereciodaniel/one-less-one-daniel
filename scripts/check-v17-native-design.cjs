@@ -18,13 +18,14 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
   const site=path.join(out,"site");S.build(site);
   const launcher=fs.readFileSync(path.join(site,"index.html"),"utf8"),pageHtml=fs.readFileSync(path.join(site,"v17/index.html"),"utf8");
   // All network is intercepted: no real account data or Worker requests.
-  for(const width of [1440,390,320]){
+  for(const width of [1920,1440,390,320]){
    const page=await browser.newPage({viewport:{width,height:900}}),errors=[],requests=[];
    page.on("pageerror",e=>errors.push(e.message));
    await page.route("**/*",route=>{const u=route.request().url();if(u===root||u===root+"index.html")return route.fulfill({contentType:"text/html",body:launcher});if(u===old||u===old+"index.html")return route.fulfill({contentType:"text/html",body:pageHtml});requests.push(u);return route.abort()});
    await page.addInitScript(({entries,origin})=>{if(location.origin===origin&&!localStorage.getItem("olo_v17_daniel_data_v1"))for(const [k,v] of Object.entries(entries))localStorage.setItem(k,v)},{origin:H.ORIGIN,entries:{[H.LEGACY]:source,[H.SOURCE]:source,[H.ACTIVE]:active}});
    await page.goto(root);await page.waitForURL(old);
    await page.locator(".olo-original-header").waitFor();
+   assert.equal(await page.title(),"One Less One");assert.equal(await page.locator(".olo-original-header .brand-version:visible").count(),0);
    assert.equal(await page.locator("style#v17-native-module-css").count(),1);assert.equal(await page.locator("style#v17-original-design").count(),1);
    const baseline=await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE);assert.equal(baseline,active);
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
@@ -46,6 +47,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
       }
       if(width!==320)await page.screenshot({path:path.join(out,"Inicio-"+width+"-"+theme+".png"),fullPage:true});
      }else {assert(!(await page.locator("#view-dashboard").isVisible()));if(["movements","debts","shared","capital","projects"].includes(name))assert(await page.locator("#view-"+name).isVisible());if(name==="future")assert(await page.locator(".one-future-panel:visible").count()>=1);if(name==="plan")assert.equal(await page.locator(".olo-budget-shell:visible").count(),1);}
+     if(width>=1440){const dimensions=await page.evaluate(()=>{const main=document.querySelector(".demo-main"),r=main.getBoundingClientRect(),c=getComputedStyle(main),shell=document.querySelector(".olo-budget-shell");return {width:r.width,left:r.left,viewport:innerWidth,usable:r.width-parseFloat(c.paddingLeft)-parseFloat(c.paddingRight),budget:shell&&shell.getBoundingClientRect().width}});assert(Math.abs(dimensions.width-dimensions.viewport)<=1&&Math.abs(dimensions.left)<=1,"Main must span the viewport "+JSON.stringify(dimensions));if(name==="plan")assert(Math.abs(dimensions.budget-dimensions.usable)<=2,"Budget must fill available width "+JSON.stringify(dimensions));}
      if(width===1440&&name!=="dashboard")await page.screenshot({path:path.join(out,name+"-"+theme+".png"),fullPage:true});
      const overflow=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1?[]:[...document.querySelectorAll("body *")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left< -1)&&!e.closest(".table-wrap")}).slice(0,20).map(e=>({id:e.id,cls:String(e.className).slice(0,100),width:Math.round(e.getBoundingClientRect().width),right:Math.round(e.getBoundingClientRect().right)})));
      if(overflow.length){await page.screenshot({path:path.join(out,"OVERFLOW-"+name+"-"+width+"-"+theme+".png"),fullPage:true});console.error(JSON.stringify(overflow))}

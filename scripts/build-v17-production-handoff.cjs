@@ -4,6 +4,7 @@ const root=path.resolve(__dirname,".."),read=p=>fs.readFileSync(path.join(root,p
 function buildInner(){
  let h=pre().replaceAll("rastro_lab_v17_prerelease_",H.PREFIX).replaceAll("V17.0 PRE","V17.0").replaceAll("V17 Pre-release","V17 Daniel");
  const rep=(a,b)=>{assert.equal(h.split(a).length,2,"Marker: "+a);h=h.replace(a,()=>b)};
+ h=h.replace(/<title>[^<]*<\/title>/i,"<title>One Less One</title>");
  const appendStyle=css=>{const i=h.lastIndexOf("</body>");assert(i>0);h=h.slice(0,i)+css+h.slice(i)};
  rep("connect-src 'none'","connect-src "+ENDPOINT);
  const desktop=read("mobile-pilot/desktop.js"),start=desktop.indexOf("  function catalog(){"),end=desktop.indexOf("  async function fetchAndImport(");
@@ -58,7 +59,7 @@ function buildCandidate(){
  const h=buildInner();
  // No real data is ever initialized on a different origin or path.
  const encoded=JSON.stringify(h).replace(/</g,"\\u003c");
- return '<!doctype html><html lang="es"><meta charset="utf-8"><title>One Less One V17</title><body><script>(function(){if(location.origin!=='+JSON.stringify(H.ORIGIN)+'||!'+JSON.stringify([H.PATH,H.PATH+"index.html"])+'.includes(location.pathname)){document.body.textContent="Ruta de activación no autorizada.";return;}document.open();document.write('+encoded+');document.close()})();</script></body></html>';
+ return '<!doctype html><html lang="es"><meta charset="utf-8"><title>One Less One</title><body><script>(function(){if(location.origin!=='+JSON.stringify(H.ORIGIN)+'||!'+JSON.stringify([H.PATH,H.PATH+"index.html"])+'.includes(location.pathname)){document.body.textContent="Ruta de activación no autorizada.";return;}document.open();document.write('+encoded+');document.close()})();</script></body></html>';
 }
 if(require.main===module){const dir=path.join(root,"preview-v17-production-handoff","v17");fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,"index.html"),buildCandidate());}
 module.exports={buildCandidate,buildInner,ENDPOINT};
