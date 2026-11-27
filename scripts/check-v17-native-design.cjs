@@ -40,20 +40,20 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    await page.locator('.olo-original-header [data-view="plan"]').click();
    await page.locator("#olo-period-level").selectOption("month");await page.locator("#olo-period-label").click();await page.locator("#olo-month-choice").selectOption(candidate.month);await page.locator('[data-budget-group="Gasto"]').click();
    const expectedText=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(expected);
-   const shown=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount small").textContent.trim().replace(/^\/\s*/,"")),candidate.id);
+   const shown=await page.locator("#rc-content .olo-budget-row:visible").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount small").textContent.trim().replace(/^\/\s*/,"")),candidate.id);
    assert(shown.includes(expectedText),"Historical category budget differs: "+JSON.stringify({candidate,expectedText,shown}));
    assert.equal(shown.length,1,"Mixed-currency categories must render exactly once");
    if(candidate.id===originalExpense.categoryId&&candidate.month===originalExpense.date.slice(0,7)){
-    const rows=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
+    const rows=await page.locator("#rc-content .olo-budget-row:visible").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
     const amount=raw.movements.filter(m=>m.categoryId===candidate.id&&m.type==="Gasto"&&m.date.startsWith(candidate.month)).reduce((n,m)=>n+m.amount*(m.currency==="USD"?m.fxSell:1),0);
     assert.deepEqual(rows,[new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(amount)]);
     await page.locator('.olo-original-header [data-display-currency="USD"]').click();
-    const converted=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
+    const converted=await page.locator("#rc-content .olo-budget-row:visible").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
     const ref=(raw.settings.fxBuy+raw.settings.fxSell)/2;
     assert.deepEqual(converted,[new Intl.NumberFormat("es-CR",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(amount/ref)]);
     await page.locator('.olo-original-header [data-display-currency="CRC"]').click();
    }
-   await page.getByRole("button",{name:"Conciliar presupuesto",exact:true}).click();assert(await page.locator("#rc-transitionAudit").isVisible());assert((await page.locator("#rc-transitionText").inputValue()).includes("real calendario"));await page.locator("#rc-closeTransitionAudit").click();assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE),baseline);
+   assert.equal(await page.getByRole("button",{name:"Conciliar presupuesto",exact:true}).count(),0);assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE),baseline);
    await page.locator("#olo-today").click();await page.locator('.olo-original-header [data-view="dashboard"]').click();
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
    for(const theme of ["dark","light"]){
@@ -67,6 +67,12 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
      if(name==="dashboard"){
       assert(await page.locator("#view-dashboard").isVisible());
       assert(await page.locator("#expenseChart").isVisible());assert(await page.locator("#cashChart").isVisible());
+      assert.equal(await page.locator("#oneBudgetChartTitle").textContent(),"Ejecución del presupuesto");
+      const layout=await page.evaluate(()=>{const chart=document.getElementById("expenseChart"),box=chart.getBoundingClientRect(),table=document.getElementById("dashboardCategories"),rows=[...table.querySelectorAll("tr[data-category]")];return {height:box.height,width:box.width,client:table.clientWidth,scroll:table.scrollWidth,ids:rows.map(r=>r.dataset.category),text:table.textContent}});
+      assert(layout.height>=270&&layout.height<=305,"Budget chart must not stretch "+JSON.stringify(layout));
+      assert(layout.scroll<=layout.client+1,"Category table must not scroll horizontally");
+      assert.equal(new Set(layout.ids).size,layout.ids.length,"Dashboard must have one row per category");
+      assert(!/arrastre de octubre/i.test(layout.text));
       assert(await page.locator("#dashboardHeroValue").textContent()!=="—");
       // Check real pixels instead of merely checking existence of canvas tags.
       for(const id of ["expenseChart","cashChart"]){

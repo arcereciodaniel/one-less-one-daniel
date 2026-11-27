@@ -34,6 +34,27 @@ function nativeHeaderSync(){
  for(const b of nativeHeader.querySelectorAll("[data-theme-choice]"))b.classList.toggle("active",b.dataset.themeChoice===document.documentElement.dataset.theme);
  for(const b of nativeHeader.querySelectorAll("[data-display-currency]"))b.classList.toggle("active",b.dataset.displayCurrency===display);
 }
+let budgetChartData=null;
+function compactChartLabel(text,range){
+ if(state.level==="month")return new Intl.DateTimeFormat("es-CR",{month:"short",year:"numeric",timeZone:"UTC"}).format(new Date(range.start+"T12:00:00Z"));
+ if(state.level==="year")return range.start.slice(0,4);
+ if(state.level==="week"||state.level==="fortnight")return short(range.start)+" – "+short(range.end);
+ return text;
+}
+const nativeDrawBase=drawBase;
+drawBase=function(canvas,height){
+ if(canvas.id!=="expenseChart")return nativeDrawBase(canvas,height);
+ const rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1,w=rect.width,h=rect.height;
+ canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));
+ const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
+ return {ctx,w,h,p:{l:48,r:16,t:20,b:38}};
+};
+function paintBudgetChart(){
+ const canvas=document.getElementById("expenseChart");
+ if(!budgetChartData||canvas.hidden||nativeHome.hidden||canvas.getBoundingClientRect().width<40)return;
+ drawBarChart(canvas,budgetChartData.labels,budgetChartData.planned,budgetChartData.actual);
+}
+if(typeof ResizeObserver==="function")new ResizeObserver(paintBudgetChart).observe(document.querySelector(".one-dashboard-bar-plot"));
 function designHome(){
  const rs=T.select(state),range=agg(rs),p=query(range);
  // Keep the V16 visual components, with V17's exact operating and available calculations.
@@ -55,10 +76,11 @@ function designHome(){
  ].join("");
  const chart=rs.map(r=>({range:r,p:query(r)})).map(({range,p})=>({label:label(range),...B.totals(p,rates,"CRC")}));
  const budgetCard=document.getElementById("oneBudgetChartTitle").closest(".v7-card");
- budgetCard.querySelector(".v7-card-head p").textContent=(chart.some(x=>x.pending)?"Presupuesto conocido y egresos reales · hay asignaciones pendientes de distribuir.":"Gastos, cuotas y aportes a metas comparados con el presupuesto seleccionado.")+(chart.some(x=>x.missing)?" Hay importes sin tipo de cambio verificado.":"");
+ document.getElementById("oneBudgetChartTitle").textContent="Ejecución del presupuesto";
+ budgetCard.querySelector(".v7-card-head p").textContent=chart.some(x=>x.missing)?"Tipo de cambio por revisar.":chart.some(x=>x.pending)?"Incluye solo el presupuesto asignado al período.":"";
  const canvas=document.getElementById("expenseChart");
  if(chart.some(x=>x.missing)){canvas.hidden=true;let msg=document.getElementById("v17ChartMissing");if(!msg){msg=document.createElement("p");msg.id="v17ChartMissing";msg.className="muted";canvas.after(msg)}msg.textContent="No se dibujan totales incompletos por tipo de cambio.";msg.hidden=false}
- else{canvas.hidden=false;const msg=document.getElementById("v17ChartMissing");if(msg)msg.hidden=true;drawBarChart(canvas,chart.map(x=>x.label),chart.map(x=>x.planned/100),chart.map(x=>x.actual/100))}
+ else{canvas.hidden=false;const msg=document.getElementById("v17ChartMissing");if(msg)msg.hidden=true;budgetChartData={labels:chart.map(x=>compactChartLabel(x.label,range)),planned:chart.map(x=>x.planned/100),actual:chart.map(x=>x.actual/100)};paintBudgetChart();requestAnimationFrame(paintBudgetChart)}
  const rows=p.rows.filter(r=>r.type!=="Ingreso");
  document.getElementById("dashboardCategories").innerHTML='<table><thead><tr><th>Categoría</th><th>Presupuesto</th><th>Real</th><th>Disponible</th><th>Uso</th></tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr><td>'+esc(r.name)+(r.pendingMinor?'<small class="one-saving-category-label">Pendiente de distribuir</small>':'')+'</td><td class="num">'+(r.pendingMinor&&!r.plannedMinor?"—":f(r.plannedMinor,r.currency))+'</td><td class="num">'+f(r.actualMinor,r.currency)+'</td><td class="num '+(r.remainingMinor===null?"":r.remainingMinor<0?"negative":"positive")+'">'+(r.remainingMinor===null?"—":f(r.remainingMinor,r.currency))+'</td><td>'+(r.plannedMinor?'<div class="progress"><span style="width:'+Math.min(100,r.actualMinor/r.plannedMinor*100)+'%"></span></div><small>'+Math.round(r.actualMinor/r.plannedMinor*100)+'%</small>':'—')+'</td></tr>').join(""):'<tr><td colspan="5" class="empty">Sin registros para este período.</td></tr>')+'</tbody></table>';
  const insight=document.getElementById("dashboardInsight"),signals=B.categoryRows({...p,actuals:p.actuals.filter(a=>a.date<=TODAY)},rates,"CRC").filter(r=>r.type!=="Ingreso"&&!r.pending&&!r.missing&&r.actualMinor>r.plannedMinor);

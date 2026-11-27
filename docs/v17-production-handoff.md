@@ -31,3 +31,6 @@ Only the original first-November legacy period's real October transactions (with
 
 ## Unified currency presentation
 Category reports aggregate original currencies into canonical CRC at each movement's stored buy/sell rate (planned amounts use the current buy/sell). USD display uses the current reference rate, matching V16. Original currency details and the reconciliation audit intentionally retain original amounts. Missing historical FX is shown as unavailable, never silently replaced. Public quote retrieval uses the native Hacienda endpoint with the existing fallback; only exact stored settings are patched under the production storage guard. This restores daily updates and a visible FX settings dialog. Real provider availability is not guaranteed; failed updates retain the last saved rate.
+
+## Compact dashboard follow-up
+Retains the consolidated currency projection and November transition calculations, but removes the one-off reconciliation dialog and opening-carry labels from the public UI. Category table is compact and responsive, chart titled Ejecución del presupuesto uses an independent bounded plot height and redraws on resize. Browser category test scopes rows to the active budget panel instead of counting the hidden dashboard. Audit core and financial tests remain available internally.

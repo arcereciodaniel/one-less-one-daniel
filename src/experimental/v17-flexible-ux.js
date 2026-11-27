@@ -54,11 +54,10 @@ const fmt=n=>n===null?"—":f(n,display);
 function periodAssignmentLabel(a){return a.date?short(a.date):datesText(a)}
 function historicalEditor(a){return a.source==="legacy-scheduled-income"?"":a.source==="range"||a.date||a.originalDate?'<button class="demo-add" data-edit="'+esc(a.id)+'">Editar</button>':'<button class="demo-add" data-distribute="'+esc(a.id)+'">Asignar fechas</button>';}
 function compactRow(r,p,range,editable){
- const carries=p.actuals.filter(a=>a.transitionCarry&&a.categoryId===r.id);
  const known=p.planned.filter(a=>a.categoryId===r.id),hasKnown=r.hasPlan,over=!r.pending&&!r.missing&&r.type!=="Ingreso"&&r.actualMinor>r.plannedMinor,percent=hasKnown&&!r.missing&&r.plannedMinor>0?Math.min(100,Math.max(0,r.actualMinor/r.plannedMinor*100)):0;
  const button=editable&&!r.synthetic&&r.active!==false&&r.budgetable!==false?'<button class="olo-row-add" type="button" data-add="'+esc(r.id)+'" data-unit="'+r.currency+'" data-range="'+range.key+'" aria-label="Asignar a '+esc(r.name)+'">+</button>':"";
  const list=editable&&known.length?'<details class="olo-row-details"><summary>Editar presupuesto</summary>'+known.map(a=>'<div class="olo-detail-line"><span>'+esc(periodAssignmentLabel(a))+' · '+f(a.minor,a.currency)+'</span>'+historicalEditor(a)+'</div>').join("")+'</details>':"";
- return '<div class="olo-budget-row" data-category="'+esc(r.id)+'"><div class="olo-row-top"><span class="olo-row-name">'+esc(r.name)+'</span><span class="olo-row-amount '+(over?"negative":"")+'">'+fmt(r.actualMinor)+' <small>/ '+(hasKnown?fmt(r.plannedMinor):"—")+'</small></span>'+button+'</div>'+(hasKnown&&!r.missing?'<div class="olo-track"><i class="'+(over?"is-over":"")+'" style="width:'+percent+'%"></i></div>':"")+(r.missing?'<small class="olo-row-note">Tipo de cambio por revisar</small>':!hasKnown&&r.actualMinor?'<small class="olo-row-note">'+(r.pending?"Presupuesto de otro período":"Sin presupuesto")+'</small>':"")+(carries.length?'<details class="olo-row-details"><summary>Incluye arrastre de octubre · '+fmt(B.value(carries,currentRates(),display,false,id=>cat(id)?.type))+'</summary>'+carries.map(a=>'<div class="olo-detail-line"><span>'+esc(short(a.date))+'</span><strong>'+f(a.minor,a.currency)+'</strong></div>').join("")+'</details>':"")+list+'</div>';
+ return '<div class="olo-budget-row" data-category="'+esc(r.id)+'"><div class="olo-row-top"><span class="olo-row-name">'+esc(r.name)+'</span><span class="olo-row-amount '+(over?"negative":"")+'">'+fmt(r.actualMinor)+' <small>/ '+(hasKnown?fmt(r.plannedMinor):"—")+'</small></span>'+button+'</div>'+(hasKnown&&!r.missing?'<div class="olo-track"><i class="'+(over?"is-over":"")+'" style="width:'+percent+'%"></i></div>':"")+(r.missing?'<small class="olo-row-note">Tipo de cambio por revisar</small>':!hasKnown&&r.actualMinor?'<small class="olo-row-note">'+(r.pending?"Presupuesto de otro período":"Sin presupuesto")+'</small>':"")+list+'</div>';
 }
 function relatedBudgets(p,editable,g){
  const pending=p.pending.filter(a=>!g||cat(a.categoryId)?.type===g);
@@ -127,7 +126,12 @@ renderDashboard=function(){
  const range=agg(T.select(state)),p=query(range),wrap=document.getElementById("dashboardCategories");
  wrap.classList.remove("table-wrap");wrap.classList.add("olo-home-category-list");
  const rows=B.categoryRows(p,currentRates(),display).filter(r=>r.type!=="Ingreso"&&(r.actualMinor||r.plannedMinor||r.missing));
- wrap.innerHTML=rows.length?rows.map(r=>compactRow(r,p,range,false)).join(""):'<p class="olo-empty">Sin actividad en este período.</p>';
+ wrap.innerHTML='<table class="olo-category-table"><thead><tr><th scope="col">Categoría</th><th scope="col">Presupuesto</th><th scope="col">Real</th><th scope="col">Restante</th></tr></thead><tbody>'+(rows.length?rows.map(r=>{
+  const known=r.hasPlan,over=!r.pending&&!r.missing&&r.actualMinor>r.plannedMinor,percent=known&&!r.missing&&r.plannedMinor>0?Math.max(0,r.actualMinor/r.plannedMinor*100):null;
+  const progress=percent===null?"":'<div class="olo-category-usage" aria-label="'+Math.round(percent)+' % ejecutado"><span class="olo-category-meter"><i style="width:'+Math.min(100,percent)+'%" class="'+(over?"is-over":"")+'"></i></span><small>'+Math.round(percent)+'%</small></div>';
+  return '<tr data-category="'+esc(r.id)+'"><th scope="row">'+esc(r.name)+progress+'</th><td data-label="Presupuesto">'+(known?fmt(r.plannedMinor):"—")+'</td><td data-label="Real">'+fmt(r.actualMinor)+'</td><td data-label="Restante" class="'+(r.remainingMinor!==null&&r.remainingMinor<0?"negative":"")+'">'+(known?fmt(r.remainingMinor):"—")+'</td></tr>'
+ }).join(""):'<tr><td colspan="4" class="olo-empty">Sin actividad en este período.</td></tr>')+'</tbody></table>';
+ document.getElementById("dashboardCategoryTitle").closest(".v7-card-head").querySelector("p").textContent="";
  const insight=document.getElementById("dashboardInsight");
  if(p.pending.length)insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>Tu presupuesto</h3><p>Consultá los períodos relacionados.</p><button type="button" class="btn secondary small" id="olo-see-budget">Ver presupuesto</button>';
  document.getElementById("olo-see-budget")?.addEventListener("click",()=>showModule("budget"));
@@ -139,8 +143,6 @@ render=function(){
  nativeDesignRender();refreshPeriod();closePicker();
  if(moduleName==="budget"&&!nativeBlocked)renderFlexibleBudget();
  if(moduleName==="moves"&&!nativeBlocked){
-  const range=agg(T.select(state)),hasCarry=query(range).actuals.some(a=>a.transitionCarry),section=nativeSections.moves;
-  let note=document.getElementById("olo-transition-movement-note");if(!note){note=document.createElement("p");note.id="olo-transition-movement-note";note.className="olo-compact-hint";section.prepend(note)}note.hidden=!hasCarry;note.textContent="Movimientos por fecha real. El presupuesto incluye el arrastre de octubre vinculado a noviembre.";
   const g=document.getElementById("goalMovementPreview");
   if(g){const heading=g.querySelector("strong");if(heading?.textContent==="Actividad de tus fondos")heading.textContent="Transferencias de metas";let d=document.getElementById("olo-goal-movement-detail");if(!d){d=document.createElement("details");d.id="olo-goal-movement-detail";d.className="v7-card olo-related";d.innerHTML="<summary>Aportes y retiros de metas</summary>";g.after(d);d.append(g)}d.hidden=g.hidden; }
  }

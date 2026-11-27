@@ -65,3 +65,39 @@ body.olo-demo .demo-footer{display:none}
  body.olo-demo .olo-row-amount small{font-size:.69rem}
  body.olo-demo #dashboardHero{padding:18px 16px}
 }
+
+/* Compact dashboard analytics; chart size is independent of category count. */
+body.olo-demo .one-dashboard-analytics-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+body.olo-demo .one-dashboard-analytics-grid>.v7-card{min-width:0;margin:0;padding:17px 18px;min-height:0}
+body.olo-demo .one-dashboard-analytics-grid .v7-card-head{margin-bottom:10px}
+body.olo-demo .one-dashboard-analytics-grid .v7-card-head h2{font-size:1rem}
+body.olo-demo .one-dashboard-analytics-grid .v7-card-head p:empty{display:none}
+body.olo-demo .one-dashboard-budget-chart .one-dashboard-bar-plot{flex:0 0 auto;height:300px;min-height:0;max-height:300px;width:100%}
+body.olo-demo .one-dashboard-budget-chart #expenseChart[hidden]{display:none!important}
+body.olo-demo #expenseChartLegend{padding:0 0 8px;margin:0 0 8px}
+body.olo-demo #dashboardCategories{overflow:visible;min-width:0;max-width:100%}
+body.olo-demo #dashboardCategories table.olo-category-table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse}
+body.olo-demo #dashboardCategories .olo-category-table th,body.olo-demo #dashboardCategories .olo-category-table td{padding:7px 6px;font-size:.76rem;line-height:1.28;white-space:normal;overflow-wrap:anywhere;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
+body.olo-demo #dashboardCategories .olo-category-table th:first-child{width:34%;text-align:left}
+body.olo-demo #dashboardCategories .olo-category-table thead th{font-size:.69rem;font-weight:600;color:var(--muted);background:transparent}
+body.olo-demo #dashboardCategories .olo-category-table tbody th{font-weight:550;background:transparent}
+body.olo-demo #dashboardCategories .olo-category-table tr:last-child>*{border-bottom:0}
+body.olo-demo .olo-category-usage{display:flex;align-items:center;gap:5px;margin-top:4px;max-width:145px}
+body.olo-demo .olo-category-usage small{font-size:.62rem;color:var(--muted)}
+body.olo-demo .olo-category-meter{display:block;flex:1;min-width:0;height:3px;background:var(--border);border-radius:5px;overflow:hidden}
+body.olo-demo .olo-category-meter i{display:block;height:100%;background:var(--muted);border-radius:5px}
+body.olo-demo .olo-category-meter i.is-over{background:var(--danger)}
+@media(max-width:1120px){
+ body.olo-demo .one-dashboard-analytics-grid{grid-template-columns:minmax(0,1fr)}
+ body.olo-demo .one-dashboard-budget-chart .one-dashboard-bar-plot{height:280px;max-height:280px}
+}
+@media(max-width:480px){
+ body.olo-demo .one-dashboard-analytics-grid>.v7-card{padding:13px 12px}
+ body.olo-demo #dashboardCategories .olo-category-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ body.olo-demo #dashboardCategories .olo-category-table tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 5px;padding:7px 0;border-bottom:1px solid var(--border)}
+ body.olo-demo #dashboardCategories .olo-category-table tbody th:first-child{grid-column:1/-1;width:auto;padding:0 2px 3px}
+ body.olo-demo #dashboardCategories .olo-category-table tbody td{padding:0 2px;text-align:left}
+ body.olo-demo #dashboardCategories .olo-category-table tbody td[data-label]::before{content:attr(data-label);display:block;font-size:.61rem;color:var(--muted);margin-bottom:2px}
+ body.olo-demo #dashboardCategories .olo-category-table tbody th,body.olo-demo #dashboardCategories .olo-category-table tbody td{border:0}
+ body.olo-demo #dashboardCategories .olo-category-table tbody td[colspan]{grid-column:1/-1}
+}
