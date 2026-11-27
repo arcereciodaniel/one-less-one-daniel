@@ -40,6 +40,13 @@ el("privateAuditFile").onchange=async()=>{
 };
 el("integrity").onclick=`);
  rep('el("closeIntegrity").onclick=()=>{resetRestore();','el("closeIntegrity").onclick=()=>{auditGeneration++;el("privateAuditFile").value="";el("privateAuditReport").textContent="";resetRestore();');
+ // Recover native optional-tool preferences; hiding a tool never removes its data.
+ rep('enabledModules=new Set();','enabledModules=new Set(optionalModules.map(([id])=>id).filter(id=>oneModuleEnabled(({goals:"capital",collections:"shared"})[id]||id)));');
+ rep('else{enabledModules.delete(id);if(moduleName===id)moduleName="home"}render()','else{enabledModules.delete(id);if(moduleName===id)moduleName="home";oneSetModuleEnabled(({goals:"capital",collections:"shared"})[id]||id,false)}render()');
+ // Keep the financial UI single-source; visual preferences are separate from the ledger.
+ rep('function theme(value){document.documentElement.dataset.theme=value;','const rcVisualKey=STORAGE_KEY+"_visual";function visualPrefs(){try{return JSON.parse(localStorage.getItem(rcVisualKey)||"{}")}catch{return {}}}function saveVisual(patch){try{localStorage.setItem(rcVisualKey,JSON.stringify({...visualPrefs(),...patch}))}catch{}}function theme(value){saveVisual({theme:value});document.documentElement.dataset.theme=value;');
+ rep('display=e.target.value;render()','display=e.target.value;saveVisual({currency:display});render()');
+ rep('theme("dark");render();','const initialVisual=visualPrefs();display=initialVisual.currency==="USD"?"USD":"CRC";el("displayCurrency").value=display;theme(initialVisual.theme==="light"?"light":"dark");render();');
  assert(!h.includes("rastro_lab_v17_rc7_preview_"));return h;
 }
 if(require.main===module){const out=path.join(root,"preview-v17-rc8");fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,"One-Less-One-V17.0-RC8-TECNICA.html"),buildCandidate());fs.writeFileSync(path.join(out,"LEEME.txt"),"RC8 técnica aislada. Solo datos ficticios para operaciones. Configuración: revisión privada de respaldo original V16.0, solo lectura, sin red ni persistencia del archivo. No restaurés un respaldo real. Movimientos: programados y repetición. Cobros: preparar recurrentes. El piloto móvil se prueba exclusivamente con transporte simulado; no se conecta a Cloudflare. No publicar.");}
