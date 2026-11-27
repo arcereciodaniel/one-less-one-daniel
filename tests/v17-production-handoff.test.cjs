@@ -37,7 +37,16 @@ test("local migration rehearses actual UI and blocks production transport on cha
  }finally{await tick();first.window.close()}
  const second=boot(B.buildInner(),{[H.LEGACY]:source,[H.SOURCE]:source,[H.ACTIVE]:active});
  try{
-  const w=second.window,g=id=>w.document.getElementById(id);g("rc-integrity").click();
+  const w=second.window,g=id=>w.document.getElementById(id);
+  assert.equal(g("view-dashboard").hidden,false);assert(!g("view-dashboard").closest("#v17NativeHost"));assert(!g("expenseChart").closest("#v17NativeHost"));assert(!g("cashChart").closest("#v17NativeHost"));
+  assert.equal(w.document.querySelector(".demo-header").hidden,true);assert(w.document.querySelector(".olo-original-header #nav"));assert.equal(g("rc-content").hidden,true);
+  const exact=w.localStorage.getItem(H.ACTIVE);
+  w.document.querySelector('.olo-original-header [data-view="plan"]').click();assert(g("view-dashboard").hidden);assert(!g("rc-content").hidden);assert.equal(g("rc-title").textContent,"Presupuesto");
+  w.document.querySelector('.olo-original-header [data-view="dashboard"]').click();assert(!g("view-dashboard").hidden);
+  w.document.querySelector('.olo-original-header [data-theme-choice="light"]').click();assert.equal(w.document.documentElement.dataset.theme,"light");
+  w.document.querySelector('.olo-original-header [data-display-currency="USD"]').click();assert.equal(g("rc-displayCurrency").value,"USD");assert.equal(w.localStorage.getItem(H.ACTIVE),exact);
+  w.document.querySelector('.olo-original-header [data-display-currency="CRC"]').click();
+  g("rc-integrity").click();
   w.localStorage.setItem(H.LEGACY,source+" ");g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
   assert.match(g("rc-mobileStagingStatus").textContent,/V16 cambió/);assert.equal(calls.length,0);
   w.localStorage.setItem(H.LEGACY,source);g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
@@ -65,4 +74,9 @@ test("three historical cross-outflow category links retain original category, ty
  assert.equal(q.rows.find(r=>r.id==="other").actualMinor,400000);
  const invalid=JSON.parse(before);invalid.movements[0].categoryId="salary";assert(F.adaptLegacy(invalid,adapter).issues.some(x=>x.code==="movement-category-review"));
  invalid.movements[0].categoryId="unknown";assert(F.adaptLegacy(invalid,adapter).issues.some(x=>x.code==="movement-category-review"));
+});
+
+test("public entrypoint redirects to V17; original V16 stays byte-identical in archive",()=>{
+ const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),P=require("../scripts/build-v17-production-site.cjs"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"olo-native-entry-"));
+ try{P.build(dir);assert.match(fs.readFileSync(path.join(dir,"index.html"),"utf8"),/location\.replace\(new URL\("\.\/v17\/"/);assert(fs.readFileSync(path.join(dir,"v16.html")).equals(fs.readFileSync(path.join(__dirname,"../index.html"))));assert(fs.readFileSync(path.join(dir,"lab/index.html")).equals(fs.readFileSync(path.join(__dirname,"../lab/index.html"))))}finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
