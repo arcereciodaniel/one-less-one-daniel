@@ -42,7 +42,7 @@ test("local migration rehearses actual UI and blocks production transport on cha
   assert.equal(w.document.querySelector(".demo-header").hidden,true);assert(w.document.querySelector(".olo-original-header #nav"));assert.equal(g("rc-content").hidden,true);
   const exact=w.localStorage.getItem(H.ACTIVE);
   w.document.querySelector('.olo-original-header [data-view="plan"]').click();assert(g("view-dashboard").hidden);assert(!g("rc-content").hidden);assert.equal(g("rc-title").textContent,"Presupuesto");
-  w.document.querySelector('.olo-original-header [data-view="dashboard"]').click();assert(!g("view-dashboard").hidden);
+  w.document.querySelector('.olo-original-header [data-view="movements"]').click();assert(!g("view-movements").hidden);assert(g("rc-content").hidden);w.document.querySelector('.olo-original-header [data-view="dashboard"]').click();assert(!g("view-dashboard").hidden);
   w.document.querySelector('.olo-original-header [data-theme-choice="light"]').click();assert.equal(w.document.documentElement.dataset.theme,"light");
   w.document.querySelector('.olo-original-header [data-display-currency="USD"]').click();assert.equal(g("rc-displayCurrency").value,"USD");assert.equal(w.localStorage.getItem(H.ACTIVE),exact);
   w.document.querySelector('.olo-original-header [data-display-currency="CRC"]').click();
@@ -50,7 +50,7 @@ test("local migration rehearses actual UI and blocks production transport on cha
   w.localStorage.setItem(H.LEGACY,source+" ");g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
   assert.match(g("rc-mobileStagingStatus").textContent,/V16 cambió/);assert.equal(calls.length,0);
   w.localStorage.setItem(H.LEGACY,source);g("rc-mobileStagingKey").value="x".repeat(40);await g("rc-mobileStagingSync").onclick();
-  assert.equal(calls.length,3);assert(calls.every(x=>x.url.startsWith(B.ENDPOINT+"/")));assert.match(g("rc-mobileStagingStatus").textContent,/0 pendiente/);
+  assert.equal(calls.length,3);assert(calls.every(x=>x.url.startsWith(B.ENDPOINT+"/")));assert.equal(w.localStorage.getItem(H.ACTIVE+"_mobile_auto_v1"),null);assert.match(g("rc-mobileStagingStatus").textContent,/0 pendiente/);
   assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.deepEqual(errors,[]);
  }finally{await tick();second.window.close()}
 });

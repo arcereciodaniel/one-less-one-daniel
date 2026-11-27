@@ -65,11 +65,67 @@ function designHome(){
  insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>'+ (signals.length?"Revisá tu presupuesto":"Dentro del presupuesto conocido")+'</h3><p>'+ (signals.length?signals.length+" categoría(s) por revisar.":p.pending.length?"Hay asignaciones sin fecha exacta; el presupuesto no está completo.":"No se detectan excesos en el período seleccionado.")+'</p>'+(totals.remaining!==null?'<span class="v7-status-pill">Restante: '+fmtCRC(totals.remaining)+'</span>':"");
 }
 renderDashboard=function(){originalDashboard();if(moduleName==="home"&&!nativeHome.hidden)designHome()};
+
+// Reattach the real original module DOM and its original event handlers.
+// V17 date selection is the sole temporal control; V17 links remain contextual.
+const nativeSections={},nativeRenderers={moves:renderMovements,debts:renderDebts,collections:renderSharedCharges,goals:renderCapital,projects:renderProjects};
+for(const id of Object.keys(nativeRenderers)){
+ const section=document.getElementById("view-"+reverseHeaderMap[id]);
+ if(!section)throw Error("Vista original no disponible: "+id);
+ nativeHome.after(section);section.classList.add("olo-original-module");section.hidden=true;section.classList.remove("active");
+ nativeSections[id]=section;
+ const heading=section.querySelector(".v7-page-head");if(heading){const title=heading.firstElementChild;if(title)title.hidden=true;}
+}
+for(const id of ["movementAccountsDialog","assignSharedGroupDialog"]){const d=nativeDialog(id);d.addEventListener("close",refreshNative)}
+const moveFilters=nativeSections.moves.querySelector(".one-move-period-control");if(moveFilters)moveFilters.hidden=true;
+const sharedNav=nativeSections.collections.querySelector(".month-navigator");if(sharedNav)sharedNav.hidden=true;
+for(const id of ["sharedCurrentMonth","sharedPrevMonth","sharedNextMonth"]){const b=document.getElementById(id);if(b)b.hidden=true}
+const originalFiltered=m2FilteredMovementRows;
+m2FilteredMovementRows=function(){
+ if(moduleName!=="moves")return originalFiltered();
+ const originalSelected=selectedMovements;
+ try{selectedMovements=()=>O.movements(data,agg(T.select(state)));return originalFiltered()}
+ finally{selectedMovements=originalSelected}
+};
+const nativeExtras=document.createElement("details");nativeExtras.id="v17-contextual-actions";nativeExtras.className="v7-details";nativeExtras.hidden=true;
+nativeExtras.innerHTML='<summary>Vínculos y planificación del período</summary><div class="v7-details-body"></div>';el("content").before(nativeExtras);
+const futureChart=document.createElement("section");futureChart.className="v7-card one-future-panel";futureChart.hidden=true;el("content").before(futureChart);
+function renderNativeExtras(id,range){
+ const slot=nativeExtras.querySelector(".v7-details-body");slot.replaceChildren();
+ const append=(labelText,button)=>{const line=document.createElement("div");line.className="one-future-breakdown-row";const name=document.createElement("span");name.textContent=labelText;line.append(name,button);slot.append(line)};
+ function button(action,text,id){const b=document.createElement("button");b.className="btn secondary small";b.type="button";b.textContent=text;b.onclick=()=>{try{openNative(action,id)}catch(e){alert(e.message)}};return b}
+ if(id==="debts")for(const x of nativeOccurrences().filter(x=>x.date>=range.start&&x.date<=range.end))append(x.name+" · "+short(x.date),button("link-debt","Vincular cuota",x.id));
+ if(id==="projects")for(const p of model.modules.projects||[]){for(const x of (model.modules.projectPlans||[]).filter(x=>x.ownerId===p.id))append(p.name+" · "+x.name,button("link-project","Vincular presupuesto",x.id))}
+ if(id==="collections"){
+  for(const c of model.modules.collections||[])append(c.name,button("classify-collection","Clasificar",c.id));
+  if((data.receivableRecurring||[]).length)append("Cobros recurrentes · "+state.month,button("recurring-collections","Preparar recurrentes",""));
+ }
+ nativeExtras.hidden=!slot.children.length;
+}
+function renderOriginalFuture(range){
+ const rates=currentRates(),forecast=C.reconcile(rawNow(),model,L.reconcile(rawNow(),model,Q.forecast(model,TODAY,range.end,confirmedFlows(),oneFutureForecast(TODAY,90).items,rates,F),TODAY,rates),nativeOccurrences(),TODAY,rates);
+ const points=forecast.points||[],fmt=n=>n===null||n===undefined?"—":money(n/100);
+ futureChart.innerHTML='<div class="v7-card-head"><div><h2>Evolución de tu saldo operativo</h2><p>Escenario parcial · hasta '+esc(short(forecast.end))+' · sin distribuir importes pendientes de fecha.</p></div></div><div class="one-future-stats">'+[["Saldo operativo hoy",model.operating.minor],["Saldo estimado",forecast.balance],["Mínimo del escenario",forecast.lowest]].map(([n,v])=>'<div class="one-future-stat"><span>'+n+'</span><strong>'+fmt(v)+'</strong></div>').join("")+'</div><div class="one-future-chart-wrap">'+(points.length?oneFutureChart(points.map(p=>({date:p.date,balance:p.balance/100}))):'<p class="muted">No hay una proyección verificable para este intervalo.</p>')+'</div>';
+}
+function styleBudget(){
+ const content=el("content");
+ content.querySelectorAll(".demo-cards").forEach(n=>n.classList.add("r8-fortnight-grid"));
+ content.querySelectorAll("article.demo-card").forEach(n=>n.classList.add("r8-fortnight-card"));
+ content.querySelectorAll(".demo-card-head").forEach(n=>n.classList.add("r8-fortnight-heading"));
+ content.querySelectorAll(".demo-row").forEach(n=>n.classList.add("r8-budget-row"));
+ content.querySelectorAll(".demo-section").forEach(n=>n.classList.add("r8-section"));
+ content.querySelectorAll(".demo-add").forEach(n=>n.classList.add("btn","secondary","small"));
+}
+
 render=function(){
  originalRender();
  const home=moduleName==="home"&&!nativeBlocked;
- nativeHome.hidden=!home;nativeHome.classList.toggle("active",home);el("content").hidden=home;
- nativeHeaderSync();
+ nativeHome.hidden=!home;nativeHome.classList.toggle("active",home);const native=!nativeBlocked?nativeSections[moduleName]:null;el("content").hidden=home||!!native;
+ for(const section of Object.values(nativeSections)){section.hidden=section!==native;section.classList.toggle("active",section===native)}
+ nativeExtras.hidden=true;futureChart.hidden=true;nativeHeaderSync();
+ if(native){const range=agg(T.select(state));if(moduleName==="collections")document.getElementById("sharedStatementMonth").value=state.month;nativeRenderers[moduleName]();renderNativeExtras(moduleName,range)}
+ if(moduleName==="budget"&&!nativeBlocked)styleBudget();
+ if(moduleName==="future"&&!nativeBlocked){futureChart.hidden=false;renderOriginalFuture(agg(T.select(state)))}
  // Native chart layout needs the real visible canvas, not its former hidden container.
  if(home)renderDashboard();
 };

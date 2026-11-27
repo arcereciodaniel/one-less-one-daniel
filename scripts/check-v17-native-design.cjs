@@ -44,8 +44,8 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
        await page.waitForFunction(id=>{const c=document.getElementById(id);if(!c||!c.width||!c.height)return false;const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i])return true;return false},id);
       }
       if(width!==320)await page.screenshot({path:path.join(out,"Inicio-"+width+"-"+theme+".png"),fullPage:true});
-     }else assert(!(await page.locator("#view-dashboard").isVisible()));
-     if(width===1440&&name==="plan")await page.screenshot({path:path.join(out,"Presupuesto-"+theme+".png"),fullPage:true});
+     }else {assert(!(await page.locator("#view-dashboard").isVisible()));if(["movements","debts","shared","capital","projects"].includes(name))assert(await page.locator("#view-"+name).isVisible());if(name==="future")assert(await page.locator(".one-future-panel:visible").count()>=1);if(name==="plan")assert(await page.locator(".r8-fortnight-card:visible").count()>=1);}
+     if(width===1440&&name!=="dashboard")await page.screenshot({path:path.join(out,name+"-"+theme+".png"),fullPage:true});
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Overflow "+width+" "+theme+" "+name);
      checks.push({width,theme,module:name});
     }
