@@ -10,7 +10,7 @@
  function verify(item){
   guard();const stored=disk();
   oneV17MobileBridge.verify(stored,item);
-  if(item.movement.type!=="Cobro"){
+  if(["Gasto","Ingreso"].includes(item.movement.type)){
    const p=periodForDate(item.movement.date),row=stored.movements.find(x=>x.mobilePilotId===item.id);
    if(!p||item.movement.date>periodEndDate(p)||row.period!==periodKey(p))throw Error("Período no verificado");
   }
@@ -21,6 +21,7 @@
   const verdict=oneV17MobileBridge.check(before,item);
   if(verdict==="duplicate"){verify(item);return "duplicate"}
   try{
+   // oneCreateSplitFare only stages native receivables; it does not save or add an expense.
    if(apply(item)!=="inserted")throw Error("Identificador ya existente sin recibo V17");
    oneV17MobileBridge.mark(data,item);
    oneV17MobileBridge.verify(data,item);
