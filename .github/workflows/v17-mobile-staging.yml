@@ -1,0 +1,30 @@
+name: V17 mobile staging verification (no deployment)
+on:
+  push:
+    branches: [release/v17-0-prerelease]
+    paths:
+      - "mobile-pilot/staging/**"
+      - "mobile-pilot/src/**"
+      - "mobile-pilot/public/**"
+      - ".github/workflows/v17-mobile-staging.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/release/v17-0-prerelease'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test mobile-pilot/tests/*.test.mjs mobile-pilot/staging/staging.test.mjs
+      - run: node mobile-pilot/staging/build.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLO-V17-MOBILE-STAGING
+          path: preview-v17-mobile-staging/
+          if-no-files-found: error
+          retention-days: 14
