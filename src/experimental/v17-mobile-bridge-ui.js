@@ -26,8 +26,11 @@
    oneV17MobileBridge.mark(data,item);
    oneV17MobileBridge.verify(data,item);
    getModel();
-   save();
+   const next=oneV17MobileBridge.appendPatch(JSON.parse(expected),before,rawNow());
+   oneV17MobileBridge.verify(next,item);
+   oneStoragePersist(JSON.stringify(next));
    verify(item);
+   refreshNative();
    return "inserted";
   }catch(error){
    if(oneStorageSnapshot===expected&&localStorage.getItem(STORAGE_KEY)===expected)data=before;

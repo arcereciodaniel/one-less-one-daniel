@@ -67,6 +67,28 @@ const oneV17MobileBridge=(()=>{
   verifyFx(x,p);
   return true;
  }
+ // Persist only append-only native changes on the exact disk ledger, not incidental
+ // normalization that happened at startup. Reject any unexpected native side effect.
+ function appendPatch(disk,before,after){
+  const lists=new Set(["movements","movementAudit","sharedCharges","sharedChargeGroups","projectLinks",FIELD]);
+  const same=(a,b)=>signature(a)===signature(b);
+  const out={...disk};
+  for(const k of new Set([...Object.keys(before),...Object.keys(after)])){
+   if(same(before[k],after[k]))continue;
+   if(k==="movementSeq"){
+    if(!Number.isSafeInteger(after[k])||after[k]!==Number(before[k]||0)+1)throw Error("Secuencia no verificada");
+    out[k]=after[k];continue;
+   }
+   if(!lists.has(k))throw Error("Cambio no permitido al importar: "+k);
+   const prev=before[k]??[],next=after[k],stored=disk[k]??[];
+   if(!Array.isArray(prev)||!Array.isArray(next)||!Array.isArray(stored)||stored.length!==prev.length||next.length<prev.length||
+    prev.some((x,i)=>!same(x,next[i])||!x?.id||x.id!==stored[i]?.id))throw Error("Historial no verificable: "+k);
+   const appended=next.slice(prev.length),ids=new Set(stored.map(x=>x.id));
+   for(const row of appended){if(!row?.id||ids.has(row.id))throw Error("Fila duplicada: "+k);ids.add(row.id)}
+   out[k]=[...stored,...appended];
+  }
+  return out;
+ }
  async function drain(items,io){
   const result={inserted:0,duplicates:0,pending:0,confirmed:0};
   for(const item of items){
@@ -78,6 +100,6 @@ const oneV17MobileBridge=(()=>{
   }
   return result;
  }
- return {FIELD,check,mark,verify,drain};
+ return {FIELD,check,mark,verify,appendPatch,drain};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV17MobileBridge;

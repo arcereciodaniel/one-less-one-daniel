@@ -7,3 +7,6 @@ Separate browser storage and a manual sync control in settings; private backup a
 
 ## Split batch verification
 The native oneCreateSplitFare implementation creates receivables, not a second cash expense, and does not save by itself. V17 now accepts normalized split payloads, verifies the exact group, all participant rows, common batch identity, shares, original amount, due date, currency and consistent historical FX. The receipt and batch are persisted together by the guarded native save. A failed acknowledgement can be retried without adding rows. The underlying user must register the original expense separately if needed, as in V16. No deployment or real-device test has occurred. New tests are pending CI confirmation.
+
+## Append-only mobile persistence
+The split integration test identified that the native save also persisted startup normalization of existing historic movements (auxiliary defaults such as FX/date metadata). Instead of weakening the test, mobile import now persists only verified append-only changes against the exact saved ledger. Changes to unrelated fields, edits to existing rows or conflicting IDs are rejected. This is limited to the synthetic mobile candidate; native manual operations retain their existing save path. New CI results pending.

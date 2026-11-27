@@ -75,3 +75,12 @@ test("native split sync persists all rows and receipt together, reuses group, re
   assert.deepEqual(raw().v16AssignmentOverlay,before.v16AssignmentOverlay);
  }finally{e.w.close()}
 });
+
+test("mobile append patches preserve exact legacy rows and unrelated fields, reject non-append mutations",()=>{
+ const disk={movements:[{id:"old",amount:25}],sharedCharges:[],settings:{foo:1}},before={...disk,movements:[{id:"old",amount:25,fxBuy:0}],movementSeq:7},after={...before,movements:[...before.movements,{id:"new",amount:12}],movementSeq:8};
+ const next=B.appendPatch(disk,before,after);
+ assert.deepEqual(next.movements,[disk.movements[0],after.movements[1]]);assert.equal(next.movementSeq,8);assert.deepEqual(next.settings,disk.settings);
+ assert.throws(()=>B.appendPatch(disk,before,{...after,settings:{foo:2}}),/no permitido/);
+ assert.throws(()=>B.appendPatch(disk,before,{...after,movements:[{id:"old",amount:99},after.movements[1]]}),/Historial/);
+ assert.throws(()=>B.appendPatch(disk,before,{...after,movements:[...before.movements,{id:"old",amount:12}]}),/duplicada/);
+});
