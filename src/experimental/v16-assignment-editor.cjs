@@ -16,8 +16,9 @@ const oneV16Editor=(()=>{
   if(model.issues?.length)throw Error("Revisá las incidencias del historial antes de editar.");
   const old=model.allocations,ids=new Set();totals(old);for(const a of old){if(typeof a.id!=="string"||!a.id||ids.has(a.id))throw Error("ID de asignación duplicado");ids.add(a.id)}
   const {kind,id}=command;
-  const target=kind==="create"?null:old.find(a=>a.id===id);
-  if(kind!=="create"&&!target)throw Error("La asignación ya no existe.");
+  const creating=kind==="create"||kind==="create-range";
+  const target=creating?null:old.find(a=>a.id===id);
+  if(!creating&&!target)throw Error("La asignación ya no existe.");
   const category=cid=>{const c=model.categories.find(x=>x.id===cid);if(!c||c.synthetic||c.active===false||c.budgetable===false||!["Ingreso","Gasto","Pago deuda"].includes(c.type))throw Error("Categoría no disponible.");return c};
   const baseId=command.transactionId;if(typeof baseId!=="string"||!baseId||baseId.length>100)throw Error("Identificador de operación inválido.");
   let created=[],removed=[];
@@ -25,7 +26,13 @@ const oneV16Editor=(()=>{
    category(cid);if(!valid(date)||!["CRC","USD"].includes(currency)||!Number.isSafeInteger(minor)||minor<=0)throw Error("Asignación inválida.");
    return {id:newId,categoryId:cid,date,minor,currency,source:"dated",...extra};
   }
-  if(kind==="create"){
+  if(kind==="create-range"||kind==="edit-range"){
+   const {start,end,categoryId,currency}=command;category(categoryId);
+   if(!valid(start)||!valid(end)||start>end||!["CRC","USD"].includes(currency))throw Error("Intervalo inválido.");
+   if(kind==="edit-range"&&(target.source!=="range"||target.parentKey||target.originId||currency!==target.currency))throw Error("No se modifica el presupuesto original.");
+   if(kind==="edit-range")removed=[target];
+   created=[{id:target?.id||baseId+":0",categoryId,currency,minor:amount(command.amount),source:"range",start,end}];
+  }else if(kind==="create"){
    const {categoryId,date,currency,frequency="once",count=1}=command;category(categoryId);
    created=dates(date,frequency,count).map((d,i)=>dated(categoryId,d,amount(command.amount),currency,baseId+":"+i));
   }else if(kind==="edit"){
@@ -46,10 +53,10 @@ const oneV16Editor=(()=>{
    if(target.minor>minor)created.push({...target,minor:target.minor-minor});
    created.push(existing?{...existing,minor:add(existing.minor,minor)}:dated(destinationCategoryId,date,minor,target.currency,baseId+":0"));
   }else if(kind==="delete"){
-   if(!target.date||target.parentKey||target.originId||target.source==="legacy-scheduled-income")throw Error("No se permite eliminar una asignación histórica.");
+   if((!target.date&&target.source!=="range")||target.parentKey||target.originId||target.source==="legacy-scheduled-income")throw Error("No se permite eliminar una asignación histórica.");
    removed=[target];
   }else if(kind==="distribute"){
-   if(target.date||!valid(target.start)||!valid(target.end)||target.start>target.end)throw Error("La asignación no es un intervalo pendiente.");
+   if(target.source==="range"||target.date||!valid(target.start)||!valid(target.end)||target.start>target.end)throw Error("La asignación no es un intervalo pendiente.");
    if(!Array.isArray(command.parts)||!command.parts.length||command.parts.length>60)throw Error("Ingresá las fechas de distribución.");
    created=command.parts.map((p,i)=>{if(!inside(target,p.date))throw Error("La fecha debe estar dentro del intervalo original.");return dated(target.categoryId,p.date,amount(p.amount),target.currency,baseId+":"+i,{originId:target.originId||target.id,originStart:target.originStart||target.start,originEnd:target.originEnd||target.end,...(target.parentKey?{parentKey:target.parentKey,financialMonth:target.financialMonth}:{})})});
    if(created.reduce((s,x)=>add(s,x.minor),0)!==target.minor)throw Error("La distribución debe conservar exactamente el total original.");
@@ -58,8 +65,13 @@ const oneV16Editor=(()=>{
   const retained=old.filter(a=>!removed.some(r=>r.id===a.id)),used=new Set(retained.map(a=>a.id)),slots=new Set(retained.filter(a=>a.date).map(a=>JSON.stringify([a.categoryId,a.currency,a.date])));
   for(const a of created){
    if(used.has(a.id))throw Error("ID de asignación duplicado.");used.add(a.id);
+   if(a.source==="range"){
+    const overlaps=x=>x.categoryId===a.categoryId&&x.currency===a.currency&&(x.date?inside(a,x.date):x.start<=a.end&&a.start<=x.end);
+    if(retained.some(overlaps)||created.some(x=>x!==a&&overlaps(x)))throw Error("Ya existe presupuesto para esta categoría en parte del intervalo. Editá el existente.");
+    continue;
+   }
    const slot=JSON.stringify([a.categoryId,a.currency,a.date]);if(slots.has(slot))throw Error("Ya existe una asignación para esta categoría, moneda y fecha. Editala o elegí otra fecha.");slots.add(slot);
-   if((kind==="create"||kind==="edit"&&(a.date!==target.date||a.categoryId!==target.categoryId||a.minor>target.minor))&&retained.some(x=>!x.date&&x.categoryId===a.categoryId&&x.currency===a.currency&&inside(x,a.date)))throw Error("Esta categoría tiene presupuesto pendiente de distribuir en esa fecha. Distribuí primero el monto existente.");
+   if((kind==="create"||kind==="transfer"||kind==="edit"&&(a.date!==target.date||a.categoryId!==target.categoryId||a.minor>target.minor))&&retained.some(x=>!x.date&&x.categoryId===a.categoryId&&x.currency===a.currency&&inside(x,a.date)))throw Error("Esta categoría tiene presupuesto pendiente de distribuir en esa fecha. Distribuí primero el monto existente.");
   }
   const next=[...retained,...created],before=totals(old),after=totals(next);
   if(kind==="transfer"&&(before.CRC!==after.CRC||before.USD!==after.USD))throw Error("La redistribución debe conservar los totales.");

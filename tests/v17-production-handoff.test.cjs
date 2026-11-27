@@ -88,3 +88,16 @@ test("public entrypoint redirects to V17; original V16 stays byte-identical in a
  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),P=require("../scripts/build-v17-production-site.cjs"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"olo-native-entry-"));
  try{P.build(dir);assert.match(fs.readFileSync(path.join(dir,"index.html"),"utf8"),/location\.replace\(new URL\("\.\/v17\/"/);assert(fs.readFileSync(path.join(dir,"v16.html")).equals(fs.readFileSync(path.join(__dirname,"../index.html"))));assert(fs.readFileSync(path.join(dir,"lab/index.html")).equals(fs.readFileSync(path.join(__dirname,"../lab/index.html"))))}finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
+
+test("V17.1 interval budgets persist in the original overlay without invented dates or double counting",()=>{
+ const E=require("../src/experimental/v16-assignment-editor.cjs"),P=require("../src/experimental/v16-storage-overlay.cjs"),F=require("../src/experimental/v16-financial-assignments.cjs");
+ const raw={movements:[],periods:[],categories:[]},base={categories:[{id:"food",name:"Supermercado",type:"Gasto",active:true,budgetable:true}],allocations:[],actuals:[],issues:[],periods:[]};
+ const cmd={kind:"create-range",categoryId:"food",start:"2026-11-01",end:"2026-11-30",amount:100000,currency:"CRC",transactionId:"monthly"};
+ const stored=P.commit(raw,base,P.prepare(raw,base,cmd,F,E),F,E),model=P.hydrate(stored,base,F);
+ assert.deepEqual(P.bare(stored),raw);assert.equal(model.allocations[0].date,undefined);
+ assert.equal(F.project(model,{basis:"calendar",start:"2026-11-01",end:"2026-11-30"}).totals.CRC.outflow.plannedMinor,10000000);
+ const week=F.project(model,{basis:"calendar",start:"2026-11-23",end:"2026-11-29"});assert.equal(week.totals.CRC.outflow.plannedMinor,0);assert.equal(week.pending[0].minor,10000000);assert.equal(week.rows[0].remainingMinor,null);
+ assert.throws(()=>E.stage(model,{...cmd,start:"2026-11-23",end:"2026-11-29",transactionId:"overlap"}),/Ya existe/);
+ const edited=E.stage(model,{...cmd,kind:"edit-range",id:model.allocations[0].id,amount:120000});assert.equal(E.commit(model,edited).allocations[0].minor,12000000);
+ assert.equal(E.commit(model,E.stage(model,{kind:"delete",id:model.allocations[0].id,transactionId:"delete"})).allocations.length,0);
+});

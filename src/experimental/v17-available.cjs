@@ -11,10 +11,11 @@ const oneV17Available=(()=>{
   if(!periods.length||periods.filter(p=>p.start<=asOf&&asOf<=p.end).length!==1||periods.map(p=>p.end).sort().at(-1)!==native.horizon)return fail("Período financiero sin conciliar");
   const cats=new Map(model.categories.map(c=>[c.id,c]));
   const groups=new Map();
-  for(const a of model.allocations.filter(a=>!a.parentKey&&a.date&&cats.get(a.categoryId)?.type!=="Ingreso")){
-   const slots=model.periods.filter(p=>p.start<=a.date&&a.date<=p.end);
+  for(const a of model.allocations.filter(a=>!a.parentKey&&(a.date||a.source==="range")&&cats.get(a.categoryId)?.type!=="Ingreso")){
+   const from=a.date||a.start,to=a.date||a.end;
+   const slots=model.periods.filter(p=>p.start<=from&&to<=p.end);
    if(slots.length!==1){
-    if(a.date>=periods.map(p=>p.start).sort()[0]&&a.date<=native.horizon)return fail("Asignación sin período financiero único");
+    if(to>=periods.map(p=>p.start).sort()[0]&&from<=native.horizon)return fail("Hay presupuesto de un intervalo que cruza períodos de pago; falta determinar su efecto en el disponible.");
     continue;
    }
    if(!periods.some(p=>p.key===slots[0].key))continue;

@@ -31,11 +31,15 @@ const oneV16Storage=(()=>{
   const retained=base.allocations.filter(a=>!removed.has(a.id)),ids=new Set(retained.map(a=>a.id)),slots=new Set(retained.filter(a=>a.date).map(a=>JSON.stringify([a.categoryId,a.currency,a.date])));
   for(const b of o.added){
    const c=base.categories.find(c=>c.id===b?.categoryId);
-   if(!c||c.synthetic||!["Ingreso","Gasto","Pago deuda"].includes(c.type)||!b||b.source!=="dated"||b.parentKey!==undefined||b.financialMonth!==undefined||b.originId!==undefined||!valid(b.date)||!Number.isSafeInteger(b.minor)||b.minor<=0||!["CRC","USD"].includes(b.currency))throw Error("Nueva asignación inválida");
-   if(retained.some(a=>!a.date&&a.categoryId===b.categoryId&&a.currency===b.currency&&inRange(a,b.date)))throw Error("Nueva asignación superpuesta con presupuesto pendiente");
+   if(!c||c.synthetic||!["Ingreso","Gasto","Pago deuda"].includes(c.type)||!b||!["dated","range"].includes(b.source)||b.parentKey!==undefined||b.financialMonth!==undefined||b.originId!==undefined||(b.source==="dated"?(!valid(b.date)||b.start!==undefined||b.end!==undefined):(!valid(b.start)||!valid(b.end)||b.start>b.end||b.date!==undefined))||!Number.isSafeInteger(b.minor)||b.minor<=0||!["CRC","USD"].includes(b.currency))throw Error("Nueva asignación inválida");
+   if(retained.some(a=>a.categoryId===b.categoryId&&a.currency===b.currency&&(b.source==="range"?(a.date?inRange(b,a.date):a.start<=b.end&&b.start<=a.end):!a.date&&inRange(a,b.date))))throw Error("Nueva asignación superpuesta con presupuesto pendiente");
    rows.push(clean(b));
   }
-  for(const a of rows){const slot=JSON.stringify([a.categoryId,a.currency,a.date]);if(typeof a.id!=="string"||!a.id||ids.has(a.id)||slots.has(slot))throw Error("Asignación duplicada");ids.add(a.id);slots.add(slot)}
+  for(const a of rows){
+   if(typeof a.id!=="string"||!a.id||ids.has(a.id))throw Error("Asignación duplicada");ids.add(a.id);
+   if(a.date){const slot=JSON.stringify([a.categoryId,a.currency,a.date]);if(slots.has(slot))throw Error("Asignación duplicada");slots.add(slot)}
+   if(a.source==="range"&&rows.some(b=>a!==b&&a.categoryId===b.categoryId&&a.currency===b.currency&&(b.date?inRange(a,b.date):b.start<=a.end&&a.start<=b.end)))throw Error("Asignaciones de intervalo superpuestas");
+  }
   const model={...base,allocations:[...retained,...rows]};
   F.project(model,{basis:"calendar",start:"0001-01-01",end:"9999-12-31"});
   return model;
