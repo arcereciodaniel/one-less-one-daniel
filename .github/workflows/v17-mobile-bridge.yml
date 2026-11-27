@@ -9,6 +9,7 @@ on:
       - "scripts/build-v17-staging.cjs"
       - "scripts/build-v17-prerelease.cjs"
       - "src/experimental/v17-parity-actions.js"
+      - "src/experimental/v17-csv.cjs"
       - "src/experimental/v17-reconciled-forecast.cjs"
       - "src/experimental/v17-commitment-links.cjs"
       - "src/experimental/v17-debt-collection-links.cjs"

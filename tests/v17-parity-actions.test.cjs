@@ -14,7 +14,7 @@ test("debt and project archive/reactivate, group edit and archive, undated colle
  r.projects=[{id:"project-parity",name:"Proyecto prueba",currency:"CRC",budget:10000,status:"active",startDate:"2026-11-01",endDate:"2026-11-30",buckets:[]}];
  r.sharedChargeGroups=[{id:"group-parity",name:"Grupo prueba",person:"Prueba",status:"active",notes:"",cutDay:0}];
  r.sharedCharges=[{id:"charge-parity",groupId:"group-parity",person:"Prueba",date:"2026-11-20",dueDate:"",chargeMonth:"2026-11",currency:"CRC",amount:1000,status:"pending",payments:[],description:"Sin fecha"}];
- saved=JSON.stringify(r)}finally{first.w.close()}
+ saved=JSON.stringify(r)}finally{await new Promise(r=>setTimeout(r,50));first.w.close()}
  const e=boot(saved);try{const {w,d,g,raw,module,action}=e,initial=raw(),balance=w.actualBalanceAt("2026-11-20");
  module("debts");action("debt-archive","debt1");await tick();assert.equal(raw().debts[0].status,"archived");
  action("debt-reactivate","debt1");await tick();assert.equal(raw().debts[0].status,"active");
@@ -26,5 +26,5 @@ test("debt and project archive/reactivate, group edit and archive, undated colle
  action("collection","charge-parity");assert(g("sharedChargeDialog").open);assert.equal(g("scId").value,"charge-parity");g("sharedChargeDialog").close();
  assert.equal(raw().movements.length,initial.movements.length);assert.equal(w.actualBalanceAt("2026-11-20"),balance);assert.equal(d.querySelectorAll(".demo-filter").length,1);
  assert(!w.localStorage.getItem("daniel_finanzas_local_v1"));assert.deepEqual(e.errors,[]);
- }finally{e.w.close()}
+ }finally{await new Promise(r=>setTimeout(r,50));e.w.close()}
 });

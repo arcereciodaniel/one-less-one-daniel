@@ -4,6 +4,11 @@ function parityDispatch(name,id){
 }
 function openNative(action,id){
  if(nativeBlocked)return;
+ if(action==="export-budget"||action==="export-movements"){
+  oneStorageAssertCurrent();
+  const range=agg(T.select(state)),fresh=getModel(),report=action==="export-budget"?oneV17Csv.budget(F.project(fresh,{basis:"calendar",...range}),range):oneV17Csv.movements(O.movements(rawNow(),range),range);
+  download("OLO-V17-"+(action==="export-budget"?"presupuesto":"movimientos")+"-"+range.start+"-"+range.end+".csv",report,"text/csv;charset=utf-8");return;
+ }
  const d=(data.debts||[]).find(x=>x.id===id),g=(data.reserves||[]).find(x=>x.id===id),p=(data.projects||[]).find(x=>x.id===id),group=sharedGroupById(id),charge=(data.sharedCharges||[]).find(x=>x.id===id);
  if(action==="debt-reactivate"){if(d&&debtStatus(d)==="archived")parityDispatch("reactivateDebt",id);return}
  if(action==="goal-reactivate"){if(g&&reserveStatus(g)==="archived")parityDispatch("reactivateReserve",id);return}
@@ -30,6 +35,7 @@ function parityRow(name,actions,detail=""){
 }
 function moduleActions(v){
  let html=baseModuleActions(v);
+ if(moduleName==="budget"||moduleName==="moves")html+='<div class="demo-native-actions">'+actionButton(moduleName==="budget"?"export-budget":"export-movements","Exportar CSV")+'</div>';
  if(moduleName==="debts")html+=paritySection("Archivadas",(data.debts||[]).filter(d=>debtStatus(d)==="archived").map(d=>parityRow(d.name,actionButton("debt-reactivate","Reactivar",d.id))));
  if(moduleName==="goals")html+=paritySection("Archivadas",(data.reserves||[]).filter(g=>g.type==="goal"&&reserveStatus(g)==="archived").map(g=>parityRow(g.name,actionButton("goal-reactivate","Reactivar",g.id))));
  if(moduleName==="projects"){

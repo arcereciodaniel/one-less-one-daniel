@@ -6,7 +6,8 @@ function buildCandidate(){
  const rep=(a,b)=>{assert.equal(h.split(a).length,2,"Marker: "+a);h=h.replace(a,()=>b)};
  rep('function moduleActions(v){','function baseModuleActions(v){');
  rep('function openNative(action,id){','function baseOpenNative(action,id){');
- rep('function baseModuleActions(v){',fs.readFileSync(path.join(root,"src/experimental/v17-parity-actions.js"),"utf8")+'\nfunction baseModuleActions(v){');
+ rep('function baseModuleActions(v){',fs.readFileSync(path.join(root,"src/experimental/v17-csv.cjs"),"utf8")+'\n'+fs.readFileSync(path.join(root,"src/experimental/v17-parity-actions.js"),"utf8")+'\nfunction baseModuleActions(v){');
+ rep('if(moduleName==="budget")el("content").innerHTML=kpis(p)','if(moduleName==="budget")el("content").innerHTML=moduleActions(v)+kpis(p)');
  rep('<p id="rc-migrationStatus" role="status"></p>','<p id="rc-migrationStatus" role="status"></p><label for="rc-sessionFile">O trasladar sesión privada V17</label><input id="rc-sessionFile" type="file" accept=".json,application/json"><p id="rc-sessionStatus" role="status"></p><button type="button" class="btn secondary" id="rc-sessionConfirm" disabled>Importar sesión</button>');
  rep('function updateMigrationControls(){',`
 let sessionDraft=null,sessionGeneration=0;
