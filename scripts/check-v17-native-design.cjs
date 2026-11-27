@@ -70,6 +70,35 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE),baseline);
    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.LEGACY),source);
    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.SOURCE),source);
+   if(width===1440){
+    await page.locator('.olo-original-header [data-view="plan"]').click();
+    await page.locator("#olo-period-level").selectOption("month");
+    await page.locator("#olo-period-label").click();
+    const futureMonth=await page.locator("#olo-month-choice option").last().getAttribute("value");
+    await page.locator("#olo-month-choice").selectOption(futureMonth);
+    await page.locator('[data-budget-group="Gasto"]').click();
+    await page.locator(".olo-budget-tools [data-add]").click();
+    assert.equal(await page.locator("#olo-assignment-mode").inputValue(),"range");
+    await page.locator("#rc-amount").fill("1234");
+    await page.locator("#rc-review").click();
+    assert(await page.locator("#rc-confirm").isEnabled(),await page.locator("#rc-error").textContent());
+    await page.locator("#rc-confirm").click();
+    await page.locator("#rc-edit").waitFor({state:"hidden"});
+    const stored=JSON.parse(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE)),assignment=stored.v16AssignmentOverlay.added.find(a=>a.source==="range");
+    assert(assignment);assert.equal(assignment.minor,123400);assert.equal(assignment.start.slice(0,7),futureMonth);assert.equal(assignment.date,undefined);
+    const original=JSON.parse(baseline);delete stored.v16AssignmentOverlay;delete original.v16AssignmentOverlay;assert.deepEqual(stored,original);
+    assert.match(await page.locator('[data-budget-total="0"]').textContent(),/1[., \s]?234/);
+    await page.locator("#olo-period-level").selectOption("week");
+    assert(await page.locator(".olo-related:visible").count()>=1);
+    await page.locator("#olo-period-level").selectOption("month");
+    await page.locator(".olo-row-details summary").first().click();
+    await page.locator('.olo-row-details [data-edit="'+assignment.id+'"]').click();
+    await page.locator("#rc-amount").fill("2345");await page.locator("#rc-review").click();assert(await page.locator("#rc-confirm").isEnabled());await page.locator("#rc-confirm").click();
+    const afterEdit=JSON.parse(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE));assert.equal(afterEdit.v16AssignmentOverlay.added.find(a=>a.id===assignment.id).minor,234500);
+    await page.locator(".olo-row-details summary").first().click();await page.locator('.olo-row-details [data-edit="'+assignment.id+'"]').click();await page.locator("#rc-deleteAssignment").click();assert(await page.locator("#rc-confirm").isEnabled());await page.locator("#rc-confirm").click();
+    const afterDelete=JSON.parse(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE));assert(!afterDelete.v16AssignmentOverlay.added.some(a=>a.id===assignment.id));
+    assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.LEGACY),source);
+   }
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);await page.close();
   }
   fs.writeFileSync(path.join(out,"visual-checks.json"),JSON.stringify({passed:true,checks},null,2));console.log("Native V16 header/dashboard + V17 data: "+checks.length+" combinations, both graphs painted, one temporal selector, root redirect, exact ledger preserved.");

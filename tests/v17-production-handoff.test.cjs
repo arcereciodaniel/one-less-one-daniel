@@ -101,3 +101,13 @@ test("V17.1 interval budgets persist in the original overlay without invented da
  const edited=E.stage(model,{...cmd,kind:"edit-range",id:model.allocations[0].id,amount:120000});assert.equal(E.commit(model,edited).allocations[0].minor,12000000);
  assert.equal(E.commit(model,E.stage(model,{kind:"delete",id:model.allocations[0].id,transactionId:"delete"})).allocations.length,0);
 });
+
+test("Flexible interval reserve uses actual execution inside its own dates and does not invent a payment date",()=>{
+ const V=require("../src/experimental/v17-available.cjs");
+ const today="2026-11-26",model={issues:[],operating:{asOf:today,minor:15000000},categories:[{id:"food",type:"Gasto"}],periods:[{key:"P",start:"2026-11-14",end:"2026-11-27",financialMonth:"2026-11"}],allocations:[{source:"range",categoryId:"food",currency:"CRC",start:"2026-11-01",end:"2026-11-30",minor:10000000}],actuals:[{categoryId:"food",currency:"CRC",date:"2026-11-20",parentKey:"P",minor:2000000}]};
+ const native={month:"2026-11",horizon:"2026-11-27",balance:150000,pending:0,hasBalance:true,hasPlan:false},rows={P:[{id:"food",plannedCRC:0,spentCRC:20000,savingsCRC:0,remainingCRC:0}]};
+ const result=V.calculate(model,today,native,rows,{sell:500});
+ assert(result.ready);assert.equal(result.rangePendingMinor,8000000);assert.equal(result.availableMinor,7000000);assert.equal(result.rangeConservative,true);
+ rows.P[0].plannedCRC=20000;native.hasPlan=true;assert.equal(V.calculate(model,today,native,rows,{sell:500}).rangePendingMinor,10000000);
+ model.allocations[0].end="2026-11-25";assert.equal(V.calculate(model,today,native,rows,{sell:500}).rangePendingMinor,0);
+});

@@ -73,7 +73,7 @@ function relatedBudgets(p,editable,g){
 }
 function renderFlexibleBudget(){
  const range=agg(T.select(state)),p=query(range),t=groupTotals(p,budgetGroup),rows=groupRows(p,budgetGroup).filter(r=>r.plannedMinor||r.actualMinor);
- const summary=[["Presupuesto",t.planned],["Real",t.actual],[budgetGroup==="Ingreso"?"Por recibir":"Restante",t.remaining]];
+ const summary=[["Presupuesto",t.pending&&t.planned===0?null:t.planned],["Real",t.actual],[budgetGroup==="Ingreso"?"Por recibir":"Restante",t.remaining]];
  el("content").innerHTML='<section class="olo-budget-shell"><div class="olo-budget-summary">'+summary.map(([n,v],i)=>'<div><small>'+n+'</small><strong data-budget-total="'+i+'" class="'+(i===2&&v!==null&&v<0&&budgetGroup!=="Ingreso"?"negative":"")+'">'+fmt(v)+'</strong></div>').join("")+'</div>'+(t.pending?'<p class="olo-compact-hint">Hay presupuestos de otros períodos. El restante de este intervalo no está definido.</p>':"")+'<div class="olo-budget-panel"><div class="olo-budget-tools"><div class="olo-segment" role="group" aria-label="Tipo de presupuesto">'+budgetGroups.map(([id,name])=>'<button type="button" data-budget-group="'+id+'" aria-pressed="'+(id===budgetGroup)+'">'+name+'</button>').join("")+'</div><button type="button" class="btn secondary small" data-add="" data-range="'+range.key+'" data-group="'+budgetGroup+'">＋ Asignar</button></div>'+(rows.length?rows.map(r=>compactRow(r,p,range,true)).join(""):'<p class="olo-empty">No hay registros en este período.</p>')+'</div>'+relatedBudgets(p,true,budgetGroup)+intelligence(range,true)+'</section>';
 }
 el("content").addEventListener("click",e=>{const b=e.target.closest("[data-budget-group]");if(b){budgetGroup=b.dataset.budgetGroup;renderFlexibleBudget()}});
@@ -123,13 +123,15 @@ renderDashboard=function(){
  if(p.pending.length)insight.innerHTML='<div class="v7-insight-icon">▥</div><h3>Tu presupuesto</h3><p>Consultá los períodos relacionados.</p><button type="button" class="btn secondary small" id="olo-see-budget">Ver presupuesto</button>';
  document.getElementById("olo-see-budget")?.addEventListener("click",()=>showModule("budget"));
 };
+const oldGoalSelection=oneGoalSelectedTransactions;
+oneGoalSelectedTransactions=function(level,value){if(moduleName!=="moves")return oldGoalSelection(level,value);const range=agg(T.select(state));return (data.reserveMovements||[]).filter(t=>T.contains(range,t.date)).sort((a,b)=>b.date.localeCompare(a.date))};
 const nativeDesignRender=render;
 render=function(){
  nativeDesignRender();refreshPeriod();closePicker();
  if(moduleName==="budget"&&!nativeBlocked)renderFlexibleBudget();
  if(moduleName==="moves"&&!nativeBlocked){
   const g=document.getElementById("goalMovementPreview");
-  if(g){let d=document.getElementById("olo-goal-movement-detail");if(!d){d=document.createElement("details");d.id="olo-goal-movement-detail";d.className="v7-card olo-related";d.innerHTML="<summary>Aportes y retiros de metas</summary>";g.after(d);d.append(g)}d.hidden=g.hidden; }
+  if(g){const heading=g.querySelector("strong");if(heading?.textContent==="Actividad de tus fondos")heading.textContent="Transferencias de metas";let d=document.getElementById("olo-goal-movement-detail");if(!d){d=document.createElement("details");d.id="olo-goal-movement-detail";d.className="v7-card olo-related";d.innerHTML="<summary>Aportes y retiros de metas</summary>";g.after(d);d.append(g)}d.hidden=g.hidden; }
  }
 };
 nativeHeader.querySelector(".brand-version").textContent="v17.1.0";
