@@ -154,7 +154,6 @@ const fxSetting=document.createElement("details");fxSetting.className="demo-allo
 fxSetting.innerHTML='<summary>Tipo de cambio</summary><div class="olo-detail-line"><span id="olo-fx-status"></span><button type="button" class="btn secondary small" id="olo-fx-open">Consultar o editar</button></div>';
 el("integrityReport").before(fxSetting);
 function fxStatus(){const r=currentRates();uxq("fx-status").textContent=r.date?short(r.date)+" · Compra ₡"+r.buy.toFixed(2)+" · Venta ₡"+r.sell.toFixed(2):"Sin confirmar"}
-const originalFxSave=saveFxRate;
 saveFxRate=function(date,buy,sell,source="manual",checkedOn=todayIso()){
  if(nativeBlocked||!M.isPrivate(data))return false;
  handoffGuard();oneStorageAssertCurrent();

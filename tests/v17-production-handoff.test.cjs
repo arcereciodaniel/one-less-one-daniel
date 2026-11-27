@@ -61,6 +61,13 @@ test("local migration rehearses actual UI and blocks production transport on cha
   w.localStorage.setItem(H.LEGACY,source);g("rc-mobileForget").click();assert.equal(w.localStorage.getItem(autoKey),null);assert.equal(g("rc-mobileAuto").checked,false);
   w.dispatchEvent(new w.Event("focus"));await tick();assert.equal(calls.length,9);
   assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.equal(w.localStorage.getItem(H.ACTIVE),exact);assert.deepEqual(errors,[]);
+  const fxRequests=[];
+  const localToday=w.eval("todayIso()");w.fetch=async(url,opt)=>{fxRequests.push({url,method:opt?.method,body:opt?.body});return {ok:true,json:async()=>({compra:{valor:501.25,fecha:localToday},venta:{valor:509.75,fecha:localToday}})}};
+  g("olo-fx-open").click();assert(g("fxDialog").open);g("fxFetchNowBtn").click();await tick();await tick();
+  const updated=JSON.parse(w.localStorage.getItem(H.ACTIVE)),prior=JSON.parse(exact);
+  assert.equal(updated.settings.fxBuy,501.25);assert.equal(updated.settings.fxSell,509.75);assert.equal(updated.settings.fxSource,"hacienda");assert.equal(updated.settings.fxDate,localToday);
+  assert.deepEqual(fxRequests,[{url:"https://api.hacienda.go.cr/indicadores/tc/dolar",method:"GET",body:undefined}]);
+  delete updated.settings;delete prior.settings;assert.deepEqual(updated,prior);assert.equal(w.localStorage.getItem(H.LEGACY),source);assert.deepEqual(errors,[]);
  }finally{await tick();second.window.close()}
 });
 

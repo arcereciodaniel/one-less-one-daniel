@@ -9,7 +9,10 @@ const fixture=new JSDOM(pre.buildCandidate(),{url:"https://fixture.invalid/",run
  w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({},{get:(_,k)=>k==="measureText"?()=>({width:80}):()=>{}});
  w.fetch=async()=>{throw Error("Sin red")};
 }});
-const source=fixture.window.localStorage.getItem("rastro_lab_v17_prerelease_data_v1");fixture.window.close();
+const synthetic=JSON.parse(fixture.window.localStorage.getItem("rastro_lab_v17_prerelease_data_v1"));
+const originalExpense=synthetic.movements.find(m=>m.type==="Gasto");
+synthetic.movements.push({...originalExpense,id:"fixture-fx-expense",seq:synthetic.movementSeq+1,amount:20,currency:"USD",fxBuy:490,fxSell:510,fxRef:500,fxDate:originalExpense.date});synthetic.movementSeq++;
+const source=JSON.stringify(synthetic);fixture.window.close();
 assert(source);const active=JSON.stringify({...JSON.parse(source),v17MigrationRehearsal:{format:"v17-private-lab-v1",importDate:"2026-11-26"}});
 const modules=["dashboard","plan","movements","debts","shared","capital","projects","future"];
 (async()=>{
@@ -39,6 +42,17 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    const expectedText=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(expected);
    const shown=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount small").textContent.trim().replace(/^\/\s*/,"")),candidate.id);
    assert(shown.includes(expectedText),"Historical category budget differs: "+JSON.stringify({candidate,expectedText,shown}));
+   assert.equal(shown.length,1,"Mixed-currency categories must render exactly once");
+   if(candidate.id===originalExpense.categoryId&&candidate.month===originalExpense.date.slice(0,7)){
+    const rows=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
+    const amount=raw.movements.filter(m=>m.categoryId===candidate.id&&m.type==="Gasto"&&m.date.startsWith(candidate.month)).reduce((n,m)=>n+m.amount*(m.currency==="USD"?m.fxSell:1),0);
+    assert.deepEqual(rows,[new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",minimumFractionDigits:0,maximumFractionDigits:2}).format(amount)]);
+    await page.locator('.olo-original-header [data-display-currency="USD"]').click();
+    const converted=await page.locator(".olo-budget-row").evaluateAll((rows,id)=>rows.filter(r=>r.dataset.category===id).map(r=>r.querySelector(".olo-row-amount").firstChild.textContent.trim()),candidate.id);
+    const ref=(raw.settings.fxBuy+raw.settings.fxSell)/2;
+    assert.deepEqual(converted,[new Intl.NumberFormat("es-CR",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(amount/ref)]);
+    await page.locator('.olo-original-header [data-display-currency="CRC"]').click();
+   }
    await page.getByRole("button",{name:"Conciliar presupuesto",exact:true}).click();assert(await page.locator("#rc-transitionAudit").isVisible());assert((await page.locator("#rc-transitionText").inputValue()).includes("real calendario"));await page.locator("#rc-closeTransitionAudit").click();assert.equal(await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE),baseline);
    await page.locator("#olo-today").click();await page.locator('.olo-original-header [data-view="dashboard"]').click();
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
