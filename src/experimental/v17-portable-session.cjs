@@ -14,11 +14,12 @@ const oneV17Session=(()=>{
   const report=validateActive(active,asOf);if(!original.ready||!report.ready)return {ready:false,report:{source:original.report,active:report}};
   return {ready:true,expected,source:p.source,serialized:p.active,asOf,report:{source:original.report,active:report}};
  }
- function commit(draft,io,M,validateSource,validateActive){
-  if(!draft?.ready||io.read()!==draft.expected||io.readSource()!==null)throw Error("La sesión cambió o ya existe");
+ function commit(draft,io,M,validateSource,validateActive,allowResume=false){
+  const existing=io.readSource();
+  if(!draft?.ready||io.read()!==draft.expected||M.isPrivate(JSON.parse(draft.expected))||(existing!==null&&(!allowResume||existing!==draft.source)))throw Error("La sesión cambió o ya existe");
   const checked=prepare(pack(draft.source,draft.serialized,M),draft.expected,draft.asOf,M,validateSource,validateActive);
   if(!checked.ready||JSON.stringify(checked.report)!==JSON.stringify(draft.report))throw Error("La validación cambió");
-  io.writeSource(draft.source);if(io.readSource()!==draft.source||io.read()!==draft.expected)throw Error("No se verificó el original");
+  if(existing===null)io.writeSource(draft.source);if(io.readSource()!==draft.source||io.read()!==draft.expected)throw Error("No se verificó el original");
   io.write(draft.serialized);if(io.read()!==draft.serialized)throw Error("No se verificó la sesión");
  }
  return {FORMAT,pack,prepare,commit};

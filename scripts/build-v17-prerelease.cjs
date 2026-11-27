@@ -23,10 +23,11 @@ el("sessionFile").onchange=async()=>{
  const generation=++sessionGeneration;sessionDraft=null;el("sessionConfirm").disabled=true;
  const file=el("sessionFile").files[0],out=el("sessionStatus");out.textContent="";if(!file)return;
  try{
-  if(file.size>50*1024*1024||M.isPrivate(data)||migrationIO.readSource()!==null||nativeBlocked)throw Error("Sesión no disponible");
+  if(file.size>50*1024*1024||M.isPrivate(data)||nativeBlocked)throw Error("Sesión no disponible");
   const expected=oneStorageSnapshot,text=await file.text();if(generation!==sessionGeneration)return;
   const draft=U.prepare(text,expected,todayIso(),M,migrationValidation,sessionActiveValidation);
   if(!draft.ready){out.textContent="La sesión requiere revisión. No se importó.";return}
+  if(migrationIO.readSource()!==null&&migrationIO.readSource()!==draft.source)throw Error("El original no coincide");
   sessionDraft=draft;out.textContent="Sesión validada. Conserva el respaldo original y la copia activa con sus asignaciones y vínculos.";el("sessionConfirm").disabled=false;
  }catch{if(generation===sessionGeneration)out.textContent="No se pudo validar la sesión. No se importó."}
  finally{if(generation===sessionGeneration)el("sessionFile").value=""}
@@ -34,11 +35,15 @@ el("sessionFile").onchange=async()=>{
 el("sessionConfirm").onclick=()=>{
  try{
   if(!sessionDraft||nativeBlocked||M.isPrivate(data)||!confirm("¿Trasladar la sesión privada a esta pre-release?"))return;
-  oneStorageAssertCurrent();U.commit(sessionDraft,migrationIO,M,migrationValidation,sessionActiveValidation);sessionDraft=null;location.reload();
+  oneStorageAssertCurrent();U.commit(sessionDraft,migrationIO,M,migrationValidation,sessionActiveValidation,true);sessionDraft=null;location.reload();
  }catch{el("sessionStatus").textContent="No se pudo activar la sesión. Revisá el almacenamiento local.";el("sessionConfirm").disabled=true}
 };
 function updateMigrationControls(){`);
- rep('el("migrationFile").disabled=active||hasSource||nativeBlocked;','el("migrationFile").disabled=active||hasSource||nativeBlocked;el("sessionFile").disabled=active||hasSource||nativeBlocked;el("sessionConfirm").disabled=true;');
+ rep('el("migrationFile").disabled=active||hasSource||nativeBlocked;','el("migrationFile").disabled=active||nativeBlocked;el("sessionFile").disabled=active||nativeBlocked;el("sessionConfirm").disabled=true;');
+ rep('Existe una copia original sin activar. Borrá este Lab para volver a empezar.','Importación interrumpida. Elegí el mismo respaldo original o la misma sesión privada para reintentar sin borrar nada.');
+ rep('if(M.isPrivate(data)||migrationIO.readSource()!==null||nativeBlocked)','if(M.isPrivate(data)||nativeBlocked)');
+ rep('const draft=M.prepare(text,expected,todayIso(),migrationValidation);','const draft=M.prepare(text,expected,todayIso(),migrationValidation);if(migrationIO.readSource()!==null&&migrationIO.readSource()!==draft.source)throw Error("El original no coincide");');
+ rep('M.commit(migrationDraft,migrationIO,migrationValidation);','M.commit(migrationDraft,migrationIO,migrationValidation,true);');
  rep('el("closeIntegrity").onclick=()=>{migrationGeneration++;','el("closeIntegrity").onclick=()=>{sessionGeneration++;sessionDraft=null;el("sessionFile").value="";el("sessionStatus").textContent="";el("sessionConfirm").disabled=true;migrationGeneration++;');
  rep('active?"Lab privado · Copia de respaldo · "+TODAY+" · Sin conexión":"Lab privado · Datos ficticios · Fecha simulada: "+TODAY+" · Sin conexión"','active?"V17 Pre-release · Copia privada · "+TODAY+" · Sin conexión":"V17 Pre-release · Datos ficticios · Fecha simulada: "+TODAY+" · Sin conexión"');
  assert(!h.includes("rastro_lab_v17_migration_preview_"));assert(!h.includes("daniel_finanzas_local_v1"));assert(!h.includes("rastro_lab_v7_1_data_v1"));assert(h.includes("connect-src 'none'"));return h;

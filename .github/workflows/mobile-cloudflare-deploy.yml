@@ -29,6 +29,7 @@ jobs:
       - name: Probar Worker, interfaz y preparacion
         run: node --test mobile-pilot/tests/*.test.mjs
   desplegar:
+    if: github.ref == 'refs/heads/main'
     name: Desplegar Worker existente
     needs: pruebas
     runs-on: ubuntu-latest

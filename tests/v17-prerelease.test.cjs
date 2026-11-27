@@ -35,3 +35,25 @@ test("pre-release package has separate path and no deploy script or external net
  const fs=require("node:fs"),os=require("node:os"),path=require("node:path"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"olo-pre-"));
  try{require("../scripts/build-v17-prerelease.cjs").buildPackage(dir);const h=fs.readFileSync(path.join(dir,"lab/v17/index.html"),"utf8");assert.match(h,/connect-src 'none'/);assert(!h.includes("daniel_finanzas_local_v1"));assert(!fs.existsSync(path.join(dir,"index.html")));assert(!fs.existsSync(path.join(dir,"lab/index.html")))}finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
+
+test("interrupted activation resumes only with the identical original; active session and conflicting sources remain protected",()=>{
+ const source=JSON.stringify({version:6.2,periods:[],movements:[],debts:[],categories:[],settings:{}}),date="2026-11-26",validate=()=>({ready:true,issues:[]}),initial="{}";
+ const first=M.prepare(source,initial,date,validate),active=JSON.stringify({...JSON.parse(first.serialized),v16AssignmentOverlay:{version:1,replacements:[],added:[]}}),portable=U.prepare(U.pack(source,active,M),initial,date,M,validate,validate);
+ for(const [draft,commit] of [[first,(d,io,resume)=>M.commit(d,io,validate,resume)],[portable,(d,io,resume)=>U.commit(d,io,M,validate,validate,resume)]]){
+  let disk=initial,original=null,fail=true,writes=0;
+  const io={read:()=>disk,readSource:()=>original,writeSource:x=>{writes++;original=x},write:x=>{if(fail)throw Error("quota");disk=x}};
+  assert.throws(()=>commit(draft,io,false),/quota/);assert.equal(original,source);assert.equal(disk,initial);
+  fail=false;assert.throws(()=>commit(draft,io,false),/sesión cambió/);
+  original=source+" ";assert.throws(()=>commit(draft,io,true),/sesión cambió/);assert.equal(disk,initial);
+  original=source;commit(draft,io,true);assert.equal(writes,1);assert.equal(disk,draft.serialized);assert.equal(original,source);
+  assert.throws(()=>commit(draft,io,true),/sesión cambió/);
+ }
+});
+test("pre-release permits reselecting the original after interrupted import without deleting the saved source",async()=>{
+ const seed=boot();const source=JSON.stringify(seed.raw());seed.w.close();
+ const b=boot({[SRC]:source});try{
+  b.g("rc-integrity").click();assert(!b.g("rc-sessionFile").disabled);assert(!b.g("rc-migrationFile").disabled);assert.match(b.g("rc-migrationMode").textContent,/interrumpida/);
+  const file=b.g("rc-migrationFile");Object.defineProperty(file,"files",{configurable:true,value:[{size:source.length,text:async()=>source+" "}]});await file.onchange();assert(b.g("rc-migrationConfirm").disabled);assert.equal(b.w.localStorage.getItem(SRC),source);
+  Object.defineProperty(file,"files",{configurable:true,value:[{size:source.length,text:async()=>source}]});await file.onchange();assert(!b.g("rc-migrationConfirm").disabled,b.g("rc-migrationStatus").textContent);b.g("rc-migrationConfirm").click();assert(M.isPrivate(b.raw()));assert.equal(b.w.localStorage.getItem(SRC),source);
+ }finally{b.w.close()}
+});

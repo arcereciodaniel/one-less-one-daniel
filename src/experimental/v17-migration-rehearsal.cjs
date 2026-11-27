@@ -16,11 +16,12 @@ const oneV17Migration=(()=>{
   const next={...raw,[FIELD]:{format:FORMAT,importDate:asOf}};
   return {ready:true,expected,source:text,serialized:JSON.stringify(next),asOf,report};
  }
- function commit(draft,io,validate){
-  if(!draft?.ready||io.read()!==draft.expected||io.readSource()!==null)throw Error("La sesión cambió; no se importó el archivo");
+ function commit(draft,io,validate,allowResume=false){
+  const existing=io.readSource();
+  if(!draft?.ready||io.read()!==draft.expected||isPrivate(JSON.parse(draft.expected))||(existing!==null&&(!allowResume||existing!==draft.source)))throw Error("La sesión cambió; no se importó el archivo");
   const verified=prepare(draft.source,draft.expected,draft.asOf,validate);
   if(!verified.ready||verified.serialized!==draft.serialized||JSON.stringify(verified.report)!==JSON.stringify(draft.report))throw Error("La revisión cambió");
-  io.writeSource(draft.source);
+  if(existing===null)io.writeSource(draft.source);
   if(io.readSource()!==draft.source||io.read()!==draft.expected)throw Error("No se verificó la copia original");
   io.write(draft.serialized);
   if(io.read()!==draft.serialized)throw Error("No se verificó la copia activa");
