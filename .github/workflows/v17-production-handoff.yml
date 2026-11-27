@@ -1,0 +1,24 @@
+name: V17 production handoff preparation (no deployment)
+on:
+  push:
+    branches: [release/v17-0-production-handoff]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  handoff:
+    if: github.ref == 'refs/heads/release/v17-0-production-handoff'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install jsdom@26 --no-save --no-package-lock
+      - run: node --test tests/v17-production-handoff.test.cjs tests/v17-prerelease.test.cjs tests/v17-mobile-bridge.test.cjs
+      - run: node scripts/build-v17-production-handoff.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OLO-V17-PRODUCTION-HANDOFF-NOT-DEPLOYED
+          path: preview-v17-production-handoff/
+          if-no-files-found: error
