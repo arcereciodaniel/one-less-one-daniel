@@ -22,7 +22,7 @@ const oneV16Finance=(()=>{
  }
  function budgetAllocation(model,a){
   const r=model.calendarSlots?.[a.parentKey];if(!r)return a;
-  if(a.date?inside(r,a.date):included(a,r))return a;
+  if(a.date?inside(r,a.date):a.source==="legacy"?a.start===r.start&&a.end===r.end:included(a,r))return a;
   // Never invent a date. A historical block or scheduled amount outside the new
   // fortnight becomes a budget envelope in that fortnight; source dates stay intact.
   const {date,start,end,...rest}=a;
