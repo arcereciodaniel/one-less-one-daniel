@@ -4,6 +4,9 @@ const root=path.resolve(__dirname,"..");
 function buildCandidate(){
  let h=migration().replaceAll("rastro_lab_v17_migration_preview_","rastro_lab_v17_prerelease_").replaceAll("_pre_v17_migration","_pre_v17_prerelease").replaceAll("_before_migration_restore","_before_prerelease_restore").replaceAll("V17.0 LAB","V17.0 PRE").replaceAll("v17-migration-test-backup","v17-prerelease-test-backup");
  const rep=(a,b)=>{assert.equal(h.split(a).length,2,"Marker: "+a);h=h.replace(a,()=>b)};
+ rep('function moduleActions(v){','function baseModuleActions(v){');
+ rep('function openNative(action,id){','function baseOpenNative(action,id){');
+ rep('function baseModuleActions(v){',fs.readFileSync(path.join(root,"src/experimental/v17-parity-actions.js"),"utf8")+'\nfunction baseModuleActions(v){');
  rep('<p id="rc-migrationStatus" role="status"></p>','<p id="rc-migrationStatus" role="status"></p><label for="rc-sessionFile">O trasladar sesión privada V17</label><input id="rc-sessionFile" type="file" accept=".json,application/json"><p id="rc-sessionStatus" role="status"></p><button type="button" class="btn secondary" id="rc-sessionConfirm" disabled>Importar sesión</button>');
  rep('function updateMigrationControls(){',`
 let sessionDraft=null,sessionGeneration=0;

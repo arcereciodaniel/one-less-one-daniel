@@ -1,0 +1,5 @@
+# V17 functional parity — contextual administration
+
+The previous forecast commit passed pre-release and hosted simulation CI. This iteration restores access in the pre-release (and its derived staging packages) to archived debt/goal reactivation, project archive/reactivation, group editing, group archive/reactivation, adding or splitting a charge within an existing group, standalone split and undated/overdue charge management. Existing native functions remain authoritative; no extra navigation or temporal selector is introduced. Archived groups retain pending balances and reactivation does not restart recurrence automatically. Actions are contextual disclosures. New CI is pending.
+
+Audit backlog: report/CSV parity (do not expose misleading native report summaries that ignore V17 overlay), salary calendar configuration with overlay revalidation, complete goal withdrawals and payment administration, project bucket editing, destructive group/charge operations with explicit link/receipt integrity, and a full operation matrix. Do not claim complete functional parity yet. No deployment, real-device validation or production changes.
