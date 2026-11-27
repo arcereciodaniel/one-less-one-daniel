@@ -150,3 +150,24 @@ test("transition audit reconciles every category, month boundary, debt and split
  assert.equal(food.oldPlan,10000000);assert.equal(food.newPlan,10000000);assert.equal(food.oldActual,9525000);assert.equal(food.newActual,8725000);assert.equal(food.onlyOld,1000000);assert.equal(food.onlyNew,200000);assert.equal(loan.newActual,0);assert.equal(loan.oldActual,5000000);
  const dec=A.inspect(model,"2026-12",F);assert.equal(dec.rows.find(x=>x.id==="food").onlyOld,200000);assert.equal(JSON.stringify(model),before);
 });
+
+test("November opening bridge preserves the original linked outflows and income, avoids double count, and leaves December calendar-only",()=>{
+ const F=require("../src/experimental/v16-financial-assignments.cjs"),A=require("../src/experimental/v17-transition-audit.cjs");
+ const categories=[{id:"food",name:"Food",type:"Gasto"},{id:"loan",name:"Loan",type:"Pago deuda"},{id:"income",name:"Income",type:"Ingreso"}],periods=[
+ {key:"N1",financialMonth:"2026-11",start:"2026-10-28",end:"2026-11-13"},{key:"N2",financialMonth:"2026-11",start:"2026-11-14",end:"2026-11-27"},{key:"D1",financialMonth:"2026-12",start:"2026-11-28",end:"2026-12-13"},{key:"J1",financialMonth:"2027-01",start:"2026-12-28",end:"2027-01-13"}];
+ const m=(id,categoryId,minor,date,parentKey,financialMonth,currency="CRC")=>({id,sourceId:id,categoryId,minor,date,parentKey,financialMonth,type:categories.find(x=>x.id===categoryId).type,currency,source:"movement",...(currency==="USD"?{fxBuy:490,fxSell:500}:{})});
+ const model={novemberTransition:true,calendarSlots:{N1:{start:"2026-11-01",end:"2026-11-15"},N2:{start:"2026-11-16",end:"2026-11-30"},D1:{start:"2026-12-01",end:"2026-12-15"},J1:{start:"2027-01-01",end:"2027-01-15"}},categories,periods,issues:[],allocations:[{id:"p",categoryId:"food",currency:"CRC",minor:12000000,parentKey:"N1",source:"legacy",start:"2026-10-28",end:"2026-11-13"}],actuals:[m("f1","food",1200000,"2026-10-30","N1","2026-11"),m("l1","loan",1500000,"2026-10-29","N1","2026-11"),m("l2","loan",3500,"2026-10-29","N1","2026-11","USD"),m("i1","income",2000000,"2026-10-28","N1","2026-11"),m("f2","food",550000,"2026-11-05","N1","2026-11"),m("f3","food",250000,"2026-11-29","D1","2026-12"),m("f4","food",900000,"2026-12-29","J1","2027-01")]};
+ const before=JSON.stringify(model),q=(start,end,actualBasis)=>F.budgetProject(model,{basis:"calendar",start,end,actualBasis}),nov=q("2026-11-01","2026-11-30");
+ assert.equal(nov.rows.find(r=>r.id==="food").actualMinor,2000000);
+ assert.equal(nov.rows.find(r=>r.id==="food").plannedMinor,12000000);
+ assert.equal(nov.actuals.filter(a=>a.transitionCarry).length,4);
+ assert.equal(nov.actuals.find(a=>a.id==="f1").date,"2026-10-30");
+ assert.equal(nov.actuals.find(a=>a.id==="l2").fxSell,500);
+ assert.equal(q("2026-10-01","2026-10-31").actuals.length,0);
+ assert.equal(q("2026-10-01","2026-10-31","date").actuals.length,4);
+ assert.equal(q("2026-11-01","2026-11-15").actuals.length+q("2026-11-16","2026-11-30").actuals.length,nov.actuals.length);
+ assert.equal(q("2026-12-01","2026-12-31").actuals[0].id,"f4");
+ assert.equal(q("2027-01-01","2027-01-31").actuals.length,0);
+ assert.equal(q("2026-10-01","2026-12-31").actuals.length,model.actuals.length);
+ const report=A.inspect(model,"2026-11",F),food=report.rows.find(r=>r.id==="food");assert.equal(food.oldActual,1750000);assert.equal(food.newActual,800000);assert.equal(food.reconciledActual,2000000);assert.equal(food.carryMinor,1200000);assert.equal(JSON.stringify(model),before);
+});

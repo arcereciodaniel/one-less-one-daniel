@@ -13,8 +13,9 @@ const oneV16Finance=(()=>{
  const kinds=["Ingreso","Gasto","Pago deuda"];
  // Production calendar-budget policy: original period keys and ledger dates remain authoritative
  // for audit and cash flows. Only the budget interpretation is normalized.
- let normalizeLegacyQuincenas=false;
+ let normalizeLegacyQuincenas=false,novemberTransition=false;
  function enableCalendarQuincenas(){normalizeLegacyQuincenas=true}
+ function enableNovemberTransition(){novemberTransition=true}
  function calendarSlot(p){
   if(p.periodKind==="flexible"||![1,2].includes(Number(p.fortnight))||!valid(p.budgetMonth+"-01"))return null;
   const m=p.budgetMonth,last=new Date(Date.UTC(Number(m.slice(0,4)),Number(m.slice(5)),0)).toISOString().slice(0,10);
@@ -31,8 +32,18 @@ const oneV16Finance=(()=>{
  function budgetBounds(model,a){
   const b=budgetAllocation(model,a);return b.date?{start:b.date,end:b.date}:{start:b.start,end:b.end};
  }
+ // The opening bridge belongs to November's first budget slot, not to a
+ // fabricated transaction date. Only the budget projection uses this anchor.
+ // December onward and all other actuals continue to use their real dates.
+ function budgetActualDate(model,a){
+  if(!model.novemberTransition||a.financialMonth!=="2026-11"||a.date>="2026-11-01"||model.calendarSlots?.[a.parentKey]?.start!=="2026-11-01")return a.date;
+  const original=model.periods.find(p=>p.key===a.parentKey);
+  return original&&original.financialMonth==="2026-11"&&inside(original,a.date)?"2026-11-01":a.date;
+ }
  function budgetProject(model,scope){
-  return project(model.calendarSlots&&scope.basis==="calendar"?{...model,allocations:model.allocations.map(a=>budgetAllocation(model,a))}:model,scope);
+  if(scope.basis!=="calendar")return project(model,scope);
+  const actuals=scope.actualBasis==="date"?model.actuals:model.actuals.map(a=>{const budgetDate=budgetActualDate(model,a);return budgetDate===a.date?a:{...a,budgetDate,transitionCarry:true}});
+  return project({...model,allocations:model.allocations.map(a=>budgetAllocation(model,a)),actuals},scope);
  }
  function budgetOverlaps(model,a,b){
   if(a.categoryId!==b.categoryId||a.currency!==b.currency)return false;
@@ -110,7 +121,7 @@ const oneV16Finance=(()=>{
    if(unit==="USD"&&!(Number.isFinite(t.fxSell)&&t.fxSell>0))issue("historical-fx-review",t.id);
    actuals.push({id:JSON.stringify(["saving",t.id]),sourceId:t.id,source:"saving",categoryId,date:t.date,currency:unit,minor:money(t.amount),type:"Gasto",parentKey:parent?.key||null,financialMonth:parent?.financialMonth||null,...snapshot(t)});
   }
-  return {categories,allocations,actuals,periods:periods.map(({p,...rest})=>rest),issues,...(normalizeLegacyQuincenas?{calendarSlots:Object.fromEntries(periods.flatMap(({p,key})=>{const slot=calendarSlot(p);return slot?[[key,slot]]:[]}))}:{})};
+  return {categories,allocations,actuals,periods:periods.map(({p,...rest})=>rest),issues,...(normalizeLegacyQuincenas?{calendarSlots:Object.fromEntries(periods.flatMap(({p,key})=>{const slot=calendarSlot(p);return slot?[[key,slot]]:[]}))}:{}),...(novemberTransition?{novemberTransition:true}:{})};
  }
  function project(model,scope){
   const calendar=scope.basis==="calendar",financial=scope.basis==="financial";
@@ -127,7 +138,7 @@ const oneV16Finance=(()=>{
   }
   const actualIds=new Set();for(const a of model.actuals){
    if(actualIds.has(a.id)||!valid(a.date)||!Number.isSafeInteger(a.minor)||a.minor<0)throw Error("Movimiento inválido o duplicado");actualIds.add(a.id);currency(a.currency);
-   if(financial?!keys.has(a.parentKey):!inside(scope,a.date))continue;
+   if(financial?!keys.has(a.parentKey):!inside(scope,a.budgetDate||a.date))continue;
    const r=row(a.categoryId,a.currency);r.actualMinor=add(r.actualMinor,a.minor);if(a.source==="saving")r.savingsMinor=add(r.savingsMinor,a.minor);actuals.push(a);
   }
   const result=[...rows.values()].filter(r=>r.plannedMinor||r.actualMinor||r.pendingMinor).map(r=>({...r,remainingMinor:r.pendingMinor?null:r.plannedMinor-r.actualMinor,status:r.pendingMinor?"pending":!r.plannedMinor&&r.actualMinor?"unplanned":"defined"}));
@@ -141,6 +152,6 @@ const oneV16Finance=(()=>{
   for(const [kind,items] of [["plannedMinor",result.planned],["actualMinor",result.actuals]])for(const a of items){const v=convert(a,kind==="plannedMinor"?rates:a);if(v===null)values.missing.push(a.id);else values[kind]=add(values[kind],v)}
   return values;
  }
- return {createAssignment,adaptLegacy,project,valueCRC,enableCalendarQuincenas,budgetAllocation,budgetBounds,budgetProject,budgetOverlaps};
+ return {createAssignment,adaptLegacy,project,valueCRC,enableCalendarQuincenas,enableNovemberTransition,budgetAllocation,budgetBounds,budgetProject,budgetActualDate,budgetOverlaps};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=oneV16Finance;

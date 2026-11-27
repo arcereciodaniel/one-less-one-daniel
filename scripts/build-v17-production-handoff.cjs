@@ -7,7 +7,7 @@ function buildInner(){
  h=h.replace(/<title>[^<]*<\/title>/i,"<title>One Less One</title>");
  const appendStyle=css=>{const i=h.lastIndexOf("</body>");assert(i>0);h=h.slice(0,i)+css+h.slice(i)};
  rep("connect-src 'none'","connect-src "+ENDPOINT);
- rep('const getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;','F.enableCalendarQuincenas();\nconst getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;');
+ rep('const getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;','F.enableCalendarQuincenas();F.enableNovemberTransition();\nconst getModel=()=>B.snapshot(rawNow(),api,TODAY,F,S,P).model;');
  rep('const query=r=>F.project(model,{basis:"calendar",start:r.start,end:r.end});','const query=r=>F.budgetProject(model,{basis:"calendar",start:r.start,end:r.end});');
  rep('d.min=editing.target.start;d.max=editing.target.end;','const bounds=F.budgetBounds(model,editing.target);d.min=bounds.start;d.max=bounds.end;');
  rep('if(kind==="distribute"){el("distributionContext").textContent=label(target)+" · Total a conservar: "+f(target.minor,target.currency);addPart(target.start,String(target.minor/100))}','if(kind==="distribute"){const bounds=F.budgetBounds(model,target);el("distributionContext").textContent=label(bounds)+" · Total a conservar: "+f(target.minor,target.currency);addPart(bounds.start,String(target.minor/100))}');

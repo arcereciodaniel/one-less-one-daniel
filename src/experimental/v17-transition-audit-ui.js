@@ -8,19 +8,19 @@ const aq=id=>document.getElementById("rc-"+id);
 aq("closeTransitionAudit").onclick=()=>auditDialog.close();
 function renderTransitionAudit(){
  const month=aq("transitionMonth").value;
- const a=oneV17TransitionAudit.inspect(model,month,F),out=aq("transitionResults"),lines=[longMonth(month),"Comparación por moneda: presupuesto anterior / presupuesto calendario / real anterior / real calendario / diferencia."];
+ const a=oneV17TransitionAudit.inspect(model,month,F),out=aq("transitionResults"),lines=[longMonth(month),"Comparación por moneda: presupuesto anterior / presupuesto calendario / real anterior / real calendario / diferencia / real conciliado."];
  const oldDates=a.periods.map(p=>datesText(p)).join(" · ");
  out.innerHTML='<p class="muted">Anterior: '+esc(oldDates||"Sin períodos históricos")+'<br>Calendario: '+esc(datesText(a))+'</p>';
  const root=document.createElement("div");
  for(const r of a.rows){
   const detail=document.createElement("details");detail.className="olo-related";detail.style.marginBottom="8px";
-  const heading=document.createElement("summary");heading.textContent=r.name+" · "+r.currency+" · "+(r.delta?"Diferencia "+f(r.delta,r.currency):"Sin diferencia");detail.append(heading);
+  const heading=document.createElement("summary");heading.textContent=r.name+" · "+r.currency+" · "+(r.reconciledActual!==r.oldActual?"Diferencia conciliada "+f(r.reconciledActual-r.oldActual,r.currency):"Conciliado");detail.append(heading);
   const summary=document.createElement("div");
-  const values=[["Presupuesto anterior",r.oldPlan],["Presupuesto calendario",r.newPlan],["Real anterior",r.oldActual],["Real calendario",r.newActual],["Solo en período anterior",r.onlyOld],["Solo en calendario",r.onlyNew],["Restante calendario",r.remaining]];
+  const values=[["Presupuesto anterior",r.oldPlan],["Presupuesto calendario",r.newPlan],["Real anterior",r.oldActual],["Real calendario",r.newActual],["Solo en período anterior",r.onlyOld],["Solo en calendario",r.onlyNew],["Real conciliado",r.reconciledActual],["Arrastre incluido",r.carryMinor],["Restante conciliado",r.remaining]];
   for(const [label,n] of values){const line=document.createElement("div");line.className="olo-detail-line";const l=document.createElement("span"),num=document.createElement("strong");l.textContent=label;num.textContent=n===null?"—":f(n,r.currency);line.append(l,num);summary.append(line)}
   if(r.relatedPlan){const p=document.createElement("p");p.textContent="Presupuesto relacionado no incluido: "+f(r.relatedPlan,r.currency);summary.append(p)}
   detail.append(summary);
-  lines.push(r.name+" ("+r.type+", "+r.currency+"): "+[r.oldPlan,r.newPlan,r.oldActual,r.newActual,r.delta].map(n=>f(n,r.currency)).join(" | "));
+  lines.push(r.name+" ("+r.type+", "+r.currency+"): "+[r.oldPlan,r.newPlan,r.oldActual,r.newActual,r.delta,r.reconciledActual].map(n=>f(n,r.currency)).join(" | "));
   for(const x of r.items){const line=document.createElement("div");line.className="olo-detail-line";const l=document.createElement("span"),n=document.createElement("strong"),status={both:"Ambas vistas",onlyOld:"Solo período anterior",onlyNew:"Solo calendario"}[x.status];l.textContent=x.date+" · "+x.type+" · "+status+(x.month?" · Vinculado a "+longMonth(x.month):" · Sin vínculo");n.textContent=f(x.minor,r.currency);line.append(l,n);detail.append(line);if(x.status!=="both")lines.push("  "+l.textContent+" | "+n.textContent)}
   root.append(detail);
  }
