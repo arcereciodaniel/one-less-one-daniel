@@ -28,6 +28,7 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
    assert.equal(await page.title(),"One Less One");assert.equal(await page.locator(".olo-original-header .brand-version:visible").count(),0);
    assert.equal(await page.locator("style#v17-native-module-css").count(),1);assert.equal(await page.locator("style#v17-original-design").count(),1);
    const baseline=await page.evaluate(k=>localStorage.getItem(k),H.ACTIVE);assert.equal(baseline,active);
+   const remap=await page.evaluate(()=>{const raw=JSON.parse(localStorage.getItem("olo_v17_daniel_data_v1"));const m=getModel();const expected=raw.periods.filter(p=>p.periodKind!=="flexible"&&[1,2].includes(Number(p.fortnight)));return {slots:Object.keys(m.calendarSlots||{}).length,expected:expected.length}});assert.equal(remap.slots,remap.expected);
    await page.locator(".olo-original-header #manageModulesBtn").click();for(const c of await page.locator("#rc-moduleChoices input").all())await c.check();await page.locator("#rc-closeModules").click();
    for(const theme of ["dark","light"]){
     await page.locator('.olo-original-header [data-theme-choice="'+theme+'"]').click();
