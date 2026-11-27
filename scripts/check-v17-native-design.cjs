@@ -46,6 +46,8 @@ const modules=["dashboard","plan","movements","debts","shared","capital","projec
       if(width!==320)await page.screenshot({path:path.join(out,"Inicio-"+width+"-"+theme+".png"),fullPage:true});
      }else {assert(!(await page.locator("#view-dashboard").isVisible()));if(["movements","debts","shared","capital","projects"].includes(name))assert(await page.locator("#view-"+name).isVisible());if(name==="future")assert(await page.locator(".one-future-panel:visible").count()>=1);if(name==="plan")assert(await page.locator(".r8-fortnight-card:visible").count()>=1);}
      if(width===1440&&name!=="dashboard")await page.screenshot({path:path.join(out,name+"-"+theme+".png"),fullPage:true});
+     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1?[]:[...document.querySelectorAll("body *")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left< -1)&&!e.closest(".table-wrap")}).slice(0,20).map(e=>({id:e.id,cls:String(e.className).slice(0,100),width:Math.round(e.getBoundingClientRect().width),right:Math.round(e.getBoundingClientRect().right)})));
+     if(overflow.length){await page.screenshot({path:path.join(out,"OVERFLOW-"+name+"-"+width+"-"+theme+".png"),fullPage:true});console.error(JSON.stringify(overflow))}
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Overflow "+width+" "+theme+" "+name);
      checks.push({width,theme,module:name});
     }
